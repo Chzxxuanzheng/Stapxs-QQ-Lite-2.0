@@ -1,5 +1,4 @@
 <template>
-    <!-- <div :class="mergeList != undefined ? 'merge-pan show' : 'merge-pan'"> -->
     <div :class="'merge-pan' + (runtimeData.mergeMsgStack.length > 0 ? ' show' : '')">
         <div @click="closeMergeMsg" />
         <div class="ss-card">
@@ -16,20 +15,11 @@
                 <span>{{ $t('加载中') }}</span>
             </div>
             <div v-else>
-                <template v-for="(msgIndex, index) in nowData.messageList" :key="'merge-' + nowData.forwardMsg.message[0].id + '-' + index">
-                    <NoticeBody v-if=" isShowTime( nowData.messageList[index - 1] ?
-                                    nowData.messageList[index - 1].time : undefined, msgIndex.time, index == 0)"
-                        :id="uuid()"
-                        :key="'notice-time-' + index"
-                        :data="{ sub_type: 'time', time: msgIndex.time }" />
-                    <!-- [已删除]消息 -->
-                    <NoticeBody
-                        v-else-if="isDeleteMsg(msgIndex)"
-                        :key="'delete-' + msgIndex.message_id"
-                        :data="{ sub_type: 'delete' }" />
-                    <!-- 合并转发消息忽略是不是自己的判定 -->
-                    <MsgBody :data="msgIndex" :type="'merge'" />
-                </template>
+                <MsgBar
+                    :msgs="nowData.messageList"
+                    :key="'merge-' + nowData.forwardMsg.message[0].id"
+                    type="merge"
+                    />
             </div>
         </div>
     </div>
@@ -38,8 +28,7 @@
 <script lang="ts">
     import { v4 as uuid } from 'uuid'
 
-    import MsgBody from '@renderer/components/MsgBody.vue'
-    import NoticeBody from '@renderer/components/NoticeBody.vue'
+    import MsgBar from './MsgBar.vue';
 
     import { defineComponent, ref, type Ref } from 'vue';
     import { runtimeData } from '@renderer/function/msg';
@@ -48,7 +37,7 @@
 
     export default defineComponent({
         name: 'MergePan',
-        components: { NoticeBody, MsgBody },
+        components: { MsgBar },
         data() {
             const stack = runtimeData.mergeMsgStack
             const nowData: Ref<MergeStackData|undefined> = ref()

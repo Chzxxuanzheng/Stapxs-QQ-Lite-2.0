@@ -73,68 +73,32 @@
             <!-- 时间戳，在下滑加载的时候会显示，方便在大段的相连消息上让用户知道消息时间 -->
             <NoticeBody v-if="tags.nowGetHistroy && list.length > 0"
                 :data="{ sub_type: 'time', time: list[0].time }" />
-            <TransitionGroup :name="runtimeData.sysConfig.opt_fast_animation ? '' : 'msglist'" tag="div">
-                <template v-for="(msgIndex, index) in list">
-                    <!-- 时间戳 -->
-                    <NoticeBody
-                        v-if="isShowTime(list[index - 1] ? list[index - 1].time : undefined, msgIndex.time)"
-                        :key="'notice-time-' + (msgIndex.time / ( 4 * 60 )).toFixed(0)"
-                        :data="{ sub_type: 'time', time: msgIndex.time }" />
-                    <!-- [已删除]消息 -->
-                    <NoticeBody
-                        v-if="isDeleteMsg(msgIndex)"
-                        :key="'delete-' + msgIndex.message_id"
-                        :data="{ sub_type: 'delete' }" />
-                    <!-- 消息体 -->
-                    <MsgBody v-else-if="(msgIndex.post_type === 'message' ||
-                                 msgIndex.post_type === 'message_sent') &&
-                                 msgIndex.message.length > 0"
-                        :key="msgIndex.fake_message_id ?? msgIndex.message_id"
-                        :selected="multipleSelectList.includes(msgIndex.message_id) || tags.openedMenuMsg?.id == 'chat-' + msgIndex.message_id"
-                        :data="msgIndex"
-                        @click="msgClick($event, msgIndex)"
-                        @scroll-to-msg="scrollToMsg"
-                        @image-loaded="imgLoadedScroll"
-                        @contextmenu.prevent="showMsgMeun($event, msgIndex)"
-                        @touchstart="msgStartMove($event, msgIndex)"
-                        @touchmove="msgOnMove"
-                        @touchend="msgMoveEnd($event, msgIndex)"
-                        @send-poke="sendPoke" />
-                    <!-- 其他通知消息 -->
-                    <NoticeBody v-else-if="msgIndex.post_type === 'notice'"
-                        :id="uuid()"
-                        :key="'notice-' + index"
-                        :data="msgIndex" />
-                </template>
-            </TransitionGroup>
+            <MsgBar
+                :msgs="list"
+                :multipleSelectList="multipleSelectList"
+                :tags="tags"
+                @msgClick="msgClick"
+                @showMsgMenu="showMsgMenu"
+                @scrollToMsg="scrollToMsg"
+                @imageLoaded="imgLoadedScroll"
+                @sendPoke="sendPoke"
+                @replyMsg="replyMsg"
+                />
         </div>
         <div v-else id="msgPan"
             class="chat" style="scroll-behavior: smooth">
             <!-- 搜索消息结果显示 -->
-            <TransitionGroup
-                :name="runtimeData.sysConfig.opt_fast_animation ? '' : 'msglist'"
-                tag="div">
-                <template v-for="(msgIndex, index) in tags.search.list">
-                    <!-- 时间戳 -->
-                    <NoticeBody
-                        v-if="isShowTime(list[index - 1] ? list[index - 1].time : undefined, msgIndex.time)"
-                        :key="'notice-time-' + index"
-                        :data="{ sub_type: 'time', time: msgIndex.time }" />
-                    <!-- 消息体 -->
-                    <MsgBody v-if=" (msgIndex.post_type === 'message' ||
-                                 msgIndex.post_type === 'message_sent') &&
-                                 msgIndex.message.length > 0"
-                        :key="msgIndex.fake_message_id ?? msgIndex.message_id"
-                        :selected="multipleSelectList.includes(msgIndex.message_id) || tags.openedMenuMsg?.id == 'chat-' + msgIndex.message_id"
-                        :data="msgIndex"
-                        @scroll-to-msg="scrollToMsg"
-                        @image-loaded="imgLoadedScroll"
-                        @contextmenu.prevent="showMsgMeun($event, msgIndex)"
-                        @touchstart="msgStartMove($event, msgIndex)"
-                        @touchmove="msgOnMove"
-                        @touchend="msgMoveEnd($event, msgIndex)" />
-                </template>
-            </TransitionGroup>
+            <MsgBar
+                :msgs="tags.search.list"
+                :multipleSelectList="multipleSelectList"
+                :tags="tags"
+                @msgClick="msgClick"
+                @showMsgMenu="showMsgMenu"
+                @scrollToMsg="scrollToMsg"
+                @imageLoaded="imgLoadedScroll"
+                @sendPoke="sendPoke"
+                @replyMsg="replyMsg"
+                />
         </div>
         <!-- 滚动到底部悬浮标志 -->
         <div v-show="tags.showBottomButton"
@@ -411,7 +375,7 @@
                     <div><font-awesome-icon :icon="['fas', 'plus']" /></div>
                     <a>{{ $t('+ 1') }}</a>
                 </div>
-                <div v-show="tags.menuDisplay.relpy" @click="replyMsg(true)">
+                <div v-show="tags.menuDisplay.relpy" @click="menuReplyMsg(true)">
                     <div><font-awesome-icon :icon="['fas', 'message']" /></div>
                     <a>{{ $t('回复') }}</a>
                 </div>
@@ -545,10 +509,11 @@
     import SendUtil from '@renderer/function/sender'
     import Option, { get } from '@renderer/function/option'
     import Info from '@renderer/pages/Info.vue'
-    import MsgBody from '@renderer/components/MsgBody.vue'
-    import NoticeBody from '@renderer/components/NoticeBody.vue'
     import FacePan from '@renderer/components/FacePan.vue'
     import MergePan from '@renderer/components/MergePan.vue'
+    import MsgBar from '@renderer/components/MsgBar.vue'
+    import NoticeBody from '@renderer/components/NoticeBody.vue'
+    import MsgBody from '@renderer/components/MsgBody.vue'
     import imageCompression from 'browser-image-compression'
 
     import { defineComponent, markRaw, reactive } from 'vue'
@@ -584,10 +549,9 @@
         UserGroupElem,
     } from '@renderer/function/elements/information'
 
-
     export default defineComponent({
         name: 'ViewChat',
-        components: { Info, MsgBody, NoticeBody, FacePan, MergePan },
+        components: { Info, FacePan, MergePan, MsgBar, NoticeBody },
         props: ['chat', 'list', 'mergeList', 'mumberInfo', 'imgView'],
         data() {
             return {
@@ -635,12 +599,6 @@
                     search: {
                         userId: -1,
                         list: reactive(this.list),
-                    },
-                    msgTouch: {
-                        x: -1,
-                        y: -1,
-                        msgOnTouchDown: false,
-                        onMove: 'no',
                     },
                     chatTouch: {
                         startX: -1,
@@ -990,7 +948,7 @@
              * @param event 右击事件
              * @param data 消息信息
              */
-            showMsgMeun(event: Event, data: any) {
+            showMsgMenu(event: Event, data: any) {
                 this.selectedMsg = data
 
                 if (Option.get('log_level') === 'debug') {
@@ -1208,11 +1166,18 @@
                 }
             },
 
+            menuReplyMsg(closeMenu = true) {
+                this.replyMsg(this.selectedMsg)
+                // 关闭消息菜单
+                if (closeMenu) {
+                    this.closeMsgMenu()
+                }
+            },
+
             /**
              * 回复消息
              */
-            replyMsg(closeMenu = true) {
-                const msg = this.selectedMsg
+            replyMsg(msg: any) {
                 if (msg !== null) {
                     const msgId = msg.message_id
                     // 添加回复内容
@@ -1226,10 +1191,6 @@
                     this.tags.isReply = true
                     // 聚焦输入框
                     this.toMainInput()
-                    // 关闭消息菜单
-                    if (closeMenu) {
-                        this.closeMsgMenu()
-                    }
                 }
             },
 
@@ -2150,109 +2111,6 @@
                         popInfo.add(PopType.ERR, this.$t('复制失败'), true)
                     },
                 )
-            },
-
-            /**
-             * 消息触屏开始
-             * @param event 触摸事件
-             */
-            msgStartMove(event: TouchEvent, msg: any) {
-                const logger = new Logger()
-                logger.add(LogType.UI, '消息触屏点击事件开始 ……')
-                this.tags.msgTouch.msgOnTouchDown = true
-                this.tags.msgTouch.x = event.targetTouches[0].pageX
-                this.tags.msgTouch.y = event.targetTouches[0].pageY
-
-                // PS：保存这个只是在 Safari 下菜单事件无法获取到
-                this.tags.openedMenuMsg = {
-                    msg: event.currentTarget as HTMLDivElement,
-                    x: event.targetTouches[0].pageX,
-                    y: event.targetTouches[0].pageY,
-                }
-
-                // 消息长按事件，计时判定长按
-                setTimeout(() => {
-                    logger.add(
-                        LogType.UI,
-                        '消息触屏长按判定：' +
-                            this.tags.msgTouch.msgOnTouchDown,
-                    )
-                    if (this.tags.msgTouch.msgOnTouchDown === true) {
-                        this.showMsgMeun(event, msg)
-                    }
-                }, 400)
-            },
-
-            /**
-             * 消息触屏移动
-             * @param event 触摸事件
-             */
-            msgOnMove(event: TouchEvent) {
-                const logger = new Logger()
-                const sender = event.currentTarget as HTMLDivElement
-                const msgPan = document.getElementById('msgPan')
-                // 开始点击的位置
-                const startX = this.tags.msgTouch.x
-                const startY = this.tags.msgTouch.y
-                // TODO: 懒得写了，移动的允许范围，用来防止按住了挪出控件范围导致无法触发 end
-                // const maxTop = sender.
-                if (startX > -1 && startY > -1 && msgPan) {
-                    // 计算移动差值
-                    const dx = Math.abs(startX - event.targetTouches[0].pageX)
-                    const dy = Math.abs(startY - event.targetTouches[0].pageY)
-                    const x = startX - event.targetTouches[0].pageX
-                    // 如果 dy 大于 10px 则判定为用户在滚动页面，打断长按消息判定
-                    if (dy > 10) {
-                        this.tags.chatTouch.onScroll = true
-                    }
-                    if (dy > 10 || dx > 5) {
-                        if (this.tags.msgTouch.msgOnTouchDown) {
-                            logger.add(LogType.UI, '用户正在滑动，打断长按判定。')
-                            this.tags.msgTouch.msgOnTouchDown = false
-                        }
-                    }
-                    if (dy < sender.offsetHeight / 3 && dy < 40) {
-                        this.tags.msgTouch.onMove = 'on'
-                        if (x > 10) {
-                            // 右滑
-                            if (dx >= sender.offsetWidth / 3) {
-                                this.tags.msgTouch.onMove = 'left'
-                                logger.add(
-                                    LogType.UI,
-                                    '触发左滑判定 ……（回复）',
-                                )
-                            } else {
-                                sender.style.transform =
-                                    'translate(-' + (Math.sqrt(dx) + 5) + 'px)'
-                                sender.style.transition = 'transform 0s'
-                            }
-                        }
-                    } else {
-                        this.tags.msgTouch.onMove = 'no'
-                        sender.style.transform = 'translate(0px)'
-                    }
-                }
-            },
-
-            /**
-             * 消息触屏结束
-             * @param event 触摸事件
-             * @param msg 消息对象
-             */
-            msgMoveEnd(event: Event, msg: any) {
-                const sender = event.currentTarget as HTMLDivElement
-                sender.style.transform = 'translate(0px)'
-                // 判断操作
-                if (this.tags.msgTouch.onMove == 'left') {
-                    // 左滑回复
-                    this.selectedMsg = msg
-                    this.replyMsg(false)
-                } else if (this.tags.msgTouch.onMove == 'right') {
-                    // 右滑转发
-                }
-                // 重置数据
-                const data = (this as any).$options.data(this)
-                this.tags.msgTouch = data.tags.msgTouch
             },
 
             /**
