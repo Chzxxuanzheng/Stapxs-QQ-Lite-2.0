@@ -640,7 +640,7 @@ export default defineComponent({
                     },
                 },
             }
-            runtimeData.mergeMessageList = undefined // 清空合并转发缓存
+            runtimeData.mergeMsgStack.length = 0 // 清空合并转发缓存
             runtimeData.tags.canLoadHistory = true // 重置终止加载标志
             if (data.type == 'group') {
                 // 获取自己在群内的资料

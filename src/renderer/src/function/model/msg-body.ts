@@ -265,26 +265,12 @@ export class MsgBodyFuns {
             switch (type) {
                 case 'forward': {
                     // 解析合并转发消息
-                    this.getForwardMsg(sender.dataset.id)
+                    // this.getForwardMsg(sender.dataset.id)
+                    // TODO 合并转发展开由msg.seg.id来确定,而非msg
+                    throw new Error('未实现，待写')
                     break
                 }
             }
-        }
-    }
-
-    static getForwardMsg(id: any) {
-        if (id !== 'undefined') {
-            runtimeData.mergeMessageList = []
-            Connector.send(
-                runtimeData.jsonMap.forward_msg.name,
-                { id: id },
-                'getForwardMsg',
-            )
-        } else {
-            popInfo.add(
-                PopType.INFO,
-                app.config.globalProperties.$t('合并消息层级过多，解析失败。'),
-            )
         }
     }
 

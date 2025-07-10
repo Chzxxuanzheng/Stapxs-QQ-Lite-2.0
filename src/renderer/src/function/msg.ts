@@ -604,51 +604,6 @@ const msgFunctions = {
     },
 
     /**
-     * 保存合并转发消息
-     */
-    getForwardMsg: (_: string, msg: { [key: string]: any }) => {
-        if (
-            msg.error !== null &&
-            (msg.error !== undefined || msg.status === 'failed')
-        ) {
-            popInfo.add(
-                PopType.ERR,
-                app.config.globalProperties.$t('获取合并转发消息失败'),
-            )
-        } else {
-            let list = getMsgData(
-                'forward_message_list',
-                msg,
-                msgPath.forward_msg,
-            )
-            list = getMessageList(list)
-            if (list != undefined) {
-                runtimeData.mergeMessageList = list
-                // 提取合并转发中的消息图片列表
-                const imgList = [] as {
-                    index: number
-                    message_id: string
-                    img_url: string
-                }[]
-                let index = 0
-                list.forEach((item) => {
-                    item.message.forEach((msg) => {
-                        if (msg.type == 'image') {
-                            imgList.push({
-                                index: index,
-                                message_id: item.message_id,
-                                img_url: msg.url,
-                            })
-                            index++
-                        }
-                    })
-                })
-                runtimeData.mergeMessageImgList = imgList
-            }
-        }
-    },
-
-    /**
      * 发送消息后处理
      */
     sendMsgBack: (

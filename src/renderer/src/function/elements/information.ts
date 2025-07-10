@@ -60,7 +60,6 @@ export interface RunTimeDataElem {
     }
     messageList: any[]
     mergeMsgStack: MergeStackData[]
-    mergeMessageList?: any[] | undefined
     mergeMessageImgList?: any[] | undefined
     stickerCache?: any[]
     popBoxList: {
