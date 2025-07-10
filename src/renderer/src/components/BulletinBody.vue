@@ -32,11 +32,7 @@
         <span v-show="needShow && !showAll">{{ $t('点击展开') }}</span>
         <div class="info">
             <img :src="'https://q1.qlogo.cn/g?b=qq&s=0&nk=' + data.sender">
-            <a>{{
-                runtimeData.chatInfo.info.group_members.filter((item) => {
-                    return Number(item.user_id) === Number(data.sender)
-                })[0].nickname
-            }}</a>
+            <a>{{ getSenderName() }}</a>
             <div />
             <span v-if="data.is_read">{{
                 $t('{readNum} 人已读 | {isRead}', {
@@ -104,6 +100,15 @@
                     openLink(link)
                 }
             },
+            getSenderName() {
+                const user = this.runtimeData.chatInfo.info.group_members.find(
+                    (item) => Number(item.user_id) === Number(this.data.sender),
+                )
+                if (user) return user.nickname
+                return this.$t('已退群( {userId} )', {
+                    userId: Number(this.data.sender),
+                })
+            }
         },
     })
 </script>

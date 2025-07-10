@@ -1220,3 +1220,6 @@ msgstr ""
 
 msgid "未知错误"
 msgstr ""
+
+msgid "已退群( {userId} )"
+msgstr ""
