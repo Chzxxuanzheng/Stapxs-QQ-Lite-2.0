@@ -46,6 +46,10 @@ export class Connector {
         token?: string,
         wss: boolean | undefined = undefined,
     ) {
+		if(address === '' || address == undefined) {
+			popInfo.add(PopType.ERR, app.config.globalProperties.$t('连接地址不能为空'))
+			return
+		}
         const { $t } = app.config.globalProperties
         login.creating = true
 

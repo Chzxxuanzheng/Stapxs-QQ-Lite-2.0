@@ -740,6 +740,11 @@ function showUpadteLog(data: any) {
     const latestVersion = data.tag_name.substring(1)
 
     if (semver.lt(appVersion,latestVersion)) {
+        // 开发模式禁止检查更新
+        if (import.meta.env.DEV){
+            logger.system(`开发者阁下，有新版本发布了：${latestVersion}。有时间的话同步下仓库`)
+            return
+        }
         // 有更新
         showReleaseLog(data, false)
     }
