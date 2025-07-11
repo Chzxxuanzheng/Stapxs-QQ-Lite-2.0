@@ -194,6 +194,21 @@
                     </div>
                 </label>
             </div>
+            <div class="opt-item">
+                <div :class="checkDefault('jump_forward')" />
+                <font-awesome-icon :icon="['fas', 'share']" />
+                <div>
+                    <span>{{ $t('转发消息跳转群组') }}</span>
+                    <span>{{ $t('发到哪里水到哪里～') }}</span>
+                </div>
+                <label class="ss-switch">
+                    <input v-model="runtimeData.sysConfig.jump_forward"
+                        type="checkbox" name="jump_forward" @change="save">
+                    <div>
+                        <div />
+                    </div>
+                </label>
+            </div>
         </div>
         <div class="ss-card">
             <header>{{ $t('浏览') }}</header>

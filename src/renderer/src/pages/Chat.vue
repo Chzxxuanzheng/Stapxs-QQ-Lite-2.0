@@ -1273,6 +1273,15 @@
             forwardMsg(data: UserFriendElem & UserGroupElem) {
                 const msg = this.selectedMsg
                 const id = data.group_id ? data.group_id : data.user_id
+                let targetId: string
+                let targetType: string
+                if (data.group_id){
+                    targetId = String(data.group_id)
+                    targetType = 'group'
+                } else {
+                    targetId = String(data.user_id)
+                    targetType = 'private'
+                }
                 if (this.multipleSelectList.length > 0 && msg) {
                     // 构造一条假的 json 消息用来渲染
                     const msgList = runtimeData.messageList.filter((item) => {
@@ -1338,10 +1347,10 @@
                                         }
                                     })
                                     sendMsgRaw(
-                                        this.chat.show.id,
-                                        this.chat.show.type,
+                                        targetId,
+                                        targetType,
                                         msgBody,
-                                        true,
+                                        targetId == this.chat.show.id,
                                     )
                                     runtimeData.popBoxList.shift()
                                 },
@@ -1367,10 +1376,10 @@
                                 master: true,
                                 fun: () => {
                                     sendMsgRaw(
-                                        this.chat.show.id,
-                                        this.chat.show.type,
+                                        targetId,
+                                        targetType,
                                         msg.message,
-                                        true,
+                                        targetId == this.chat.show.id,
                                     )
                                     runtimeData.popBoxList.shift()
                                 },
@@ -1385,6 +1394,7 @@
                 if(runtimeData.baseOnMsgList.get(id) == undefined) {
                     runtimeData.baseOnMsgList.set(id, data)
                 }
+                if(!runtimeData.sysConfig.jump_forward)return
                 this.$nextTick(() => {
                     const user = document.getElementById('user-' + id)
                     if (user) {
