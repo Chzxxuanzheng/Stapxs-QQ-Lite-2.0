@@ -1223,3 +1223,9 @@ msgstr ""
 
 msgid "已退群( {userId} )"
 msgstr ""
+
+msgid "转发消息跳转群组"
+msgstr ""
+
+msgid "发到哪里水到哪里～"
+msgstr ""

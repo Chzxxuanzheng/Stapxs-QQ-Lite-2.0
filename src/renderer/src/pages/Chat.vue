@@ -467,38 +467,7 @@
             </div>
         </Transition>
         <!-- 转发面板 -->
-        <Transition>
-            <div v-if="tags.showForwardPan" class="forward-pan">
-                <div class="ss-card card">
-                    <header>
-                        <span>{{ $t('转发消息') }}</span>
-                        <font-awesome-icon :icon="['fas', 'xmark']" @click="cancelForward" />
-                    </header>
-                    <input :placeholder="$t('搜索 ……')" @input="searchForward">
-                    <div>
-                        <div v-for="data in forwardList"
-                            :key=" 'forwardList-' + data.user_id ? data.user_id : data.group_id"
-                            @click="forwardMsg(data)">
-                            <img loading="lazy"
-                                :title="getShowName(data.group_name || data.nickname, data.remark)"
-                                :src="data.user_id ?
-                                    'https://q1.qlogo.cn/g?b=qq&s=0&nk=' + data.user_id :
-                                    'https://p.qlogo.cn/gh/' + data.group_id + '/' + data.group_id + '/0'">
-                            <div>
-                                <p>
-                                    {{ data.group_name ?
-                                        data.group_name : data.remark === data.nickname ?
-                                            data.nickname : data.remark + '（' + data.nickname + '）'
-                                    }}
-                                </p>
-                                <span>{{ data.group_id ? $t('群组') : $t('好友') }}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="bg" @click="cancelForward" />
-            </div>
-        </Transition>
+        <ForwardPan ref="forwardPan" />
         <div class="bg" :style=" runtimeData.sysConfig.option_view_background ?
             `backdrop-filter: blur(${runtimeData.sysConfig .chat_background_blur}px);` : ''" />
     </div>
@@ -511,12 +480,12 @@
     import Info from '@renderer/pages/Info.vue'
     import FacePan from '@renderer/components/FacePan.vue'
     import MergePan from '@renderer/components/MergePan.vue'
+    import ForwardPan from '@renderer/components/ForwardPan.vue'
     import MsgBar from '@renderer/components/MsgBar.vue'
     import NoticeBody from '@renderer/components/NoticeBody.vue'
-    import MsgBody from '@renderer/components/MsgBody.vue'
     import imageCompression from 'browser-image-compression'
 
-    import { defineComponent, markRaw, reactive } from 'vue'
+    import { defineComponent, reactive } from 'vue'
     import { v4 as uuid } from 'uuid'
     import {
         downloadFile,
@@ -532,7 +501,6 @@
         getMsgRawTxt,
         sendMsgRaw,
         getFace,
-        getShowName,
         isShowTime,
         isDeleteMsg,
     } from '@renderer/function/utils/msgUtil'
@@ -545,18 +513,15 @@
         MsgItemElem,
         SQCodeElem,
         GroupMemberInfoElem,
-        UserFriendElem,
-        UserGroupElem,
     } from '@renderer/function/elements/information'
 
     export default defineComponent({
         name: 'ViewChat',
-        components: { Info, FacePan, MergePan, MsgBar, NoticeBody },
+        components: { Info, FacePan, MergePan, MsgBar, NoticeBody, ForwardPan },
         props: ['chat', 'list', 'mumberInfo', 'imgView'],
         data() {
             return {
                 uuid,
-                getShowName,
                 fun: {
                     getMsgRawTxt: getMsgRawTxt,
                 },
@@ -573,7 +538,6 @@
                     showBottomButton: true,
                     showMoreDetail: false,
                     showMsgMenu: false,
-                    showForwardPan: false,
                     openedMenuMsg: {} as any | null,
                     openChatInfo: false,
                     isReply: false,
@@ -1204,49 +1168,18 @@
                 })
                 this.tags.isReply = false
             },
-
-            /**
-             * 取消转发
-             */
-            cancelForward() {
-                this.forwardList = runtimeData.userList
-                this.tags.showForwardPan = false
+            showForWard() {
+                const forwardPan = this.$refs.forwardPan as InstanceType<typeof ForwardPan>
+                if(this.multipleSelectList.length > 0) {
+                    const msgList = runtimeData.messageList.filter((item) => {
+                        return this.multipleSelectList.indexOf(item.message_id) >= 0
+                    })
+                    forwardPan.mergeForward(msgList)
+                } else if (this.selectedMsg) {
+                    forwardPan.forward([this.selectedMsg])
+                }
                 this.closeMsgMenu()
             },
-
-            /**
-             * 搜索转发列表
-             * @param value 搜索内容
-             */
-            searchForward(event: Event) {
-                const value = (event.target as HTMLInputElement).value
-                this.forwardList = runtimeData.userList.filter(
-                    (item: UserFriendElem & UserGroupElem) => {
-                        const name = (
-                            item.user_id? item.nickname + item.remark: item.group_name
-                        ).toLowerCase()
-                        const id = item.user_id ? item.user_id : item.group_id
-                        return (
-                            name.indexOf(value.toLowerCase()) !== -1 ||
-                            id.toString() === value
-                        )
-                    },
-                )
-            },
-
-            showForWard() {
-                this.tags.showForwardPan = true
-                const showList = Object.assign(runtimeData.onMsgList).reverse()
-                // 将 forWardList 中 showList 之中的条目挪到最前面
-                showList.forEach((item) => {
-                    const index = this.forwardList.indexOf(item)
-                    if (index > -1) {
-                        this.forwardList.splice(index, 1)
-                        this.forwardList.unshift(item)
-                    }
-                })
-            },
-
             forwardSelf() {
                 if (this.selectedMsg) {
                     const msg = JSON.parse(JSON.stringify(this.selectedMsg))
@@ -1265,142 +1198,6 @@
                     this.multipleSelectList.push(this.selectedMsg.message_id)
                 }
                 this.closeMsgMenu()
-            },
-
-            /**
-             * 转发消息
-             */
-            forwardMsg(data: UserFriendElem & UserGroupElem) {
-                const msg = this.selectedMsg
-                const id = data.group_id ? data.group_id : data.user_id
-                let targetId: string
-                let targetType: string
-                if (data.group_id){
-                    targetId = String(data.group_id)
-                    targetType = 'group'
-                } else {
-                    targetId = String(data.user_id)
-                    targetType = 'private'
-                }
-                if (this.multipleSelectList.length > 0 && msg) {
-                    // 构造一条假的 json 消息用来渲染
-                    const msgList = runtimeData.messageList.filter((item) => {
-                        return this.multipleSelectList.indexOf(item.message_id) >= 0
-                    })
-                    // 构造 titleList
-                    const jsonMsg = {
-                        app: 'com.tencent.multimsg',
-                        meta: {
-                            detail: {
-                                source: this.$t('合并转发消息'),
-                                news: [
-                                    ...msgList.slice(0, 3).map((item) => {
-                                        const name =
-                                            item.sender.card &&
-                                            item.sender.card != ''? item.sender.card: item.sender.nickname
-                                        return {
-                                            text:
-                                                name +
-                                                ': ' +
-                                                getMsgRawTxt(item),
-                                        }
-                                    }),
-                                ],
-                                summary: this.$t('查看 {count} 条转发消息', { count: this.multipleSelectList.length }),
-                                resid: '',
-                            },
-                        },
-                    }
-                    const previewMsg = {
-                        message: [
-                            { type: 'json', data: JSON.stringify(jsonMsg), id: '' },
-                        ],
-                        sender: {
-                            user_id: runtimeData.loginInfo.uin,
-                            nickname: runtimeData.loginInfo.nickname,
-                        }
-                    }
-                    // 二次确认转发
-                    const popInfo = {
-                        title: this.$t('合并转发消息'),
-                        template: MsgBody,
-                        templateValue: markRaw({ data: previewMsg, type: 'forward' }),
-                        button: [
-                            {
-                                text: this.$t('取消'),
-                                fun: () => {
-                                    runtimeData.popBoxList.shift()
-                                },
-                            },
-                            {
-                                text: this.$t('确定'),
-                                master: true,
-                                fun: () => {
-                                    // 构建消息体
-                                    const msgBody = msgList.map((item) => {
-                                        return {
-                                            type: 'node',
-                                            id: item.message_id,
-                                            user_id: item.sender.user_id,
-                                            nickname: item.sender.nickname,
-                                            content: item.message,
-                                        }
-                                    })
-                                    sendMsgRaw(
-                                        targetId,
-                                        targetType,
-                                        msgBody,
-                                        targetId == this.chat.show.id,
-                                    )
-                                    runtimeData.popBoxList.shift()
-                                },
-                            },
-                        ],
-                    }
-                    runtimeData.popBoxList.push(popInfo)
-                } else if (this.selectedMsg && msg) {
-                    // 二次确认转发
-                    const popInfo = {
-                        title: this.$t('转发消息'),
-                        template: MsgBody,
-                        templateValue: markRaw({ data: msg, type: 'forward' }),
-                        button: [
-                            {
-                                text: this.$t('取消'),
-                                fun: () => {
-                                    runtimeData.popBoxList.shift()
-                                },
-                            },
-                            {
-                                text: this.$t('确定'),
-                                master: true,
-                                fun: () => {
-                                    sendMsgRaw(
-                                        targetId,
-                                        targetType,
-                                        msg.message,
-                                        targetId == this.chat.show.id,
-                                    )
-                                    runtimeData.popBoxList.shift()
-                                },
-                            },
-                        ],
-                    }
-                    runtimeData.popBoxList.push(popInfo)
-                }
-                // 关闭转发窗口
-                this.cancelForward()
-                // 将接收目标加入消息列表并跳转过去
-                if(runtimeData.baseOnMsgList.get(id) == undefined) {
-                    runtimeData.baseOnMsgList.set(id, data)
-                }
-                if(!runtimeData.sysConfig.jump_forward)return
-                this.$nextTick(() => {
-                    const user = document.getElementById('user-' + id)
-                    if (user) {
-                        user.click()
-                    }
-                })
             },
 
             /**
