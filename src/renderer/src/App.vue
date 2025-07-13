@@ -145,7 +145,6 @@
             v-show="tags.showChat"
             ref="chat" :mumber-info="runtimeData.chatInfo.info.now_member_info == undefined ?
                 {} : runtimeData.chatInfo.info.now_member_info"
-            :merge-list="runtimeData.mergeMessageList"
             :list="runtimeData.messageList" :chat="runtimeData.chatInfo"
             @user-click="changeChat" />
         <TransitionGroup class="app-msg" name="appmsg" tag="div">
