@@ -102,17 +102,16 @@
                                 :data-group="data.group_id"
                                 @mouseenter="showUserInfo">{{ getAtName(item) }}</a>
                         </div>
-                        <div
-                            v-else-if="item.type == 'file'" :class="'msg-file' + (isMe ? ' me' : '')">
+                        <div v-else-if="item.type == 'file'" :class="'msg-file' + (isMe ? ' me' : '')">
                             <div>
                                 <div>
                                     <a>
                                         <font-awesome-icon :icon="['fas', 'file']" />
                                         {{ runtimeData.chatInfo.show.type == 'group' ? $t('群文件') : $t('离线文件') }}
                                     </a>
-                                    <p>{{ loadFileBase( item, item.name, data.message_id) }}</p>
+                                    <p>{{ loadFileBase( item, item.name ?? item.file_name, data.message_id) }}</p>
                                 </div>
-                                <i>{{ getSizeFromBytes(item.size ?? item.file_size) }}</i>
+                                <i>{{ fileSize }}</i>
                             </div>
                             <div>
                                 <font-awesome-icon
@@ -384,6 +383,7 @@
                 senderInfo: null as any,
                 trueLang: getTrueLang(),
                 textIndex: {} as { [key: string]: number },
+				fileSize: '加载ing',
             }
         },
         mounted() {
@@ -424,6 +424,10 @@
                     // eslint-disable-next-line vue/no-mutating-props
                     this.data.message[0].content = data
                 })
+            }
+			// 初始化文件大小
+			if (this.data.message[0].type === 'file') {
+                this.getFileSize(this.data.message[0]).then(re => this.fileSize = re)
             }
         },
         methods: {
@@ -838,6 +842,21 @@
                 }
                 return name
             },
+
+			/**
+			 * 获取文件大小
+			 * @param fileSeg 文件segment
+			 */
+			async getFileSize(fileSeg: any): Promise<string> {
+				let size: number|undefined = undefined
+				if (fileSeg.size) size = Number(fileSeg.size)
+				if (fileSeg.file_size) size = Number(fileSeg.file_size)
+                if (fileSeg.url) {
+                    // TODO 要跨域，后端做
+                }
+				if(size) return getSizeFromBytes(size)
+				return '获取文件大小失败'
+			},
 
             /**
              * 下载 txt 文件并获取文件内容
