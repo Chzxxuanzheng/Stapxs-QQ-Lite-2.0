@@ -22,7 +22,7 @@
                 <p>{{ getShowName(data.group_name || data.nickname, data.remark) }}</p>
                 <div style="flex: 1" />
                 <a class="time">{{
-                    data.time !== undefined
+                    data.time !== undefined && !Number.isNaN(data.time)
                         ? Intl.DateTimeFormat(trueLang, {
                             hour: 'numeric',
                             minute: 'numeric',
