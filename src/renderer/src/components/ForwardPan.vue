@@ -149,21 +149,23 @@ export default defineComponent({
         sendForward(msgs: any[]){
             this.selected.forEach((chat: Chat)=>{
                 let targetId: number
-                let targetType: string
+                let targetType: 'user' | 'group' | 'temp'
                 if (chat.group_id) {
                     targetId = chat.group_id
                     targetType = 'group'
                 } else {
                     targetId = chat.user_id
-                    targetType = 'private'
+                    targetType = 'user'
                 }
                 msgs.forEach((msg: any)=>{
-                    sendMsgRaw(
+                    const preMSg = sendMsgRaw(
                         String(targetId),
                         targetType,
                         msg,
-                        targetId == runtimeData.chatInfo.show.id,
-                )
+                    )
+                    if (targetId === runtimeData.chatInfo.show.id) {
+                        runtimeData.messageList.push(preMSg)
+                    }
                 })
             })
         },

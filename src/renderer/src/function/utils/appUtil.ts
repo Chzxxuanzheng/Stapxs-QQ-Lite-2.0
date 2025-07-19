@@ -405,8 +405,9 @@ export function createIpc() {
     })
     addBackendListener(undefined, 'bot:quickReply', (event, data) => {
         const info = data ?? event.payload
-        sendMsgRaw(info.id, info.type,
-            parseMsg(info.content, [{ type: 'reply', id: String(info.msg) }], []), true)
+        const preMsg = sendMsgRaw(info.id, info.type,
+            parseMsg(info.content, [], [], String(info.msg)))
+        runtimeData.messageList.push(preMsg)
         // 去消息列表内寻找，去除新消息标记
         const item = runtimeData.baseOnMsgList.get(info.id)
         if(item) {
@@ -520,12 +521,12 @@ export async function loadMobile() {
                         notification.extra.msgId)
                 } else if(info.actionId == 'REPLY_ACTION') {
                     // 快速回复
-                    sendMsgRaw(
+                    const preMsg = sendMsgRaw(
                         notification.extra.userId,
                         notification.extra.chatType,
-                        parseMsg( info.inputValue ?? '', [{ type: 'reply', id: String(notification.extra.msgId) }], []),
-                        true
+                        parseMsg(info.inputValue ?? '', [], [], String(notification.extra.msgId)),
                     )
+                    runtimeData.messageList.push(preMsg)
                     // 去消息列表内寻找，去除新消息标记
                     const item = runtimeData.baseOnMsgList.get(Number(notification.extra.userId))
                     if(item) {

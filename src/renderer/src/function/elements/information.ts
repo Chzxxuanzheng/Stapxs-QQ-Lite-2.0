@@ -79,7 +79,7 @@ export interface RunTimeDataElem {
         }[]
         allowQuickClose?: boolean // 是否允许快速关闭
         allowClose?: boolean // 是否允许关闭
-    }[]
+    }[],
 }
 
 export interface ChatInfoElem {
@@ -98,17 +98,19 @@ export interface ChatInfoElem {
             list: { [key: string]: any }[]
             is_end?: boolean
             pages: number
-        }
+        },
+        me_infotimestamp: number,
     }
 }
 
 export interface BaseChatInfoElem {
-    type: string
+    type: 'group' | 'user' | 'temp'
     id: number
     name: string
     avatar: string
     appendInfo?: string
     jump?: string
+    temp: number
 }
 
 export interface UserElem {

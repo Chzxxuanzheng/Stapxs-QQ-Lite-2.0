@@ -333,16 +333,31 @@
     import { getMsgRawTxt, sendMsgRaw } from '@renderer/function/utils/msgUtil'
     import { parseMsg } from '@renderer/function/sender'
     import {
-        MsgItemElem,
+        ChatInfoElem,
         SQCodeElem,
     } from '@renderer/function/elements/information'
     import { PopInfo, PopType } from '@renderer/function/base'
     import { getTrueLang } from '@renderer/function/utils/systemUtil'
+    import { Message } from '@renderer/function/model/msg'
+import { Seg } from '@renderer/function/model/seg'
 
     export default defineComponent({
         name: 'ChatDan',
         components: { vueDanmaku },
-        props: ['chat', 'list', 'mumberInfo'],
+        props: {
+            chat: {
+                type: Object as () => ChatInfoElem,
+                required: true,
+            },
+            list: {
+                type: Array as () => Message[],
+                required: true,
+            },
+            mumberInfo: {
+                type: Object as () => {[key: string]: any},
+                default: () => ({}),
+            },
+        },
         data() {
             return {
                 opt: {
@@ -353,7 +368,7 @@
                 trueLang: getTrueLang(),
                 danmus: [],
                 imgCache: [] as string[],
-                sendCache: [] as MsgItemElem[],
+                sendCache: [] as Seg[],
                 msg: '',
                 parseIndex: -1,
                 operaParse: false,
@@ -482,7 +497,7 @@
             addSpecialMsg(data: SQCodeElem) {
                 if (data !== undefined) {
                     const index = this.sendCache.length
-                    this.sendCache.push(data.msgObj)
+                    this.sendCache.push(Seg.parse(data.msgObj))
                     if (data.addText === true) {
                         if (data.addTop === true) {
                             this.msg = '[SQ:' + index + ']' + this.msg

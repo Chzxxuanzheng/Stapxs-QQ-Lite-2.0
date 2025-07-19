@@ -9,7 +9,7 @@
         <template v-for="(msgIndex, index) in msgs">
             <!-- 时间戳 -->
             <NoticeBody
-                v-if="isShowTime(msgs[index - 1] ? msgs[index - 1].time : undefined, msgIndex.time)"
+                v-if="msgIndex.time && isShowTime(msgs[index - 1] ? msgs[index - 1].time : undefined, msgIndex.time)"
                 :key="'notice-time-' + (msgIndex.time / ( 4 * 60 )).toFixed(0)"
                 :data="{ sub_type: 'time', time: msgIndex.time }" />
             <!-- [已删除]消息 -->
@@ -18,10 +18,8 @@
                 :key="'delete-' + msgIndex.message_id"
                 :data="{ sub_type: 'delete' }" />
             <!-- 消息体 -->
-            <MsgBody v-else-if="(msgIndex.post_type === 'message' ||
-                            msgIndex.post_type === 'message_sent') &&
-                            msgIndex.message.length > 0"
-                :key="msgIndex.fake_message_id ?? msgIndex.message_id"
+            <MsgBody v-else-if="msgIndex instanceof Msg"
+                :key="'msg-' + msgIndex.uuid"
                 :selected="isSelected(msgIndex)"
                 :data="msgIndex"
                 :type="type"
@@ -51,10 +49,27 @@ import { v4 as uuid } from 'uuid'
 import { isDeleteMsg, isShowTime } from '@renderer/function/utils/msgUtil';
 import { runtimeData } from '@renderer/function/msg';
 import { Logger, LogType } from '@renderer/function/base';
+import { Message, Msg } from '@renderer/function/model/msg';
 
 export default defineComponent({
     components: { MsgBody, NoticeBody },
-    props: ['msgs', 'multipleSelectList', 'tags', 'type'],
+    props: {
+        msgs: {
+            type: Array as () => Message[],
+            required: true,
+        },
+        multipleSelectList: {
+            type: Array as () => Msg[],
+            default: () => [],
+        },
+        tags: {
+            type: Object as () => { [key: string]: any },
+            default: () => ({}),
+        },
+        type: {
+            type: String,
+        },
+    },
     emits: ['msgClick', 'showMsgMenu', 'forward', 'scrollToMsg', 'imageLoaded', 'sendPoke', 'replyMsg'],
     data() {
         return {
@@ -68,6 +83,7 @@ export default defineComponent({
                 msgOnTouchDown: false,
                 onMove: 'no',
             },
+            Msg,
         }
     },
     methods: {
@@ -180,13 +196,4 @@ export default defineComponent({
         }
     }
 });
-
-//             @click="msgClick($event, msgIndex)"
-//             @scroll-to-msg="scrollToMsg"
-//             @image-loaded="imgLoadedScroll"
-//             @contextmenu.prevent="showMsgMeun($event, msgIndex)"
-//             @touchstart="msgStartMove($event, msgIndex)"
-//             @touchmove="msgOnMove"
-//             @touchend="msgMoveEnd($event, msgIndex)"
-//             @send-poke="sendPoke"
 </script>

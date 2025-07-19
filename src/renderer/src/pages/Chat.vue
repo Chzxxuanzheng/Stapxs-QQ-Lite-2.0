@@ -40,12 +40,8 @@
                     </template>
                     <template v-else>
                         {{
-                            list[list.length - 1] ? $t('上次消息 - {time}', {
-                                time: Intl.DateTimeFormat(trueLang, {
-                                    hour: 'numeric',
-                                    minute: 'numeric',
-                                    second: 'numeric',
-                                }).format(new Date(list[list.length - 1].time * 1000)),
+                            list.at(-1) ? $t('上次消息 - {time}', {
+                                time: list.at(-1)?.formatTime()
                             }) : $t('暂无消息')
                         }}
                     </template>
@@ -210,11 +206,11 @@
                     </div>
                 </div>
                 <!-- 回复指示器 -->
-                <div :class="tags.isReply ? 'replay-tag show' : 'replay-tag'">
+                <div :class="replayMsg ? 'replay-tag show' : 'replay-tag'">
                     <font-awesome-icon :icon="['fas', 'reply']" />
                     <span>{{
                         selectedMsg === null ?
-                            '' : selectedMsg.sender.nickname + ': ' + fun.getMsgRawTxt(selectedMsg)
+                            '' : selectedMsg.sender.nickname + ': ' + getMsgRawTxt(selectedMsg)
                     }}</span>
                     <div @click="cancelReply">
                         <font-awesome-icon :icon="['fas', 'xmark']" />
@@ -314,7 +310,7 @@
                             @click="selectSQIn()"
                             @input="searchMessage" />
                     </form>
-                    <div @click="sendMsg('sendMsgBack')">
+                    <div @click="sendMsg">
                         <font-awesome-icon v-if="details[3].open" :icon="['fas', 'search']" />
                         <font-awesome-icon v-else :icon="['fas', 'angle-right']" />
                     </div>
@@ -410,7 +406,7 @@
                     <div><font-awesome-icon :icon="['fas', 'at']" /></div>
                     <a>{{ $t('提及') }}</a>
                 </div>
-                <div v-show="tags.menuDisplay.poke" @click="sendPoke(selectedMsg ? selectedMsg.sender.user_id : undefined)">
+                <div v-show="tags.menuDisplay.poke" @click="()=>{if(selectedMsg)sendPoke(selectedMsg.sender.user_id)}">
                     <div><font-awesome-icon :icon="['fas', 'fa-hand-point-up']" /></div>
                     <a>{{ $t('戳一戳') }}</a>
                 </div>
@@ -442,7 +438,7 @@
                 <div class="card ss-card">
                     <div class="hander">
                         <span>{{ $t('发送图片') }}</span>
-                        <button class="ss-button" @click="sendMsg('sendMsgBack')">
+                        <button class="ss-button" @click="sendMsg">
                             {{ $t('发送') }}
                         </button>
                     </div>
@@ -501,8 +497,6 @@
         getMsgRawTxt,
         sendMsgRaw,
         getFace,
-        isShowTime,
-        isDeleteMsg,
     } from '@renderer/function/utils/msgUtil'
     import { scrollToMsg } from '@renderer/function/utils/appUtil'
     import { Logger, LogType, PopInfo, PopType } from '@renderer/function/base'
@@ -513,12 +507,28 @@
         MsgItemElem,
         SQCodeElem,
         GroupMemberInfoElem,
+        ChatInfoElem,
     } from '@renderer/function/elements/information'
+    import { Message, Msg, SelfMsg } from '@renderer/function/model/msg'
+    import { Seg, FileSeg } from '@renderer/function/model/seg'
 
     export default defineComponent({
         name: 'ViewChat',
         components: { Info, FacePan, MergePan, MsgBar, NoticeBody, ForwardPan },
-        props: ['chat', 'list', 'mumberInfo', 'imgView'],
+        props: {
+            chat: {
+                type: Object as () => ChatInfoElem,
+                required: true,
+            },
+            list: {
+                type: Array as () => Message[],
+                required: true,
+            },
+            mumberInfo: {
+                type: Object as () => {[key: string]: any},
+                default: () => ({}),
+            },
+        },
         data() {
             return {
                 uuid,
@@ -532,7 +542,8 @@
                 getTimeConfig: getTimeConfig,
                 forwardList: runtimeData.userList,
                 trueLang: getTrueLang(),
-                multipleSelectList: [] as string[],
+                multipleSelectList: [] as Msg[],
+                replayMsg: undefined as undefined | Msg,
                 tags: {
                     nowGetHistroy: false,
                     showBottomButton: true,
@@ -540,7 +551,6 @@
                     showMsgMenu: false,
                     openedMenuMsg: {} as any | null,
                     openChatInfo: false,
-                    isReply: false,
                     isJinLoading: false,
                     onAtFind: false,
                     menuDisplay: {
@@ -581,10 +591,9 @@
                 NewMsgNum: 0,
                 msg: '',
                 imgCache: [] as string[],
-                sendCache: [] as MsgItemElem[],
-                selectedMsg: null as { [key: string]: any } | null,
+                sendCache: [] as Seg[],
+                selectedMsg: null as Msg | null,
                 selectCache: '',
-                replyMsgInfo: null,
                 atFindList: null as GroupMemberInfoElem[] | null,
                 getImgList: [] as {
                     index: number
@@ -602,8 +611,7 @@
                     281, 282, 284, 285, 287, 289, 290, 293, 294, 297, 298, 299,
                     305, 306, 307, 314, 315, 318, 319, 320, 322, 324, 326,
                 ],
-                isShowTime,
-                isDeleteMsg,
+                getMsgRawTxt,
             }
         },
         watch: {
@@ -1131,6 +1139,7 @@
             },
 
             menuReplyMsg(closeMenu = true) {
+                if (!this.selectedMsg) return
                 this.replyMsg(this.selectedMsg)
                 // 关闭消息菜单
                 if (closeMenu) {
@@ -1141,20 +1150,18 @@
             /**
              * 回复消息
              */
-            replyMsg(msg: any) {
-                if (msg !== null) {
-                    const msgId = msg.message_id
-                    // 添加回复内容
-                    // PS：这儿还是用旧的方式 …… 因为新的调用不友好。回复消息不会被加入文本行，在消息发送器内有特殊判定。
-                    this.addSpecialMsg({
-                        msgObj: { type: 'reply', id: String(msgId) },
-                        addText: false,
-                        addTop: true,
-                    })
+            replyMsg(msg: Msg) {
+                if (msg.message_id) {
                     // 显示回复指示器
-                    this.tags.isReply = true
+                    this.replayMsg = msg
                     // 聚焦输入框
                     this.toMainInput()
+                }else {
+                    new PopInfo().add(
+                        PopType.ERR,
+                        this.$t('无法回复该消息'),
+                        true,
+                    )
                 }
             },
 
@@ -1162,11 +1169,7 @@
              * 取消回复消息
              */
             cancelReply() {
-                // 去除回复消息缓存
-                this.sendCache = this.sendCache.filter((item) => {
-                    return item.type !== 'reply'
-                })
-                this.tags.isReply = false
+                this.replayMsg = undefined
             },
             showForWard() {
                 const forwardPan = this.$refs.forwardPan as InstanceType<typeof ForwardPan>
@@ -1182,20 +1185,19 @@
             },
             forwardSelf() {
                 if (this.selectedMsg) {
-                    const msg = JSON.parse(JSON.stringify(this.selectedMsg))
-                    sendMsgRaw(
+                    const preMsg = sendMsgRaw(
                         this.chat.show.id,
                         this.chat.show.type,
-                        msg.message,
-                        true,
+                        this.selectedMsg.message,
                     )
+                    runtimeData.messageList.push(preMsg)
                 }
                 this.closeMsgMenu()
             },
 
             intoMultipleSelect() {
                 if (this.selectedMsg) {
-                    this.multipleSelectList.push(this.selectedMsg.message_id)
+                    this.multipleSelectList.push(this.selectedMsg)
                 }
                 this.closeMsgMenu()
             },
@@ -1442,7 +1444,7 @@
             addSpecialMsg(data: SQCodeElem) {
                 if (data !== undefined) {
                     const index = this.sendCache.length
-                    this.sendCache.push(data.msgObj)
+                    this.sendCache.push(Seg.parse(data.msgObj))
                     if (data.addText === true) {
                         if (data.addTop === true) {
                             this.msg = '[SQ:' + index + ']' + this.msg
@@ -1541,39 +1543,34 @@
                     sender.value = ''
                 }
             },
-            sendFile(file: File, fileName: string | null) {
-                // 将 file 转换为 base64
-                const reader = new FileReader()
-                    reader.readAsDataURL(file)
-                    reader.onloadend = () => {
-                        let base64data = reader.result as string
-                        // 找到第一个逗号，截取后面的内容
-                        base64data = base64data.substring(
-                            base64data.indexOf('base64,') + 7,
-                            base64data.length,
-                        )
-                        // 发送文件不能包含任何其他内容
-                        this.sendCache = []
-                        this.imgCache = []
-                        this.msg = ''
-                        this.addSpecialMsg({
-                            addText: true,
-                            msgObj: {
-                                type: 'file',
-                                file: 'base64://' + base64data,
-                                name: fileName ?? this.$t('未知文件'),
-                            },
-                        })
-                        // 直接触发发送消息
-                        this.sendMsg('sendFileBack')
-                        // 提示
-                        const popInfo = {
-                            title: this.$t('提醒'),
-                            html: `<span>${this.$t('正在发送文件中……')}</span>`,
-                            allowClose: false
-                        }
-                        runtimeData.popBoxList.push(popInfo)
-                    }
+            async sendFile(file: File, fileName: string | null) {
+                const arrayBuffer = await file.arrayBuffer()
+                const bytes = new Uint8Array(arrayBuffer)
+                const binary = bytes.reduce((acc, byte) => acc + String.fromCharCode(byte), '')
+                const base64 = btoa(binary)
+
+                const message = [new FileSeg(
+                    base64,
+                    fileName ?? this.$t('未知文件'),
+                    file.size
+                )]
+
+                const selfMsg = new SelfMsg(
+                    message,
+                    this.chat.show.type,
+                    this.chat.show.id,
+                )
+                runtimeData.messageList.push(selfMsg)
+
+                // 提示
+                const popInfo = {
+                    title: this.$t('提醒'),
+                    html: `<span>${this.$t('正在发送文件中……')}</span>`,
+                    allowClose: false
+                }
+                runtimeData.popBoxList.push(popInfo)
+                await selfMsg.send()
+                runtimeData.popBoxList.shift()
             },
 
             /**
@@ -1660,7 +1657,7 @@
             /**
              * 发送消息
              */
-            sendMsg(echo = 'sendMsgBack') {
+            sendMsg() {
                 // 在搜索消息的时候不允许发送消息
                 if (this.details[3].open) {
                     return
@@ -1679,24 +1676,24 @@
                     this.msg,
                     this.sendCache,
                     this.imgCache,
+                    this.replayMsg,
                 )
+                this.replayMsg = undefined
+                let preMsg: SelfMsg
                 if (this.chat.show.temp) {
-                    sendMsgRaw(
+                    preMsg = sendMsgRaw(
                         this.chat.show.id + '/' + this.chat.show.temp,
                         this.chat.show.type,
                         msg,
-                        true,
-                        echo,
                     )
                 } else {
-                    sendMsgRaw(
+                    preMsg = sendMsgRaw(
                         this.chat.show.id,
                         this.chat.show.type,
                         msg,
-                        true,
-                        echo,
                     )
                 }
+                runtimeData.messageList.push(preMsg)
                 // 发送后事务
                 this.msg = ''
                 this.sendCache = []

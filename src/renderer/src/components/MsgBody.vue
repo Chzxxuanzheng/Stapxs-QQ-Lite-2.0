@@ -11,11 +11,13 @@
 
 <template>
     <div :id="'chat-' + data.message_id"
-        :class="'message' +
-            (type ? ' ' + type : '') +
-            (data.revoke ? ' revoke' : '') +
-            (isMe ? ' me' : '') +
-            (selected ? ' selected' : '')"
+        :class="{
+            'message': true,
+            'me': isMe,
+            'selected': selected,
+            'revoke': !data.exist,
+            type,
+        }"
         :data-raw="getMsgRawTxt(data)"
         :data-sender="data.sender.user_id"
         :data-time="data.time"
@@ -26,16 +28,16 @@
             @dblclick="sendPoke">
         <div v-if="isMe && type != 'merge'"
             class="message-space" />
-        <div v-if="data.fake_msg == true"
+        <div v-if="data instanceof SelfMsg && data.state === 'sending'"
             :class="'sending left' + (isMe ? ' me' : '')">
             <font-awesome-icon :icon="['fas', 'spinner']" />
         </div>
         <div :class="isMe ? type == 'merge' ? 'message-body' : 'message-body me' : 'message-body'">
             <template v-if="runtimeData.chatInfo.show.type == 'group' && !isMe">
-                <span v-if="senderInfo?.is_robot" class="robot">{{ $t('机器人') }}</span>
-                <span v-if="senderInfo?.role == 'owner'" class="owner">{{ $t('群主') }}</span>
-                <span v-else-if="senderInfo?.role == 'admin'" class="admin">{{ $t('管理员') }}</span>
-                <span v-if="senderInfo?.title && senderInfo?.title != ''">{{ senderInfo?.title.replace(/[\u202A-\u202E\u2066-\u2069]/g, '') }}</span>
+                <span v-if="data.sender.role === Role.Bot" class="robot">{{ $t('机器人') }}</span>
+                <span v-else-if="data.sender.role === Role.Owner" class="owner">{{ $t('群主') }}</span>
+                <span v-else-if="data.sender.role === Role.Admin" class="admin">{{ $t('管理员') }}</span>
+                <span v-if="data.sender.title && data.sender.title != ''">{{ data.sender.title.replace(/[\u202A-\u202E\u2066-\u2069]/g, '') }}</span>
             </template>
             <a v-if="data.sender.card || data.sender.nickname"
                 v-show="!isMe || type == 'merge'">
@@ -45,14 +47,7 @@
                 {{ isMe ? runtimeData.loginInfo.nickname : runtimeData.chatInfo.show.name }}
             </a>
             <a v-if="selected" class="time">
-                {{ Intl.DateTimeFormat(trueLang, {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: 'numeric',
-                    minute: 'numeric',
-                    second: 'numeric',
-                }).format(getViewTime(getViewTime(data.time))) }}
+                {{ data.formatTime('year') }}
             </a>
             <div>
                 <!-- 消息体 -->
@@ -62,54 +57,50 @@
                         :class="View.isMsgInline(item.type) ? 'msg-inline' : ''">
                         <div v-if="item.type === undefined" />
                         <span v-else-if="isDebugMsg" class="msg-text">{{ item }}</span>
-                        <template v-else-if="item.type == 'text'">
+                        <template v-else-if="item instanceof TxtSeg">
                             <div v-if="hasMarkdown()" class="msg-md-title" />
                             <!-- {{ item.text }} -->
-                            <span v-else v-show="item.text !== ''"
-                                class="msg-text" @click="textClick" v-html="textIndex[index]" />
+                            <span v-else v-show="item.praseMsg !== ''"
+                                class="msg-text" @click="textClick" v-html="item.praseMsg" />
                         </template>
-                        <div v-else-if="item.type == 'markdown'" v-once
+                        <div v-else-if="item instanceof MdSeg" v-once
                             :id="getMdHTML(item.content, 'msg-md-' + data.message_id)"
                             class="msg-md" />
-                        <img v-else-if="item.type == 'image' && item.file == 'marketface'"
+                        <img v-else-if="item instanceof ImgSeg && item.file == 'marketface'"
                             :class=" imgStyle(data.message.length, index, item.asface) + ' msg-mface'"
-                            :src="item.url"
+                            :src="item.src"
                             @load="imageLoaded"
                             @error="imgLoadFail">
-                        <img v-else-if="item.type == 'image'"
+                        <img v-else-if="item instanceof ImgSeg"
                             :title="(!item.summary || item.summary == '') ? $t('预览图片') : item.summary"
                             :alt="$t('图片')"
                             :class=" imgStyle(data.message.length, index, item.asface)"
-                            :src="runtimeData.tags.proxyPort && item.url.startsWith('http') ? `http://localhost:${runtimeData.tags.proxyPort}/assets?url=${encodeURIComponent(item.url)}` : item.url"
+                            :src="item.src"
                             @load="imageLoaded"
                             @error="imgLoadFail"
                             @click="imgClick(data.message_id)">
-                        <template v-else-if="item.type == 'face'">
-                            <img v-if="getFace(item.id)"
+                        <template v-else-if="item instanceof FaceSeg">
+                            <img v-if="item.src"
                                 :alt="item.text"
                                 class="msg-face"
-                                :src="getFace(item.id)"
+                                :src="item.src"
                                 :title="item.text">
                             <font-awesome-icon v-else :class="'msg-face-svg' + (isMe ? ' me' : '')" :icon="['fas', 'face-grin-wide']" />
                         </template>
-                        <span v-else-if="item.type == 'bface'"
-                            style="font-style: italic; opacity: 0.7">
-                            [ {{ $t('图片') }}：{{ item.text }} ]
-                        </span>
-                        <div v-else-if="item.type == 'at'"
+                        <div v-else-if="item instanceof AtSeg"
                             :class="getAtClass(item.qq)">
                             <a :data-id="item.qq"
-                                :data-group="data.group_id"
+                                :data-group="data.session?.id"
                                 @mouseenter="showUserInfo">{{ getAtName(item) }}</a>
                         </div>
-                        <div v-else-if="item.type == 'file'" :class="'msg-file' + (isMe ? ' me' : '')">
+                        <div v-else-if="item instanceof FileSeg" :class="'msg-file' + (isMe ? ' me' : '')">
                             <div>
                                 <div>
                                     <a>
                                         <font-awesome-icon :icon="['fas', 'file']" />
                                         {{ runtimeData.chatInfo.show.type == 'group' ? $t('群文件') : $t('离线文件') }}
                                     </a>
-                                    <p>{{ loadFileBase( item, item.name ?? item.file_name, data.message_id) }}</p>
+                                    <p>{{ item.name }}</p>
                                 </div>
                                 <i>{{ fileSize }}</i>
                             </div>
@@ -117,7 +108,7 @@
                                 <font-awesome-icon
                                     v-if="item.download_percent === undefined"
                                     :icon="['fas', 'angle-down']"
-                                    @click="downloadFile(item, data.message_id)" />
+                                    @click="item.download()" />
                                 <svg v-else-if="item.download_percent !== undefined && item.download_percent < 100"
                                     class="download-bar"
                                     xmlns="http://www.w3.org/2000/svg">
@@ -130,24 +121,24 @@
                                 </svg>
                                 <font-awesome-icon v-else :icon="['fas', 'check']" />
                             </div>
-                            <div v-if="data.fileView && Object.keys(data.fileView).length > 0"
+                            <div v-if="item.fileView"
                                 class="file-view">
-                                <img v-if="['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(data.fileView.ext)"
-                                    :src="data.fileView.url">
-                                <video v-else-if="['mp4', 'avi', 'mkv', 'flv'].includes(data.fileView.ext)"
+                                <img v-if="['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(item.fileView.ext)"
+                                    :src="item.fileView.url">
+                                <video v-else-if="['mp4', 'avi', 'mkv', 'flv'].includes(item.fileView.ext)"
                                     playsinline controls muted
                                     autoplay>
-                                    <source :src="data.fileView.url"
-                                        :type="'video/' + data.fileView.ext">
+                                    <source :src="item.fileView.url"
+                                        :type="'video/' + item.fileView.ext">
                                     现在还有不支持 video tag 的浏览器吗？
                                 </video>
-                                <span v-else-if="['txt', 'md'].includes(data.fileView.ext) && (item.size ?? item.file_size) < 2000000" class="txt">
+                                <span v-else-if="['txt', 'md'].includes(item.fileView.ext) && item.size && item.size < 2000000" class="txt">
                                     <a>&gt; {{ item.name }} - {{ $t('文件预览') }}</a>
-                                    {{ getTxtUrl(data.fileView) }}{{ data.fileView.txt }}
+                                    {{ getTxtUrl(item.fileView) }}{{ item.fileView.txt }}
                                 </span>
                             </div>
                         </div>
-                        <div v-else-if="item.type == 'video'"
+                        <div v-else-if="item instanceof VideoSeg"
                             class="msg-video">
                             <video playsinline controls muted
                                 autoplay>
@@ -156,13 +147,13 @@
                                 现在还有不支持 video tag 的浏览器吗？
                             </video>
                         </div>
-                        <template v-else-if="item.type == 'forward'">
+                        <template v-else-if="item instanceof ForwardSeg">
                             <div class="msg-raw-forward"
-                                @click="openMerge()">
+                                @click="openMerge(item)">
                                 <span>{{ $t('合并转发消息') }}</span>
                                 <div class="forward-msg">
-                                    <div v-if="item.content === undefined">
-                                        <div class="loading">
+                                    <div v-if="!item.content">
+                                        <div class="loading" style="opacity: 0.9;">
                                             <font-awesome-icon :icon="['fas', 'spinner']" />
                                             {{ $t('加载中') }}
                                         </div>
@@ -170,32 +161,8 @@
                                     <div v-for="(i, indexItem) in item.content.slice(0, 3)" v-else-if="item.content.length > 0"
                                         :key="'raw-forward-' + indexItem">
                                         {{ i.sender.nickname }}:
-                                        <span v-for="(msg, msgIndex) in i.message"
-                                            :key="'raw-forward-item-' + msgIndex">
-                                            <span v-if="msg.type == 'text'">
-                                                {{ msg.text }}
-                                            </span>
-                                            <span v-else-if="msg.type == 'image'">
-                                                [{{ $t('图片') }}]
-                                            </span>
-                                            <span v-else-if="msg.type == 'face' || msg.type == 'bface'">
-                                                [{{ $t('表情') }}]
-                                            </span>
-                                            <span v-else-if="msg.type == 'file'">
-                                                [{{ $t('文件') }}]{{ msg.data.file }}
-                                            </span>
-                                            <span v-else-if="msg.type == 'video'">
-                                                [{{ $t('视频') }}]
-                                            </span>
-                                            <span v-else-if="msg.type == 'forward'">
-                                                [{{ $t('聊天记录') }}]
-                                            </span>
-                                            <span v-else-if="msg.type == 'reply'">
-                                                <!--原版QQ此处不做处理-->
-                                            </span>
-                                            <span v-else>
-                                                [{{ $t('不支持的消息') }}]
-                                            </span>
+                                        <span :key="'raw-forward-item-' + i.uuid">
+                                            {{ i.raw_message }}
                                         </span>
                                     </div>
                                     <div v-else>
@@ -212,7 +179,7 @@
                                 </div>
                             </div>
                         </template>
-                        <div v-else-if="item.type == 'reply'"
+                        <div v-else-if="item instanceof ReplySeg"
                             :class="isMe ? type == 'merge' ? 'msg-replay' : 'msg-replay me' : 'msg-replay'"
                             @click="scrollToMsg(item.id)">
                             <font-awesome-icon :icon="['fas', 'reply']" />
@@ -232,8 +199,8 @@
                     <template v-for="(item, index) in data.message"
                         :key="data.message_id + '-m-' + index">
                         <CardMessage v-if="item.type == 'xml' || item.type == 'json'"
-                            :id="data.message_id"
-                            :item="item" />
+                            :id="data.uuid"
+                            :item="item as XmlSeg|JsonSeg" />
                     </template>
                 </template>
                 <!-- 链接预览框 -->
@@ -317,11 +284,11 @@
                 </div>
             </div>
         </div>
-        <div v-if="data.fake_msg == true"
+        <div v-if="data instanceof SelfMsg && data.state === 'sending'"
             :class="'sending right' + (isMe ? ' me' : '')">
             <font-awesome-icon :icon="['fas', 'spinner']" />
         </div>
-        <div v-if="data.emoji_like"
+        <!-- <div v-if="data.emoji_like"
             :class="'emoji-like' + (isMe ? ' me' : '')">
             <div class="emoji-like-body">
                 <div v-for="info in data.emoji_like"
@@ -331,7 +298,7 @@
                     <span>{{ info.count }}</span>
                 </div>
             </div>
-        </div>
+        </div> -->
         <code style="display: none">{{ data.raw_message }}</code>
     </div>
 </template>
@@ -345,9 +312,8 @@
     import { MsgBodyFuns as ViewFuns } from '@renderer/function/model/msg-body'
     import { defineComponent } from 'vue'
     import { Connector } from '@renderer/function/connect'
-    import { getMessageList, runtimeData } from '@renderer/function/msg'
+    import { runtimeData } from '@renderer/function/msg'
     import { Logger, LogType, PopInfo, PopType } from '@renderer/function/base'
-    import { StringifyOptions } from 'querystring'
     import { getFace, getMsgRawTxt, pokeAnime } from '@renderer/function/utils/msgUtil'
     import {
         openLink,
@@ -360,11 +326,39 @@
         getViewTime } from '@renderer/function/utils/systemUtil'
     import { linkView } from '@renderer/function/utils/linkViewUtil'
     import { MergeStackData } from '@renderer/function/elements/information'
+    import { 
+        AtSeg,
+        FaceSeg,
+        FileSeg,
+        ForwardSeg,
+        ImgSeg,
+        JsonSeg,
+        MdSeg,
+        ReplySeg,
+        TxtSeg,
+        VideoSeg,
+        XmlSeg
+    } from '@renderer/function/model/seg'
+    import {Msg, SelfMsg} from '@renderer/function/model/msg'
+    import { Role } from '@renderer/function/model/user'
 
     export default defineComponent({
         name: 'MsgBody',
         components: { CardMessage },
-        props: ['data', 'type', 'selected'],
+        props: {
+            data: {
+                type: [Msg, SelfMsg],
+                required: true,
+            },
+            type: {
+                type: String,
+                required: false,
+            },
+            selected: {
+                type: Boolean,
+                required: false,
+            }
+        },
         emits: ['scrollToMsg', 'imageLoaded', 'sendPoke'],
         data() {
             return {
@@ -378,12 +372,24 @@
                 View: ViewFuns,
                 runtimeData: runtimeData,
                 pageViewInfo: undefined as { [key: string]: any } | undefined,
-                gotLink: false,
                 getVideo: false,
                 senderInfo: null as any,
                 trueLang: getTrueLang(),
-                textIndex: {} as { [key: string]: number },
 				fileSize: '加载ing',
+                Role,
+                AtSeg,
+                FaceSeg,
+                ForwardSeg,
+                ImgSeg,
+                JsonSeg,
+                MdSeg,
+                Msg,
+                ReplySeg,
+                TxtSeg,
+                VideoSeg,
+                XmlSeg,
+                FileSeg,
+                SelfMsg,
             }
         },
         mounted() {
@@ -391,40 +397,7 @@
             this.isMe =
                 Number(runtimeData.loginInfo.uin) ===
                 Number(this.data.sender.user_id)
-            // 补充发送者信息
-            this.$watch(
-                () => runtimeData.chatInfo.info.group_members.length,
-                () => {
-                    this.senderInfo =
-                        runtimeData.chatInfo.info.group_members.filter(
-                            (item: any) => {
-                                return item.user_id == this.data.sender.user_id
-                            },
-                        )[0]
-                },
-            )
-            this.senderInfo = runtimeData.chatInfo.info.group_members.filter(
-                (item: any) => {
-                    return item.user_id == this.data.sender.user_id
-                },
-            )[0]
-            // 处理 textIndex
-            for (let i = 0; i < this.data.message.length; i++) {
-                const item = this.data.message[i]
-                if(item.type == 'text') {
-                    this.parseText(i)
-                }
-            }
-            // 初始化解析合并转发消息
-            if (this.data.message[0].type === 'forward'){
-                Connector.callApi('forward_msg', {id: this.data.message[0].id})
-                .then(data => {
-                    data = getMessageList(data)
-                    // PS：这个写法其实不合规，但是影响不大就这样罢
-                    // eslint-disable-next-line vue/no-mutating-props
-                    this.data.message[0].content = data
-                })
-            }
+            this.getLink()
 			// 初始化文件大小
 			if (this.data.message[0].type === 'file') {
                 this.getFileSize(this.data.message[0]).then(re => this.fileSize = re)
@@ -592,91 +565,81 @@
                 parent.appendChild(a)
             },
 
-            /**
-             * 处理纯文本消息和链接预览
-             * @param text 纯文本消息
-             */
-            async parseText(index: number) {
-                let text = this.data.message[index].text
+            findLink(): string|undefined {
+                for (const seg of this.data.message){
+                    if (seg instanceof TxtSeg) {
+                        if (seg.links.length > 0) {
+                            return seg.links[0]
+                        }
+                    }
+                }
+                return
+            },
 
+            async getLink(){
                 const logger = new Logger()
-                text = ViewFuns.parseText(text)
-                // 防止大量的重复字符
-                const filtedText = text.replace(/(.)(\1{10,})/g, '$1<span style="opacity:0.7;margin-right:10px;">...</span>')
-                if(filtedText != text) {
-                    const style = 'display:block;margin-top:10px;opacity:0.7;cursor:pointer;'
-                    text = filtedText + '<a style="' + style +'" data-raw="' + text + '" onclick="this.parentNode.innerText = this.dataset.raw;return false;">' + this.$t('显示原始消息') + '</a>'
-                }
-                // 链接判定
-                const reg = /(http|https):\/\/[\w\-_]+(\.[\w\-_]+)+([\w\-.,@?^=%&:/~+#]*[\w\-@?^=%&/~+#])?/gi
-                text = text.replaceAll(reg, '<a href="" data-link="$&" onclick="return false">$&</a>')
-                const linkList = text.match(reg)
-                if (linkList !== null && !this.gotLink) {
-                    queueMicrotask(async() => {
-                        this.gotLink = true
-                        const fistLink = linkList[0]
-                        let protocol = ''
-                        let domain = ''
-                        try {
-                            protocol = new URL(fistLink).protocol + '//'
-                            domain = new URL(fistLink).hostname
-                        } catch (ignore) {
-                            // ignore
-                        }
-                        sendStatEvent('link_view', { domain: domain })
+                const link = this.findLink()
+                if(!link) return
 
-                        let data = null as any
-                        let finaLink = fistLink
-                        try {
-                            finaLink = await callBackend('Onebot', 'sys:getFinalRedirectUrl', true, fistLink)
-                            if(!finaLink) {
-                                finaLink = fistLink
-                            }
-                        } catch(_) { /**/ }
-                        const showLinkList = {
-                            bilibili: ['bilibili.com', 'b23.tv', 'bili2233.cn', 'acg.tv'],
-                            music163: ['music.163.com', '163cn.tv'],
-                        }
-                        for (const key in showLinkList) {
-                            if (showLinkList[key].some((item: string) => finaLink.includes(item))) {
-                                data = await linkView[key](finaLink)
-                            }
-                        }
-                        // 通用 og 解析
-                        if(!data) {
-                            if (runtimeData.tags.clientType != 'web') {
-                                let html = await callBackend('Onebot', 'sys:getHtml', true, finaLink)
-                                if(html) {
-                                    const headEnd = html.indexOf('</head>')
-                                    html = html.slice(0, headEnd)
-                                    // 获取所有的 og meta 标签
-                                    const ogRegex = /<meta\s+property="og:([^"]+)"\s+content="([^"]+)"\s*\/?>/g
-                                    const ogTags = {} as {[key: string]: string}
-                                    let match: string[] | null
-                                    while ((match = ogRegex.exec(html)) !== null) {
-                                        ogTags[`og:${match[1]}`] = match[2]
-                                    }
-                                    data = ogTags
-                                }
-                            } else {
-                                // 获取链接预览
-                                const response = await fetch(`${import.meta.env.VITE_APP_LINK_VIEW}/${encodeURIComponent(fistLink)}`)
-                                if(response.ok) {
-                                    const res = await response.json()
-                                    if (res.status === undefined && Object.keys(res).length > 0) {
-                                        data = res
-                                    }
-                                }
-                            }
-                        }
-
-                        logger.add(LogType.DEBUG, 'Link View: ', data)
-                        if(data) {
-                            this.loadLinkPreview(protocol + domain, data)
-                        }
-                    })
+                let protocol = ''
+                let domain = ''
+                try {
+                    protocol = new URL(link).protocol + '//'
+                    domain = new URL(link).hostname
+                } catch (ignore) {
+                    // ignore
                 }
-                this.textIndex[index] = text
+                sendStatEvent('link_view', { domain: domain })
+
+                let data = null as any
+                let finaLink = link
+                try {
+                    finaLink = await callBackend('Onebot', 'sys:getFinalRedirectUrl', true, link)
+                    if (!finaLink) {
+                        finaLink = link
+                    }
+                } catch (_) { /**/ }
+                const showLinkList = {
+                    bilibili: ['bilibili.com', 'b23.tv', 'bili2233.cn', 'acg.tv'],
+                    music163: ['music.163.com', '163cn.tv'],
+                }
+                for (const key in showLinkList) {
+                    if (showLinkList[key].some((item: string) => finaLink.includes(item))) {
+                        data = await linkView[key](finaLink)
+                    }
+                }
+                // 通用 og 解析
+                if (!data) {
+                    if (runtimeData.tags.clientType != 'web') {
+                        let html = await callBackend('Onebot', 'sys:getHtml', true, finaLink)
+                        if (html) {
+                            const headEnd = html.indexOf('</head>')
+                            html = html.slice(0, headEnd)
+                            // 获取所有的 og meta 标签
+                            const ogRegex = /<meta\s+property="og:([^"]+)"\s+content="([^"]+)"\s*\/?>/g
+                            const ogTags = {} as { [key: string]: string }
+                            let match: string[] | null
+                            while ((match = ogRegex.exec(html)) !== null) {
+                                ogTags[`og:${match[1]}`] = match[2]
+                            }
+                            data = ogTags
+                        }
+                    } else {
+                        // 获取链接预览
+                        const response = await fetch(`${import.meta.env.VITE_APP_LINK_VIEW}/${encodeURIComponent(link)}`)
+                        if (response.ok) {
+                            const res = await response.json()
+                            if (res.status === undefined && Object.keys(res).length > 0) {
+                                data = res
+                            }
+                        }
+                    }
+                }
+
+                logger.add(LogType.DEBUG, 'Link View: ', data)
+                if (data) {
+                    this.loadLinkPreview(protocol + domain, data)
+                }
             },
 
             loadLinkPreview(domain: string, res: any) {
@@ -772,24 +735,6 @@
             },
 
             /**
-             * 下载消息中的文件
-             * @param data 消息对象
-             */
-            downloadFile(data: any, message_id: string) {
-                // 获取下载链接
-                let name = runtimeData.jsonMap.file_download?.private_name
-                if(runtimeData.chatInfo.show.type == 'group') {
-                    name = runtimeData.jsonMap.file_download?.name
-                }
-                Connector.send(name, {
-                    file_id: data.file_id,
-                    group_id: runtimeData.chatInfo.show.type == 'group' ? runtimeData.chatInfo.show.id : undefined,
-                },
-                    'downloadFile_' + message_id + '_' + btoa(encodeURIComponent(data.name)),
-                )
-            },
-
-            /**
              * 文本消息被点击
              * @param event 事件
              */
@@ -800,47 +745,6 @@
                     const link = target.dataset.link
                     openLink(link)
                 }
-            },
-
-            /**
-             * 对部分文件类型进行预览处理
-             * @param name 文件名
-             */
-            loadFileBase(
-                data: any,
-                name: string,
-                message_id: StringifyOptions,
-            ) {
-                const ext = name.split('.').pop()
-                // 寻找消息
-                const msg = runtimeData.messageList.find(
-                    (item) => item.message_id === message_id,
-                )
-                if (ext && msg?.fileView == undefined) {
-                    // 图片、视频和文本文件获取文件链接
-                    const list = [
-                        'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp',
-                        'mp4', 'avi', 'mkv', 'flv',
-                        'txt', 'md',
-                    ]
-                    if (list.includes(ext)) {
-                        msg.fileView = {}
-                        // 获取下载链接
-                        let name = runtimeData.jsonMap.file_download?.private_name
-                        if(runtimeData.chatInfo.show.type == 'group') {
-                            name = runtimeData.jsonMap.file_download?.name
-                        }
-                        if(name) {
-                            Connector.send(name, {
-                                file_id: data.file_id,
-                                group_id: runtimeData.chatInfo.show.type == 'group' ? runtimeData.chatInfo.show.id : undefined,
-                            },
-                                'loadFileBase_' + this.data.message_id + '_' + ext,
-                            )
-                        }
-                    }
-                }
-                return name
             },
 
 			/**
@@ -906,27 +810,27 @@
 
             async showPock() {
                 // 如果是最后一条消息并且在最近发送
-                if (this.data.message_id ==
-                    runtimeData.messageList[runtimeData.messageList.length - 1].message_id &&
-                    (new Date().getTime() - getViewTime(this.data.time)) / 1000 < 5) {
-                    let windowInfo = null as {
-                        x: number
-                        y: number
-                        width: number
-                        height: number
-                    } | null
-                    if (['electron', 'tauri'].includes(runtimeData.tags.clientType)) {
-                        windowInfo = await callBackend('Onebot', 'win:getWindowInfo', true)
-                    }
-                    const message = document.getElementById('chat-' + this.data.message_id)
-                    let item = document.getElementById('app')
-                    if (['electron', 'tauri'].includes(runtimeData.tags.clientType)) {
-                        item = message?.getElementsByClassName('poke-hand')[0] as HTMLImageElement
-                    }
-                    this.$nextTick(() => {
-                        pokeAnime(item, windowInfo)
-                    })
+                if (this.data.uuid != runtimeData.messageList.at(-1).uuid) return
+                if (!this.data.time) return
+                if ((new Date().getTime() - getViewTime(this.data.time)) / 1000 < 5) return
+
+                let windowInfo = null as {
+                    x: number
+                    y: number
+                    width: number
+                    height: number
+                } | null
+                if (['electron', 'tauri'].includes(runtimeData.tags.clientType)) {
+                    windowInfo = await callBackend('Onebot', 'win:getWindowInfo', true)
                 }
+                const message = document.getElementById('chat-' + this.data.message_id)
+                let item = document.getElementById('app')
+                if (['electron', 'tauri'].includes(runtimeData.tags.clientType)) {
+                    item = message?.getElementsByClassName('poke-hand')[0] as HTMLImageElement
+                }
+                this.$nextTick(() => {
+                    pokeAnime(item, windowInfo)
+                })
             },
 
             getMdHTML(str: string, id: string) {
@@ -1076,7 +980,7 @@
                     }
                 }
             },
-            openMerge(){
+            openMerge(seg: ForwardSeg){
                 const data: MergeStackData = {
                     messageList: [],
                     imageList: [],
@@ -1084,7 +988,6 @@
                     ready: false,
                     forwardMsg: this.data
                 }
-                const seg = this.data.message[0]
                 if (seg.content !== undefined){
                     data.ready = true
                     data.messageList = seg.content

@@ -15,7 +15,7 @@
 
 <template>
     <div>
-        <div v-if="item.type == 'xml'"
+        <div v-if="item instanceof XmlSeg"
             @click="View.cardClick('xml-' + id)"
             v-html="View.buildXML(item.data, item.id, id)" />
         <div v-else>
@@ -42,15 +42,27 @@
 
     import { defineComponent } from 'vue'
     import { MsgBodyFuns as ViewFuns } from '@renderer/function/model/msg-body'
+    import { JsonSeg, XmlSeg } from '@renderer/function/model/seg'
 
     export default defineComponent({
         name: 'CardMessage',
         components: {},
-        props: ['item', 'id'],
+        props: {
+            item: {
+                type: [XmlSeg,JsonSeg],
+                required: true,
+            },
+            id: {
+                type: String,
+                required: true,
+            }
+        },
         data() {
             return {
                 View: ViewFuns,
                 info: ViewFuns.getJSONType(this.item),
+                JsonSeg,
+                XmlSeg,
             }
         },
         methods: {

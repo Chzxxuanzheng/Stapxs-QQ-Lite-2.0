@@ -24,3 +24,13 @@ declare module '*.po' {
     const value: string
     export default value
 }
+
+declare module '*.yaml' {
+    const content: any
+    export default content
+}
+
+declare module '*.yml' {
+    const content: any
+    export default content
+}

@@ -1,0 +1,14 @@
+# OneBot v11标准 api
+
+send_msg:
+    name: send_msg
+    source: $.data
+    message_id: /message_id
+
+get_message:
+    name: get_msg
+    source: $.data
+    message_id: /message_id
+    message: /message
+    time: /time
+    sender: /sender

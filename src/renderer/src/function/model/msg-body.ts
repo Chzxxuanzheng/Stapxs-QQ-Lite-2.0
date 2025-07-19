@@ -7,15 +7,10 @@
  */
 
 import xss from 'xss'
-import app from '@renderer/main'
 
-import { PopInfo, PopType } from '@renderer/function/base'
-import { runtimeData } from '@renderer/function/msg'
-import { Connector } from '@renderer/function/connect'
 import { openLink } from '@renderer/function/utils/appUtil'
 import { getDeviceType } from '@renderer/function/utils/systemUtil'
-
-const popInfo = new PopInfo()
+import app from '@renderer/main'
 
 export class MsgBodyFuns {
     /**
@@ -288,5 +283,28 @@ export class MsgBodyFuns {
         text = xss(text, { whiteList: { a: ['href', 'target'] } })
         // 返回
         return text
+    }
+
+    /**
+     * 处理纯文本消息和链接预览
+     * @param text 纯文本消息
+     */
+    static parseTextMsg(text: string): { text: string, links: string[] } {
+        const { $t } = app.config.globalProperties
+        text = MsgBodyFuns.parseText(text)
+        // 防止大量的重复字符
+        const filtedText = text.replace(/(.)(\1{10,})/g, '$1<span style="opacity:0.7;margin-right:10px;">...</span>')
+        if (filtedText != text) {
+            const style = 'display:block;margin-top:10px;opacity:0.7;cursor:pointer;'
+            text = filtedText + '<a style="' + style + '" data-raw="' + text + '" onclick="this.parentNode.innerText = this.dataset.raw;return false;">' + $t('显示原始消息') + '</a>'
+        }
+        // 链接判定
+        const reg = /(http|https):\/\/[\w\-_]+(\.[\w\-_]+)+([\w\-.,@?^=%&:/~+#]*[\w\-@?^=%&/~+#])?/gi
+        text = text.replaceAll(reg, '<a href="" data-link="$&" onclick="return false">$&</a>')
+        const linkList = text.match(reg)
+        return {
+            text: text,
+            links: linkList ?? [],
+        }
     }
 }

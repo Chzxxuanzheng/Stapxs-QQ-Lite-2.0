@@ -62,7 +62,6 @@ message_info:
     target_id: $.target_id
     sender: $.sender.user_id
 # 获取消息体
-get_message: $.message
 message_value: # 这是消息转义，防止某些消息字段不同
     image:
         url: $.file

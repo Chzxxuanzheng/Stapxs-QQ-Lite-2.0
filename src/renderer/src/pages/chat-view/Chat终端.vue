@@ -30,11 +30,11 @@
                     <div
                         v-if="msgItem.post_type == 'message'
                             || msgItem.post_type == 'message_sent'"
-                        :class="
-                            'shell-msg' +
-                                (msgItem.revoke ? ' revoke' : '') +
-                                (tags.replyId == msgItem.message_id ? ' reply' : '')
-                        "
+                        :class="{
+                            'shell-msg': true,
+                            'revoke': msgItem.revoke,
+                            'reply': replyMsg === msgItem,
+                        }"
                         style="cursor: pointer">
                         <span
                             :class="
@@ -125,7 +125,7 @@
                             <font-awesome-icon
                                 :icon="['fas', 'folder-open']" />
                             {{ runtimeData.chatInfo.show.name }}
-                            {{ tags.replyName ? ' -> ' + tags.replyName : '' }}
+                            {{ replyMsg?.sender.name ? ' -> ' + replyMsg.sender.name : '' }}
                         </span>
                         <span style="color: var(--color-main-0)">
                             <font-awesome-icon :icon="['fas', 'plug']" />{{
@@ -175,7 +175,7 @@
     import { runtimeData } from '@renderer/function/msg'
     import { getTrueLang } from '@renderer/function/utils/systemUtil'
     import {
-        MsgItemElem,
+        ChatInfoElem,
         SQCodeElem,
         UserFriendElem,
         UserGroupElem,
@@ -189,10 +189,25 @@
     } from '@renderer/function/base'
     import { sendMsgRaw, getMsgRawTxt } from '@renderer/function/utils/msgUtil'
     import { uptime } from '@renderer/main'
+    import { Message, Msg } from '@renderer/function/model/msg'
+import { Seg } from '@renderer/function/model/seg'
 
     export default defineComponent({
         name: 'ChatShell',
-        props: ['chat', 'list', 'mumberInfo'],
+        props: {
+            chat: {
+                type: Object as () => ChatInfoElem,
+                required: true,
+            },
+            list: {
+                type: Array as () => Message[],
+                required: true,
+            },
+            mumberInfo: {
+                type: Object as () => {[key: string]: any},
+                default: () => ({}),
+            },
+        },
         data() {
             return {
                 tags: {
@@ -200,8 +215,6 @@
                     fistget: true,
                     cmdTags: {} as { [key: string]: any },
                     newMsg: 0,
-                    replyName: null as string | null,
-                    replyId: null as string | null,
                 },
                 getMsgRawTxt: getMsgRawTxt,
                 popInfo: new PopInfo(),
@@ -221,8 +234,9 @@
                 msg: '',
                 supportCmd: {} as { [key: string]: any },
                 imgCache: [] as string[],
-                sendCache: [] as MsgItemElem[],
+                sendCache: [] as Seg[],
                 searchListCache: [] as (UserFriendElem & UserGroupElem)[],
+                replyMsg: undefined as Msg | undefined,
             }
         },
         watch: {
@@ -287,6 +301,7 @@
                                     rawMsg,
                                     this.sendCache,
                                     this.imgCache,
+                                    this.replyMsg,
                                 )
                                 if (this.chat.show.temp) {
                                     sendMsgRaw(
@@ -307,8 +322,7 @@
                                 this.sendCache = []
                                 this.imgCache = []
 
-                                this.tags.replyName = null
-                                this.tags.replyId = null
+                                this.replyMsg = undefined
                                 break
                             }
                             // 寻找联系人
@@ -358,28 +372,14 @@
                                 )
                                 if (item[2] && item[2] != 'clear') {
                                     // 根据 item[2] 寻找这条消息 的名字
-                                    const msg = runtimeData.messageList.filter(
+                                    const msg = this.list.filter(
                                         (msg) => {
                                             return msg.message_id == item[2]
                                         },
-                                    )
-                                    this.tags.replyId = item[2]
-                                    if (msg[0]) {
-                                        this.tags.replyName = msg[0].sender.card? msg[0].sender.card: msg[0].sender.nickname
-                                    }
-                                    this.addSpecialMsg({
-                                        msgObj: { type: 'reply', id: item[2] },
-                                        addText: false,
-                                        addTop: true,
-                                    })
+                                    ) 
+                                    this.replyMsg = msg[0] as Msg
                                 } else if (item[2] && item[2] == 'clear') {
-                                    this.sendCache = this.sendCache.filter(
-                                        (item) => {
-                                            return item.type !== 'reply'
-                                        },
-                                    )
-                                    this.tags.replyName = null
-                                    this.tags.replyId = null
+                                    this.replyMsg = undefined
                                 }
                                 if (item[3]) {
                                     this.supportCmd['sql'].fun(
@@ -569,8 +569,7 @@
                         }
                         this.addCommandOut(':: No valid contacts found', 'red')
 
-                        this.tags.replyName = null
-                        this.tags.replyId = null
+                        this.replyMsg = undefined
                     },
                 },
             }
@@ -802,7 +801,7 @@
             addSpecialMsg(data: SQCodeElem) {
                 if (data !== undefined) {
                     const index = this.sendCache.length
-                    this.sendCache.push(data.msgObj)
+                    this.sendCache.push(Seg.parse(data.msgObj))
                     if (data.addText === true) {
                         if (data.addTop === true) {
                             this.msg = '[SQ:' + index + ']' + this.msg

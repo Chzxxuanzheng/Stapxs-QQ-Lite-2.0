@@ -42,8 +42,8 @@
             class="note-time note-base">
             <a>{{ Intl.DateTimeFormat(
                 trueLang,
-                getTimeConfig(new Date(data.time * 1000)),
-            ).format(new Date(data.time * 1000))
+                getTimeConfig(new Date(data.time)),
+            ).format(new Date(data.time))
             }}</a>
         </div>
     </div>

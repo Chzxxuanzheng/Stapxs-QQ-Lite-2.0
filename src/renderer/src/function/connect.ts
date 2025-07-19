@@ -20,6 +20,8 @@ import { callBackend } from './utils/systemUtil'
 import { v4 as uuid } from 'uuid'
 import { getMsgData } from './utils/msgUtil'
 
+import stdApi from '@renderer/assets/pathMap/std.yaml'
+
 const logger = new Logger()
 const popInfo = new PopInfo()
 
@@ -279,7 +281,7 @@ export class Connector {
 
     /**
      * 调用 api
-     * TODO 标准API适配
+     * TODO 异常处理
      * @param api  api名称,该api应该为映射Map里存在的键
      * @param args 参数
      * @returns undefined 表示无此API, null表示调用失败, 其余为经getMsgData过滤的返回值
@@ -287,7 +289,7 @@ export class Connector {
     static async callApi(api: string, args: {[key: string]: any}): Promise<any|undefined|null>{
         // 组建信息
         const echo = uuid()
-        const apiMap = runtimeData.jsonMap[api]
+        const apiMap = runtimeData.jsonMap[api] ?? stdApi[api]
         if (!apiMap) {
             logger.debug(`${runtimeData.jsonMap.name} 未适配 API ${api}`)
             return undefined

@@ -559,6 +559,7 @@ import { callBackend } from '@renderer/function/utils/systemUtil'
                 const pathMapList: string[] = []
                 Object.keys(pathMap).forEach((key: string) => {
                     const name = key.split('/').pop()?.replace('.yaml', '')
+                    if (name === 'std') return
                     if (name) pathMapList.push(name)
                 })
                 return pathMapList

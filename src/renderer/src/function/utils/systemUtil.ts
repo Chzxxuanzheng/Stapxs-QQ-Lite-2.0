@@ -390,6 +390,25 @@ export function getTimeConfig(date: Date) {
 }
 
 /**
+ * 标准化url,处理通信协议,加http
+ * @param url 
+ */
+export function stdUrl(url: string){
+    if (!url.toLowerCase().startsWith('http')) return url
+    if (document.location.protocol == 'https:') {
+        // 判断文件 URL 的协议
+        // PS：Chrome 不会对 http 文件进行协议升级
+        if (url.toLowerCase().startsWith('http:')) {
+            url = 'https' + url.substring(url.indexOf('://'))
+        }
+    }
+    if (runtimeData.tags.proxyPort) {
+        return `http://localhost:${runtimeData.tags.proxyPort}/assets?url=${encodeURIComponent(url)}`
+    }
+    return url
+}
+
+/**
  * 调用后端方法
  *
  * #### 方法名称

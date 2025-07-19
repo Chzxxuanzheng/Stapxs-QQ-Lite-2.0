@@ -99,7 +99,6 @@ message_info:
     target_id: $.target_id
     sender: $.sender.user_id
 # 获取消息体
-get_message: $.message
 message_value:
     file:
         name: $.file
@@ -192,9 +191,8 @@ group_files:
 group_folder_files:
     name: get_group_files_by_folder
 # 获取文件下载信息
-file_download:
-    name: get_group_file_url
-    private_name: get_private_file_url
+get_file_url:
+    name: get_file
     source: $.data
     list:
         file_url: /url

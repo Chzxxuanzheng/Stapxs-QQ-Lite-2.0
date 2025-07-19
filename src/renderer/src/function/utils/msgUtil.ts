@@ -1,11 +1,9 @@
 import jp from 'jsonpath'
-import app from '@renderer/main'
 import anime from 'animejs'
 import option from '@renderer/function/option'
 
 import { Logger, PopInfo, PopType } from '@renderer/function/base'
 import { runtimeData } from '@renderer/function/msg'
-import { v4 as uuid } from 'uuid'
 import { Connector } from '@renderer/function/connect'
 import {
     BotMsgType,
@@ -14,6 +12,8 @@ import {
 } from '../elements/information'
 import { sendStatEvent } from './appUtil'
 import { callBackend } from './systemUtil'
+import { Message, Msg, SelfMsg } from '../model/msg'
+import { AtSeg, Seg } from '../model/seg'
 
 const logger = new Logger()
 
@@ -159,7 +159,7 @@ export function parseMsgList(
     list: any,
     map: string,
     valueMap: { [key: string]: any },
-): any[] {
+): Msg[] {
     // 判断消息类型
     if (typeof list[0].message == 'string') {
         runtimeData.tags.msgType = BotMsgType.CQCode
@@ -234,7 +234,31 @@ export function parseMsgList(
             })
         }
     }
-    return list
+    return list.map((item: any) => {
+        return new Msg(item)
+    })
+}
+
+/**
+ * 将收到的消息转为Msg对象
+ * @param data 
+ * @returns 
+ */
+export function createMsg(data: any): Msg|undefined {
+    const msgPath = runtimeData.jsonMap
+    // 对消息进行一次格式化处理
+    let list = getMsgData(
+        'message_list',
+        buildMsgList([data]),
+        msgPath.message_list,
+    )
+    if (!list) return
+    list = parseMsgList(
+        list,
+        msgPath.message_list.type,
+        msgPath.message_value,
+    )
+    return list[0]
 }
 
 /**
@@ -242,89 +266,45 @@ export function parseMsgList(
  * @param message 待处理的消息对象
  * @returns 字符串
  */
-export function getMsgRawTxt(data: any): string {
-    const { $t } = app.config.globalProperties
-
-    const message = data.message as [{ [key: string]: any }]
-    const fromId = data.group_id ?? data.user_id
+export function getMsgRawTxt(data: Msg): string {
+    const fromId = data.session?.id
     let back = ''
-    for (let i = 0; i < message.length; i++) {
-        try {
-            switch (message[i].type) {
-                case 'at':
-                    if (message[i].text == undefined) {
-                        // 群内才可以 at，如果 at 消息中没有 text 字段
-                        // 尝试去群成员列表中找到对应的昵称，群成员列表只在当前打开的群才有
-                        if (
-                            runtimeData.chatInfo.show.id == fromId &&
-                            runtimeData.chatInfo.info.group_members
-                        ) {
-                            const user =
-                                runtimeData.chatInfo.info.group_members.find(
-                                    (item) => item.user_id == message[i].qq,
-                                )
-                            if (user) {
-                                back +=
-                                    '@' +
-                                    (user.card && user.card != ''? user.card: user.nickname)
-                                break
-                            }
+    for (const seg of data.message){
+        try{
+            // @消息要根据目标环境拿东西，seg拿不到目标环境, 单独抽出来处理
+            if (seg instanceof AtSeg) {
+                if (!seg.text) {
+                    // 群内才可以 at，如果 at 消息中没有 text 字段
+                    // 尝试去群成员列表中找到对应的昵称，群成员列表只在当前打开的群才有
+                    if (
+                        runtimeData.chatInfo.show.id == fromId &&
+                        runtimeData.chatInfo.info.group_members
+                    ) {
+                        const user =
+                            runtimeData.chatInfo.info.group_members.find(
+                                (item) => String(item.user_id) === seg.qq,
+                            )
+                        if (user) {
+                            back +=
+                                '@' +
+                                (user.card && user.card != '' ? user.card : user.nickname)
                         }
-                        break
                     }
-                // eslint-disable-next-line
-                case 'text':
-                    back += message[i].text
-                        .replaceAll('\n', ' ')
-                        .replaceAll('\r', ' ')
-                    break
-                case 'forward':
-                    back += '[' + $t('聊天记录') + ']'
-                    break
-                case 'face':
-                    back += '[' + $t('表情') + ']'
-                    break
-                case 'bface':
-                    back += message[i].text
-                    break
-                case 'image':
-                    back +=
-                        (!message[i].summary || message[i].summary == '') ? '[' + $t('图片') + ']' : message[i].summary
-                    break
-                case 'record':
-                    back += '[' + $t('语音') + ']'
-                    break
-                case 'video':
-                    back += '[' + $t('视频') + ']'
-                    break
-                case 'file':
-                    back += '[' + $t('文件') + ']'
-                    break
-                case 'json': {
-                    try {
-                        back += JSON.parse(message[i].data).prompt
-                    } catch (error) {
-                        back += '[' + $t('卡片消息') + ']'
-                    }
-                    break
+                }else{
+                    back += '@' + seg.text
                 }
-                case 'xml': {
-                    let name = message[i].data.substring(
-                        message[i].data.indexOf('<source name="') + 14,
-                    )
-                    name = name.substring(0, name.indexOf('"'))
-                    back += '[' + name + ']'
-                    break
-                }
+            }else {
+                if (seg.plaintext === undefined) throw new Error('Seg plaintext is undefined')
+                back += seg.plaintext
             }
         } catch (error) {
             logger.error(
                 error as Error,
-                '解析消息短格式错误：' + JSON.stringify(message[i]),
+                '解析消息短格式错误：' + JSON.stringify(seg),
             )
         }
     }
-    return back
+    return back.replace('\r\n', '\n').replace('\n', ' ')
 }
 
 /**
@@ -419,118 +399,27 @@ export function parseCQ(data: any) {
 * @param id 发送对象的 id
 * @param type 发送对象的类型
 * @param msg 消息体
-* @param preShow 是否消息预显
-* @param echo 回显的事件名
 */
 export function sendMsgRaw(
-    id: string,
-    type: string,
-    msg: string | any[] | undefined,
-    preShow = false,
-    echo = 'sendMsgBack',
-) {
-    // 如果消息为空则不发送
-    if(msg == undefined || msg == '' || (Array.isArray(msg) && msg.length == 0)) {
-        return
-    }
-    // 预发送消息
-    // 将消息构建为完整消息体先显示出去
-    const msgUUID = uuid()
-    if (preShow) {
-        const preShowMsg = JSON.parse(JSON.stringify(msg));
-        preShowMsg.forEach((item: any) => {
-            // 对 base64 图片做特殊处理
-            if (item.type == 'image') {
-                if(!item.file.startsWith('http')) {
-                    const b64Str = (item.file as string).substring(9)
-                    item.url = 'data:image/png;base64,' + b64Str
-                } else {
-                    item.url = item.file
-                }
-            }
-        })
-        const showMsg = {
-            revoke: true,
-            fake_msg: true,
-            message_id: msgUUID,
-            fake_message_id: msgUUID,       // 用来作为这条消息的唯一标识，防止 message_id 刷新导致的闪烁
-            message_type: runtimeData.chatInfo.show.type,
-            time: parseInt(String(new Date().getTime() / 1000)),
-            post_type: 'message',
-            sender: {
-                user_id: runtimeData.loginInfo.uin,
-                nickname: runtimeData.loginInfo.nickname,
-            },
-            message: preShowMsg,
-        } as { [key: string]: any }
-        showMsg.raw_message = getMsgRawTxt(showMsg)
-
-        if (showMsg.message_type == 'group') {
-            showMsg.group_id = runtimeData.chatInfo.show.id
-        } else {
-            showMsg.user_id = runtimeData.chatInfo.show.id
-        }
-        runtimeData.messageList = runtimeData.messageList.concat([showMsg])
-    }
-    // 检查消息体是否需要处理
-    if (runtimeData.tags.msgType == BotMsgType.Array) {
-        if (msg && typeof msg != 'string') {
-            const newMsg = [] as any
-            msg.forEach((item) => {
-                const newResult = {} as { [key: string]: any }
-                newResult.type = item.type
-                newResult.data = item
-                delete newResult.data.type
-                // 特殊处理，如果 newResult.data 里有 _type 字段，给它改成 type
-                if (newResult.data._type != undefined) {
-                    newResult.data.type = newResult.data._type
-                    delete newResult.data._type
-                }
-                newMsg.push(newResult)
-            })
-            msg = newMsg
-        }
-    }
-    if (msg !== undefined && msg.length > 0) {
-        if (runtimeData.jsonMap.name === 'Lagrange.OneBot'){
-            lgrSendMsg(id, msg, type, echo + '_uuid_' + msgUUID)
-            sendStatEvent('sendMsg', { type: type })
-            return
-        }
-        switch (type) {
-            case 'group':
-                Connector.send(
-                    runtimeData.jsonMap.message_list.name_group_send ??
-                        'send_msg',
-                    { group_id: id, message: msg },
-                    echo + '_uuid_' + msgUUID,
-                )
-                break
-            case 'user': {
-                if (String(id).indexOf('/') > 1) {
-                    Connector.send(
-                        runtimeData.jsonMap.message_list.name_temp_send ??
-                            'send_temp_msg',
-                        {
-                            user_id: id.split('/')[0],
-                            group_id: id.split('/')[1],
-                            message: msg,
-                        },
-                        echo + '_uuid_' + msgUUID,
-                    )
-                } else {
-                    Connector.send(
-                        runtimeData.jsonMap.message_list.name_user_send ??
-                            'send_msg',
-                        { user_id: id, message: msg },
-                        echo + '_uuid_' + msgUUID,
-                    )
-                }
-                break
-            }
-        }
-        sendStatEvent('sendMsg', { type: type })
-    }
+    id: number|string,
+    type: 'group' | 'user' | 'temp',
+    msg: Seg[],
+): SelfMsg {
+    // 预览消息 =======================================================
+    const preMsg = new SelfMsg(
+        msg,
+        type,
+        String(id)
+    )
+    // if (runtimeData.jsonMap.name === 'Lagrange.OneBot'){
+    //     // TODO 合并转发与自定义node转发
+    //     // lgrSendMsg(id, msg, type)
+    //     sendStatEvent('sendMsg', { type: type })
+    //     return
+    // }
+    sendStatEvent('sendMsg', { type: type })
+    preMsg.send()
+    return preMsg
 }
 
 export function updateLastestHistory(item: UserFriendElem & UserGroupElem) {
@@ -692,8 +581,8 @@ export function getShowName(base: string, remark: string) {
 
 /**
  * 判断是否需要显示时间戳（上下超过五分钟的消息）
- * @param timePrv 上条消息的时间戳（10 位）
- * @param timeNow 当前消息的时间戳（10 位）
+ * @param timePrv 上条消息的时间戳（13 位）
+ * @param timeNow 当前消息的时间戳（13 位）
  */
 export function isShowTime(
     timePrv: number | undefined,
@@ -702,19 +591,19 @@ export function isShowTime(
 ): boolean {
     if (alwaysShow) return true
     if (timePrv == undefined) return false
-    // 五分钟 10 位时间戳相差 300
-    return timeNow - timePrv >= 300
+    // 五分钟 13 位时间戳相差 300 000
+    return timeNow - timePrv >= 300000
 }
 
 /**
  * 判断这个消息是不是[已删除]
  * @param msg
  */
-export function isDeleteMsg(msg: any): boolean {
-    if(runtimeData.sysConfig.dont_parse_delete === true)return false
-    if(!['message', 'message_sent'].includes(msg.post_type)) return false
-    if(msg.sender.user_id !== runtimeData.loginInfo.uin)return false
-    if(msg.raw_message !== '&#91;已删除&#93;')return false
+export function isDeleteMsg(msg: Message): boolean {
+    if (runtimeData.sysConfig.dont_parse_delete === true) return false
+    if (!(msg instanceof Msg)) return false
+    if(msg.sender.user_id !== runtimeData.loginInfo.uin) return false
+    if(!['&#91;已删除&#93;', '[已删除]'].includes(msg.raw_message)) return false
     return true
 }
 
