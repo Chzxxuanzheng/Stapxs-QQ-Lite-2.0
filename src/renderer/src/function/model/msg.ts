@@ -249,6 +249,7 @@ export class SelfMsg extends Msg {
             new PopInfo().add(PopType.ERR, '发送消息失败')
             return false
         }
+        this.message_id = String(data['message_id'])
         //#endregion
 
         //#region 获取发送后真实消息 ============================================
