@@ -206,9 +206,9 @@ export class FileSeg extends Seg {
         'txt', 'md',
     ]
     constructor(file: string, name: string, size: number)
-    constructor(data: { file_id?: string, name?: string, file_name?: string, file_url: string, size?: number, file_size: number })
+    constructor(data: { file_id?: string, name?: string, file_name?: string, url?: string, size?: number, file_size: number })
     constructor(
-        arg1: string | { file_id?: string, name?: string, file_name?: string, file_url: string, size?: number, file_size: number },
+        arg1: string | { file_id?: string, name?: string, file_name?: string, url?: string, size?: number, file_size: number },
         arg2?: string,
         arg3?: number
     ) {
@@ -222,13 +222,13 @@ export class FileSeg extends Seg {
             this.ext = name.split('.').pop() || 'unknown'
             this.size = size
         } else {
-            const data = arg1 as { file_id?: string, name?: string, file_name?: string, file_url: string, size?: number, file_size: number }
+            const data = arg1 as { file_id?: string, name?: string, file_name?: string, url: string, size?: number, file_size: number }
             if (!data.file_id) throw new Error('文件ID缺失')
             this.file_id = data.file_id
             this.name = data.name ?? data.file_name ?? '未知文件'
             this.size = data.size ?? data.file_size
             this.ext = this.name.split('.').pop() || 'unknown'
-            if (data.file_url) this.file_url = stdUrl(data.file_url)
+            if (data.url) this.file_url = stdUrl(data.url)
         }
     }
 
