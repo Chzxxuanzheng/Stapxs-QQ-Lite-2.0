@@ -78,6 +78,18 @@
                     </option>
                 </select>
             </div>
+            <!-- TODO 这个输入框确实不好用...不知道用啥输入框合适...等那天都啥api统计齐全了直接做成复选框 -->
+            <div class="opt-item">
+                <div :class="checkDefault('api_log')" />
+                <font-awesome-icon :icon="['fas', 'right-left']" />
+                <div>
+                    <span>{{ $t('通信过滤器') }}</span>
+                    <span>{{ $t('输入你要过滤的api日志, 输入all表示全都输出, ex: send_msg, get_message') }}</span>
+                </div>
+                <input v-model="runtimeData.sysConfig.api_log"
+                    class="ss-input" style="width: 150px"
+                    type="text" name="api_log" @keyup="save">
+            </div>
             <div class="opt-item">
                 <div :class="checkDefault('debug_msg')" />
                 <font-awesome-icon :icon="['fas', 'robot']" />

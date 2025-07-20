@@ -29,11 +29,61 @@ let retry = 0
 
 export let websocket: WebSocket | undefined = undefined
 
-class TimeoutError extends Error {
+class WsError extends Error {
+    params: any
+    constructor(message: string, params: any) {
+        super(message)
+        this.params = params
+    }
+}
+
+class TimeoutError extends WsError {
+    constructor(params: any) {
+        super('请求超时', params)
+    }
+}
+
+class ActionFailedError extends WsError {
+    data: any
+    constructor(params: any, data: any) {
+        super(`请求失败,返回代码:${data['retcode']}`, params)
+        this.data = data
+    }
+}
+
+/**
+ * 请求类
+ */
+class Request {
+    timeout: number
+    params: any
+    resolve!: (value: any) => void
+    reject!: (reason?: any) => void
+    promise: Promise<any>
     echo: string
-    constructor(echo: string) {
-        super()
+    constructor(params: any, echo: string = uuid(), timeout: number = 5000) {
+        this.promise = new Promise((resolve, reject) => {
+            this.resolve = resolve
+            this.reject = reject
+        })
+        this.params = params
         this.echo = echo
+        this.timeout = setTimeout(() => {
+            Connector.RequestMap.delete(this.params.echo)
+            this.reject(new TimeoutError(this.params))
+        }, timeout) as unknown as number
+        Connector.RequestMap.set(echo, this)
+    }
+
+    handleResponse(data: any) {
+        clearTimeout(this.timeout)
+        Connector.RequestMap.delete(this.echo)
+        if (data.status !== 'ok') this.reject(new ActionFailedError(this.params, data))
+        else this.resolve(data)
+    }
+
+    async waitResponse(): Promise<any> {
+        return await this.promise
     }
 }
 
@@ -171,10 +221,11 @@ export class Connector {
 
     static onmessage(message: string) {
         const data = JSON.parse(message)
-        logger.add(LogType.WS, 'GET：', data)
+        // 分发事件
         if (data.echo === undefined){
             dispatch(data)
         }
+        // 处理请求返回值
         if (data.echo) {
             let echo: string = data.echo
             delete data.echo
@@ -184,38 +235,16 @@ export class Connector {
                 dispatch(data, echo)
                 return
             }
-            this.ReMap.set(echo, data)
+            const request = Connector.RequestMap.get(echo)
+            if (!request) return
+            request.handleResponse(data)
         }
     }
 
     /**
      * 返回值Map
      */
-    private static ReMap: Map<string, any> = new Map()
-
-    private static waitReturn(echo: string, timeout: number=5000): Promise<any> {
-        return new Promise((resolve, reject) => {
-            const startTime = Date.now()
-
-            const check = () => {
-                if (this.ReMap.has(echo)) {
-                    const re = this.ReMap.get(echo)
-                    this.ReMap.delete(echo)
-                    resolve(re)
-                    return
-                }
-
-                if (Date.now() - startTime > timeout) {
-                    reject(new TimeoutError(echo))
-                    return
-                }
-
-                setTimeout(check, 20)
-            }
-
-            check()
-        })
-    }
+    static RequestMap: Map<string, Request> = new Map()
 
     static onclose(
         code: number,
@@ -281,31 +310,33 @@ export class Connector {
 
     /**
      * 调用 api
-     * TODO 异常处理
      * @param api  api名称,该api应该为映射Map里存在的键
      * @param args 参数
      * @returns undefined 表示无此API, null表示调用失败, 其余为经getMsgData过滤的返回值
      */
     static async callApi(api: string, args: {[key: string]: any}): Promise<any|undefined|null>{
         // 组建信息
-        const echo = uuid()
         const apiMap = runtimeData.jsonMap[api] ?? stdApi[api]
         if (!apiMap) {
             logger.debug(`${runtimeData.jsonMap.name} 未适配 API ${api}`)
             return undefined
         }
 
+        const request = new Request(args)
+
         // 发送信息
         if(import.meta.env.VITE_APP_SSE_MODE == 'true') {
             // 使用 http POST 请求 /api/$name,body 为 json
-            this.sendSeeMod(apiMap.name, args, echo)
+            this.sendSeeMod(apiMap.name, request.params, request.echo)
         } else {
-            this.sendRaw(apiMap.name, args, echo)
+            this.sendRaw(apiMap.name, request.params, request.echo)
         }
 
         // 处理响应
         try{
-            const re = await this.waitReturn(echo)
+            const re = await request.waitResponse()
+            logger.get(api, re)
+            if (re['status'] !== 'ok') throw new Error()
             return getMsgData(api, re, apiMap)
         }catch (e) {
             if (e instanceof TimeoutError) {
@@ -391,12 +422,7 @@ export class Connector {
         } else if (websocket) {
             websocket.send(json)
         }
-
-        if (Option.get('log_level') === 'debug') {
-            logger.add(LogType.DEBUG, 'PUT：', JSON.parse(json))
-        } else {
-            logger.add(LogType.WS, 'PUT：', JSON.parse(json))
-        }
+        logger.put(name, args)
     }
     static sendRawJson(str: string) {
         const json = JSON.parse(str)

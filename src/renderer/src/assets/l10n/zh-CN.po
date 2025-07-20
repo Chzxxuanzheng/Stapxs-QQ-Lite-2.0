@@ -1238,3 +1238,9 @@ msgstr ""
 
 msgid "空消息"
 msgstr ""
+
+msgid "通信过滤器"
+msgstr ""
+
+msgid "输入你要过滤的api日志, 输入all表示全都输出, ex: send_msg, get_message"
+msgstr ""

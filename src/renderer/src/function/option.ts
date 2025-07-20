@@ -74,6 +74,7 @@ export const optDefault: { [key: string]: any } = {
     msg_type: 2,
     log_level: 'err',
     debug_msg: false,
+    api_log: '',
 }
 
 // =============== 设置项事件 ===============

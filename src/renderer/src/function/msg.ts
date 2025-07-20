@@ -77,6 +77,9 @@ let heartbeatTime = -1
 export function dispatch(raw: string | { [k: string]: any }, echo?: string) {
     let msg: any;
 
+    // TODO 分发事件适配
+    logger.add(LogType.WS, 'GET：', raw)
+
     // 1) 如有需要先 parse
     if (typeof raw === 'string') {
         try {

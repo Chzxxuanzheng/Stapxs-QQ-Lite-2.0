@@ -18,7 +18,9 @@ export enum LogType {
     ERR,
     INFO,
     DEBUG,
-    SYSTEM
+    SYSTEM,
+    _GET,
+    _PUT,
 }
 
 export class Logger {
@@ -33,6 +35,8 @@ export class Logger {
             ['99b3db', 'fff'],
             ['677480', 'fff'],
             ['e5a5a9', 'fff'],
+            ['357837ff', 'fff'],
+            ['1765a5ff', 'fff'],
         ]
     }
 
@@ -41,48 +45,71 @@ export class Logger {
      * @param mode 日志类型
      * @param args 日志内容
      */
-    add(type: LogType, args: string, data = '' as any, hidden = false) {
-        const logLevel = Option.get('log_level')
+    add(type: LogType, args: string, data = '' as any, hidden = false, deep = 0) {
+        deep ++
         // PS：WS, UI, ERR, INFO, DEBUG
         // all 将会输出以上全部类型，debug 将会输出 DEBUG、UI，info 将会输出 INFO，err 将会输出 ERR
-        if (logLevel === 'all') {
-            this.print(type, args, data, hidden)
-        } else if (
-            logLevel === 'debug' &&
-            (type === LogType.DEBUG || type === LogType.UI)
-        ) {
-            this.print(type, args, data, hidden)
-        } else if (logLevel === 'info' && type === LogType.INFO) {
-            this.print(type, args, data, hidden)
-        } else if (logLevel === 'err' && type === LogType.ERR) {
-            this.print(type, args, data, hidden)
-        } else if(import.meta.env.MODE == 'development' && type == LogType.SYSTEM) {
-            this.print(type, args, data, hidden)
-        }
+        // api 通信不受这个控制,受api_log控制
+        if (!this.normallyContditionCheck(type)) return
+        this.print(type, args, data, hidden, deep)
     }
-    info(args: string, hidden = false) {
-        this.add(LogType.INFO, args, undefined, hidden)
+    info(args: string, hidden = false, deep = 0) {
+        deep ++
+        this.add(LogType.INFO, args, undefined, hidden, deep)
     }
-    error(e: Error | null, args: string, hidden = false) {
+    error(e: Error | null, args: string, hidden = false, deep = 0) {
+        deep ++
         if (e) {
-            // this.add(LogType.ERR, args + '\n' + e.stack?.replaceAll('webpack-internal:///./', 'webpack-internal:///'), undefined, hidden)
-            this.add(LogType.ERR, args + '\n', e, hidden)
+            this.add(LogType.ERR, args + '\n', e, hidden, deep)
         } else {
-            this.add(LogType.ERR, args, undefined, hidden)
+            this.add(LogType.ERR, args, undefined, hidden, deep)
         }
     }
-    debug(args: string, hidden = false) {
-        this.add(LogType.DEBUG, args, undefined, hidden)
+    debug(args: string, hidden = false, deep = 0) {
+        deep ++
+        this.add(LogType.DEBUG, args, undefined, hidden, deep)
     }
-    system(args: string) {
-        this.add(LogType.SYSTEM, args, undefined, true)
+    system(args: string, deep = 0) {
+        deep ++
+        this.add(LogType.SYSTEM, args, undefined, true, deep)
+    }
+    get(api: string, data: any, deep = 0) {
+        if (!this.apiConditionCheck(api)) return
+        return this.add(LogType._GET, 'GET|' + api, data, false, deep)
+    }
+    put(api: string, params: any, deep = 0) {
+        if (!this.apiConditionCheck(api)) return
+        this.add(LogType._PUT, 'PUT|' + api, params, false, deep)
+    }
+    private normallyContditionCheck(type: LogType): boolean {
+        const logLevel = Option.get('log_level')
+        if (type === LogType._GET || type === LogType._PUT) return true
+        if (logLevel === 'all') return true
+        if (logLevel === 'debug' && (type === LogType.DEBUG || type === LogType.UI)) return true
+        if (logLevel === 'info' && type === LogType.INFO) return true
+        if (logLevel === 'err' && type === LogType.ERR) return true
+        if (import.meta.env.MODE === 'development' && type === LogType.SYSTEM) return true
+        return false
+
+    }
+    private apiConditionCheck(api: string): boolean {
+        let api_log = Option.get('api_log')?.trim()
+        if (!api_log) return false
+        if (api_log === 'all') return true
+        api_log = api_log.split(',').map((e: string) => e.trim())
+        return api_log.includes(api)
     }
     /**
      * 打印一条日志
      * @param type 日志类型
      * @param args 日志内容
+     * @param data 附加数据
+     * @param hidden 是否隐藏日志（不显示调用者信息）
+     * @param deep 调用深度（用于获取调用者信息）
+     * @private
      */
-    private print(type: LogType, args: string, data: any, hidden: boolean) {
+    private print(type: LogType, args: string, data: any, hidden: boolean, deep: number) {
+        deep ++
         const error = new Error()
         // 浏览器类型，用于判断是不是 webkit
         let isWebkit = /webkit/i.test(navigator.userAgent)
@@ -92,37 +119,54 @@ export class Logger {
         }
         // 从调用栈中获取调用者信息
         let from = undefined as string | undefined
-        const stack = error.stack
+        const stack = error.stack?.split('\n').at(deep)
         if (stack) {
-            const stackArr = stack.split('\n')
-            // 找到第一个不是 at Logger 开头的调用者信息（WebKit 为第一个 @ 开头）
-            for (let i = 1; i < stackArr.length; i++) {
-                if (isWebkit ? stackArr[i].startsWith('@') : !stackArr[i].includes('at Logger')) {
-                    // 取出链接部分，去除括号
-                    from = stackArr[i].replace(/\(|\)/g, '').split(' ').pop() || ''
-                    from = from.replace(
-                        'webpack-internal:///./',
-                        'webpack-internal:///',
-                    )
-                    if(from.startsWith('@')) {
-                        from = from.substring(1)
-                    }
-                    if (from.startsWith('webpack-internal:///node_modules')) {
-                        from = undefined
-                    }
-                    break
+            if (isWebkit ? stack.startsWith('@') : !stack.includes('at Logger')) {
+                // 取出链接部分，去除括号
+                from = stack.replace(/\(|\)/g, '').split(' ').pop() || ''
+                from = from.replace(
+                    'webpack-internal:///./',
+                    'webpack-internal:///',
+                )
+                if (from.startsWith('@')) {
+                    from = from.substring(1)
+                }
+                if (from.startsWith('webpack-internal:///node_modules')) {
+                    from = undefined
+                }
+
+                // zen(基于火狐)拿出来的东西和上面的不一样,我不知道上面的啥意思
+                // 下面的是我针对火狐的删连接的代码
+                // 火狐的原始格式:onclose @http://localhost:8080/src/function/connect.ts?t=1753012335169:220:12
+                //   -- by Mr.Lee
+                if (from) {
+                    from = from.replace(`${window.location.origin}/`, '')
+                        .replace(/\?t=\d+:/, ' ')
+                        .replace('/', '.')
                 }
             }
         }
         // 打印日志
         let typeStr = LogType[type]
+        // 更换WS收发的样式,from参数
         if (typeStr === 'WS') {
             if (args.startsWith('GET')) {
-                args = args.substring(4)
-                typeStr = '<<<'
+                type = LogType._GET
             } else if (args.startsWith('PUT')) {
-                args = args.substring(4)
-                typeStr = '>>>'
+                type = LogType._PUT
+            }
+        }
+        if (type === LogType._GET) {
+            typeStr = '<<<'
+            if (args.startsWith('GET|')) {
+                from = args.replace('GET|', '')
+                args = ''
+            }
+        }else if (type === LogType._PUT) {
+            typeStr = '>>>'
+            if (args.startsWith('PUT|')){
+                from = args.replace('PUT|', '')
+                args = ''
             }
         }
 
@@ -167,6 +211,7 @@ export class Logger {
     }
 
     private logOutput(message: string, styles: string[], data: any, useStyles = true) {
+        if (!data) data = ''
         if (useStyles) {
             // eslint-disable-next-line no-console
             console.log(message, ...styles, data)
