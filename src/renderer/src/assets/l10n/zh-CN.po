@@ -1229,3 +1229,12 @@ msgstr ""
 
 msgid "发到哪里水到哪里～"
 msgstr ""
+
+msgid "时间丢失了..."
+msgstr ""
+
+msgid "群文件"
+msgstr ""
+
+msgid "空消息"
+msgstr ""

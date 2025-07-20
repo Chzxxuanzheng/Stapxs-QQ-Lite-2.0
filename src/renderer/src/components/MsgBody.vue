@@ -51,7 +51,10 @@
             </a>
             <div>
                 <!-- 消息体 -->
-                <template v-if="!hasCard()">
+                <template v-if="data.message.length === 0">
+                    <span class="msg-text" style="opacity: 0.5">{{ $t('空消息') }}</span>
+                </template>
+                <template v-else-if="!hasCard()">
                     <div v-for="(item, index) in data.message"
                         :key="data.message_id + '-m-' + index"
                         :class="View.isMsgInline(item.type) ? 'msg-inline' : ''">
@@ -398,10 +401,6 @@
                 Number(runtimeData.loginInfo.uin) ===
                 Number(this.data.sender.user_id)
             this.getLink()
-			// 初始化文件大小
-			if (this.data.message[0].type === 'file') {
-                this.getFileSize(this.data.message[0]).then(re => this.fileSize = re)
-            }
         },
         methods: {
             /**
@@ -746,21 +745,6 @@
                     openLink(link)
                 }
             },
-
-			/**
-			 * 获取文件大小
-			 * @param fileSeg 文件segment
-			 */
-			async getFileSize(fileSeg: any): Promise<string> {
-				let size: number|undefined = undefined
-				if (fileSeg.size) size = Number(fileSeg.size)
-				if (fileSeg.file_size) size = Number(fileSeg.file_size)
-                if (fileSeg.url) {
-                    // TODO 要跨域，后端做
-                }
-				if(size) return getSizeFromBytes(size)
-				return '获取文件大小失败'
-			},
 
             /**
              * 下载 txt 文件并获取文件内容

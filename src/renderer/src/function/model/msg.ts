@@ -115,7 +115,7 @@ export class Msg extends Message {
             if (!data['message']) throw new Error('消息内容缺失')
             this.sender = new Sender(data['sender'])
             this.message = Msg.createSegs(data['message'])
-            if (data['raw_message']) this.raw_message = data['raw_message']
+            if (data['raw_message'] || data['raw_message'] === '') this.raw_message = data['raw_message']
             else this.raw_message = this.generateRawMsg()
             this.message.forEach(seg => {
                 if (!(seg instanceof AtSeg)) return
@@ -139,6 +139,8 @@ export class Msg extends Message {
      * @returns 
      */
     generateRawMsg(): string {
+        const { $t } = app.config.globalProperties
+        if (this.message.length === 0) return $t('空消息')
         return this.message.map(seg => seg.toCq()).join('')
     }
 
