@@ -266,9 +266,6 @@ msgstr "（获取回复喵喵失败）"
 msgid "管理员禁言了"
 msgstr "发小鱼干的禁言了"
 
-msgid "管理员解除了 {name} 的禁言"
-msgstr "发小鱼干的解除了 {name} 的禁言"
-
 msgid "退出群聊"
 msgstr "退出喵圈"
 

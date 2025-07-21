@@ -1,13 +1,11 @@
 /*
- * @FileDescription: Message 相关的模型
+ * @FileDescription: Msg 相关的模型
  * @Author: Mr.Lee
  * @Date: 2025/07/15
  * @Version: 1.0
  * @Description: 提供模型定义和类型声明，用于处理消息相关的数据结构。（虽然把整个项目的类型全重构了不太现实...但还是从现在开始规范些吧...）
  */
 
-import { v4 as uuid } from 'uuid';
-import { getTimeConfig, getTrueLang, getViewTime } from '../utils/systemUtil';
 import { Connector } from '../connect';
 import { createMsg, getMsgRawTxt } from '../utils/msgUtil';
 import { Logger, PopInfo, PopType } from '../base';
@@ -18,69 +16,10 @@ import { TimeoutSet } from './data';
 import { AtSeg, ImgSeg, Seg } from './seg';
 import { autoReactive } from './utils';
 import { Sender } from './user';
+import { Message } from './message';
+import { Session } from './session';
 
 const logger = new Logger()
-
-export abstract class Message {
-    /**
-     * 消息ID
-     * @description 项目内部使用唯一标识符时优先使用这个，不要用message_id
-     */
-    readonly abstract type: string
-    readonly uuid: string = uuid()
-    sub_type?: string
-    session?: Session
-    time?: number
-    message_id?: string
-    constructor(data: object) {
-        if (data['time']) this.time = getViewTime(data['time'])
-        if (data['message_id']) this.message_id = String(data['message_id'])
-        if (data['sub_type']) this.sub_type = data['sub_type']
-        try{
-            if (data['message_type']) this.session = new Session(data as any)
-        // eslint-disable-next-line no-empty
-        } catch (e) {}
-    }
-
-    formatTime(config:'year'
-    | 'month'
-    | 'week'
-    | 'day'
-    | 'hour'
-    | 'minute'
-    | 'second'
-    | 'auto' = 'auto'): string {
-        const { $t } = app.config.globalProperties
-        const lang = getTrueLang()
-        if (!this.time) return $t('时间丢失了...')
-        let timeConfig: Intl.DateTimeFormatOptions = {}
-        if (config === 'auto') timeConfig = getTimeConfig(new Date(this.time))
-        else switch (config) {
-            case 'year':
-                timeConfig.year = 'numeric'
-            // eslint-disable-next-line no-fallthrough
-            case 'month':
-                timeConfig.month = '2-digit'
-            // eslint-disable-next-line no-fallthrough
-            case 'week':
-                if (config === 'week') timeConfig.weekday = 'short'
-            // eslint-disable-next-line no-fallthrough
-            case 'day':
-                timeConfig.day = '2-digit'
-            // eslint-disable-next-line no-fallthrough
-            case 'hour':
-                timeConfig.hour = 'numeric'
-            // eslint-disable-next-line no-fallthrough
-            case 'minute':
-                timeConfig.minute = 'numeric'
-            // eslint-disable-next-line no-fallthrough
-            case 'second':
-                timeConfig.second = 'numeric'
-                break
-        }
-        return Intl.DateTimeFormat(lang, timeConfig).format(this.time)
-    }
-}
 
 /**
  * 聊天消息
@@ -95,6 +34,7 @@ export class Msg extends Message {
     atme: boolean = false
     atall: boolean = false
     imgList: string[] = []
+    session?: Session | undefined;
     constructor(segs: Seg[], sender: Sender, session: Session)
     constructor(data: any)
     constructor(arg1: Seg[] | any, arg2?: Sender, arg3?: Session) {
@@ -122,6 +62,13 @@ export class Msg extends Message {
                 if (seg.qq === 'all') this.atall = true
                 else if (seg.qq === String(runtimeData.loginInfo.uin)) this.atme = true
             })
+            if (data['message_type'] === 'group') {
+                this.session = new Session('group', data['group_id'])
+            } else if (data['message_type'] === 'private') {
+                this.session = new Session('user', data['user_id'])
+            } else if (data['group_id'] && data['user_id']) {
+                this.session = new Session('temp', data['group_id'], data['user_id'])
+            }
         }
         // TODO 文件图片支持
         this.message.forEach(seg => {
@@ -201,25 +148,13 @@ export class SelfMsg extends Msg {
     private static lock: number = 0
     static readonly sendIds: TimeoutSet<string> = new TimeoutSet()
     
-    constructor(segs: Seg[], type: string, id: string|number) {
+    constructor(segs: Seg[], type: 'group' | 'user' | 'temp', id: string|number) {
         const sender = new Sender({
             user_id: runtimeData.loginInfo.uin,
             nickname: runtimeData.loginInfo.nickname,
             gender: 'unknown',
         })
-        let session: Session
-        if (type === 'temp') {
-            session = new Session({
-                message_type: type,
-                user_id: (id as string).split('/')[0],
-                group_id: (id as string).split('/')[1]
-            })
-        } else {
-            session = new Session({
-                message_type: type,
-                id: id
-            })
-        }
+        const session: Session = new Session(type, id)
         super(segs, sender, session)
     }
 
@@ -337,54 +272,3 @@ export class SelfMsg extends Msg {
     }
 }
 
-/**
- * 通知类消息
- */
-export class Notice extends Message {
-    readonly type = 'notice'
-}
-
-export class Session {
-    type: 'group' | 'user' | 'temp'
-    id: number
-    group_id?: number
-
-    constructor(data: any) {
-        const type = data.message_type
-        if (!type) throw new Error('会话类型缺失')
-        switch (type) {
-            case 'group':
-                this.type = 'group'
-                this.id = Number(data.group_id)
-                break
-            case 'private':
-                this.type = 'user'
-                this.id = Number(data.user_id ?? data.sender.user_id)
-                break
-            default:
-                this.type = 'temp'
-                // TODO lgr不支持匿名聊天，我不知道nc的长啥样
-                this.id = Number(data.user_id)
-                this.group_id = Number(data.group_id)
-                break
-        }
-        if (data['id']) this.id = data['id'] as number
-        if (!this.id) throw new Error('会话ID缺失')
-    }
-
-    createSendParam(): {user_id?: number, group_id?: number} {
-        if (this.type === 'group') {
-            return { group_id: this.id };
-        }
-        else if (this.type === 'user') {
-            return { user_id: this.id };
-        } else {
-            return { user_id: this.id, group_id: this.group_id };
-        }
-    }
-
-    getSendApi(): string {
-        if (this.type === 'temp') return 'send_temp_msg'
-        return 'send_msg'
-    }
-}

@@ -57,6 +57,7 @@ import {
 import { NotifyInfo } from './elements/system'
 import { Notify } from './notify'
 import { Msg, SelfMsg } from './model/msg'
+import { BanLiftNotice, BanNotice, JoinNotice, LeaveNotice, PokeNotice, RevokeNotice } from './model/notice'
 
 // eslint-disable-next-line
 const msgPaths = import.meta.glob("@renderer/assets/pathMap/*.yaml", { eager: true})
@@ -78,33 +79,34 @@ export function dispatch(raw: string | { [k: string]: any }, echo?: string) {
     let msg: any;
 
     // TODO 分发事件适配
+    // TODO 事件模型重构
     logger.add(LogType.WS, 'GET：', raw)
 
     // 1) 如有需要先 parse
     if (typeof raw === 'string') {
         try {
-            msg = JSON.parse(raw);
+            msg = JSON.parse(raw)
         } catch {
             if (!raw.includes('"meta_event_type":"heartbeat"')) {
-                logger.add(LogType.WS, 'GET：' + raw);
+                logger.add(LogType.WS, 'GET：' + raw)
             }
-            return;
+            return
         }
     } else {
-        msg = raw;
+        msg = raw
     }
 
     // 2) 決定 name/key
-    const name = echo ? echo.split('_')[0] : msg.post_type === 'notice' ? msg.sub_type ?? msg.notice_type : msg.post_type;
+    const name = echo ? echo.split('_')[0] : msg.post_type === 'notice' ? msg.sub_type ?? msg.notice_type : msg.post_type
 
     // 3) 安全調用 handler
     try {
-        const fn = handlers[name];
-        if (!fn) throw new Error(`No handler for "${name}"`);
-        const metaArgs = echo ? echo.split('_') : undefined;
-        fn(msg, metaArgs);
+        const fn = handlers[name]
+        if (!fn) throw new Error(`No handler for "${name}"`)
+        const metaArgs = echo ? echo.split('_') : undefined
+        fn(msg, metaArgs)
     } catch (e) {
-        logger.error(e as Error, `跳转事件处理错误 - ${name}:\n${JSON.stringify(msg)}`);
+        logger.error(e as Error, `跳转事件处理错误 - ${name}:\n${JSON.stringify(msg)}`)
     }
 }
 
@@ -211,116 +213,59 @@ const noticeFunctions = {
     /**
      * 群禁言
      */
-    group_ban: (_: string, msg: { [key: string]: any }) => {
-        const groupId = msg.group_id
-        const userId = msg.user_id
-        const status = msg.sub_type === 'ban' ? true : false
-        const duration = msg.duration ?? 0 // 秒
+    ban: (_: string, msg: { [key: string]: any }) => {
+        const notice = new BanNotice(msg as any)
+        if (!notice.session) {
+            throw new Error('群禁言通知解析失败')
+        }
+
+        const groupId = notice.session.id
 
         // 如果是自己，更新禁言时间
-        if (
-            userId == runtimeData.loginInfo.uin &&
-            groupId == runtimeData.chatInfo.show.id
-        ) {
-            if (status)
-                runtimeData.chatInfo.info.me_info.shut_up_timestamp =
-                    (new Date().getTime() + duration * 1000) / 1000
-            else runtimeData.chatInfo.info.me_info.shut_up_timestamp = 0
+        if (notice.tome && groupId == runtimeData.chatInfo.show.id) {
+            runtimeData.chatInfo.info.me_info.shut_up_timestamp =
+                new Date().getTime() + notice.duration * 1000
         }
 
         // 只有在当前群才会显示
         if (groupId == runtimeData.chatInfo.show.id)
-            runtimeData.messageList.push(msg)
+            runtimeData.messageList.push(notice)
+    },
+    lift_ban: (_: string, msg: { [key: string]: any }) => {
+        const notice = new BanLiftNotice(msg as any)
+
+        if (!notice.session) {
+            throw new Error('群禁言通知解析失败')
+        }
+        const groupId = notice.session.id
+
+        // 如果是自己，更新禁言时间
+        if (notice.tome && groupId == runtimeData.chatInfo.show.id) {
+            runtimeData.chatInfo.info.me_info.shut_up_timestamp = 0
+        }
+
+        // 只有在当前群才会显示
+        if (groupId == runtimeData.chatInfo.show.id)
+            runtimeData.messageList.push(notice)
     },
 
     /**
      * 戳一戳
      */
     poke: (_: string, msg: { [key: string]: any }) => {
-        const { $t } = app.config.globalProperties
-
-        const groupId = msg.group_id
-        const userIds = [msg.user_id, msg.target_id]
-        const info = msg.raw_info
-
-        // 如果的当前打开的会话
-        if (groupId == runtimeData.chatInfo.show.id) {
-            let str = ''
-            const userInfo = [] as { txt: string; isMe: boolean }[]
-            // 用户列表
-            userIds.forEach((id) => {
-                if (id == runtimeData.loginInfo.uin) {
-                    userInfo.push({
-                        txt: $t('你'),
-                        isMe: true,
-                    })
-                } else {
-                    // 到群成员列表中去找这个人
-                    const user = runtimeData.chatInfo.info.group_members.find(
-                        (item) => {
-                            return item.user_id == id
-                        },
-                    )
-                    if (user)
-                        userInfo.push({
-                            txt: `<span>${user.nickname}</span>`,
-                            isMe: false,
-                        })
-                }
-            })
-            // 遍历内容段
-            let getQQTimes = 0
-            info.forEach((item: any) => {
-                switch (item.type) {
-                    case 'img':
-                        str += `<img src="${runtimeData.tags.proxyPort ? 'http://localhost:' + runtimeData.tags.proxyPort + '/proxy?url=' + encodeURIComponent(item.src) : item.src }"/>`
-                        break
-                    case 'nor':
-                        str += item.txt
-                        break
-                    case 'qq': {
-                        str += userInfo[getQQTimes].txt
-                        getQQTimes++
-                    }
-                }
-            })
-            // 插入系统消息
-            msg.str = str
-            msg.pokeMe = userInfo[1].isMe
-            runtimeData.messageList.push(msg)
-        }
+        const notice = new PokeNotice(msg as any)
+        if (! notice.session)  throw new Error('戳一戳通知解析失败')
+        // 只有在当前群才会显示
+        if (notice.session?.id == runtimeData.chatInfo.show.id)
+            runtimeData.messageList.push(notice)
     },
 
-    approve: (_: string, msg: { [key: string]: any }) => {
-        const { $t } = app.config.globalProperties
+    approve: joinGroup,
+    invite: joinGroup,
 
-        const groupId = msg.group_id
-        const userId = msg.user_id
-
-        // 如果的当前打开的会话
-        if (groupId == runtimeData.chatInfo.show.id) {
-            // 刷新群成员列表
-            Connector.send(
-                'get_group_member_list',
-                { group_id: groupId, no_cache: true },
-                'getGroupMemberList',
-            )
-            // 获取到用户信息
-            const user = runtimeData.chatInfo.info.group_members.find(
-                (item) => {
-                    return item.user_id == userId
-                },
-            )
-            // 插入入群通知
-            if (user) {
-                const str = $t('{name} 加入了群聊', {
-                    name: user.nickname,
-                })
-                msg.str = str
-                runtimeData.messageList.push(msg)
-            }
-        }
-    },
+    leave: leaveGroup,
+    kick: leaveGroup,
+    kick_me: leaveGroup,
 
     input_status: (_: string, msg: { [key: string]: any }) => {
         const { $t } = app.config.globalProperties
@@ -1261,40 +1206,34 @@ export function getMessageList(list: any[] | undefined): Msg[] {
 }
 
 function revokeMsg(_: string, msg: any) {
-    const chatId =
-        msg.notice_type.indexOf('group') >= 0 ? msg.group_id : msg.user_id
-    const msgId = msg.message_id
+    const notice = new RevokeNotice(msg)
+    if (!notice.session || !notice.message_id) throw new Error('撤回通知缺少必要信息')
+    const chatId = notice.session.id
+    const msgId = notice.message_id
     // 寻找消息
-    let msgGet = null as { [key: string]: any } | null
-    let msgIndex = -1
-    runtimeData.messageList.forEach((item, index) => {
-        if (item.message_id === msgId) {
-            msgGet = item
-            msgIndex = index
+    let matchMsg: undefined | Msg
+    let matchMsgId: undefined | number
+    for (const [ id, msg ] of runtimeData.messageList.entries()) {
+        if (msg.message_id === String(msgId)) {
+            matchMsg = msg as Msg
+            matchMsgId = id
+            break
         }
-    })
-    if (msgGet !== null && msgIndex !== -1) {
-        runtimeData.messageList[msgIndex].revoke = true
-        if (
-            runtimeData.messageList[msgIndex].sender.user_id !=
-            runtimeData.loginInfo.uin
-        ) {
-            runtimeData.messageList.splice(msgIndex, 1)
-        }
-        if (msgGet.sender.user_id !== runtimeData.loginInfo.uin) {
-            // 显示撤回提示
-            const list = runtimeData.messageList
-            if (msgIndex !== -1) {
-                list.splice(msgIndex + 1, 0, msg)
-            } else {
-                list.push(msg)
-            }
-        }
-    } else {
-        logger.error(null, '没有找到这条被撤回的消息 ……')
     }
+    if (!matchMsg || !matchMsgId) {
+        logger.error(null, '没有找到这条被撤回的消息 ……')
+        return
+    }
+    // 自己发送的消息被撤回，直接删除
+    if (matchMsg.sender.user_id === runtimeData.loginInfo.uin) runtimeData.messageList.splice(matchMsgId, 1)
+    else matchMsg.revoke = true
+
+    // 只有在当前群才会显示
+    if (notice.session.id === runtimeData.chatInfo.show.id)
+        runtimeData.messageList.push(notice)
+
     // 撤回通知
-    new Notify().closeAll(chatId)
+    new Notify().closeAll(String(chatId))
 }
 
 let qed_try_times = 0
@@ -1553,6 +1492,42 @@ function updateSysInfo(
         if (index !== -1) {
             runtimeData.systemNoticesList?.splice(index, 1)
         }
+    }
+}
+
+async function joinGroup(_: string, msg: { [key: string]: any }){
+    const notice = new JoinNotice(msg as any)
+
+    if (!notice.session) throw new Error('入群通知解析失败')
+
+    const groupId = notice.session.id
+
+    // 如果的当前打开的会话
+    if (groupId == runtimeData.chatInfo.show.id) {
+        // 刷新群成员列表
+        const data = await Connector.callApi('get_group_member_list', { group_id: groupId, no_cache: true })
+        msgFunctions['getGroupMemberList']('', { data: data })
+
+        // 插入消息
+        runtimeData.messageList.push(notice)
+    }
+}
+
+async function leaveGroup(_: string, msg: { [key: string]: any }) {
+    const notice = new LeaveNotice(msg as any)
+
+    if (!notice.session) throw new Error('退群通知解析失败')
+
+    const groupId = notice.session.id
+
+    // 如果的当前打开的会话
+    if (groupId == runtimeData.chatInfo.show.id) {
+        // 刷新群成员列表
+        const data = await Connector.callApi('get_group_member_list', { group_id: groupId, no_cache: true })
+        msgFunctions['getGroupMemberList']('', { data: data })
+
+        // 插入消息
+        runtimeData.messageList.push(notice)
     }
 }
 

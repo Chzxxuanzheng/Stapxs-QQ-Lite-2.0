@@ -1,3 +1,5 @@
+import  type { Message } from '../model/message'
+
 export enum BotMsgType {
     CQCode,
     Array
@@ -58,7 +60,7 @@ export interface RunTimeDataElem {
         lastHeartbeatTime?: number
         backTimes: number
     }
-    messageList: any[]
+    messageList: Message[]
     mergeMsgStack: MergeStackData[]
     mergeMessageImgList?: any[] | undefined
     stickerCache?: any[]

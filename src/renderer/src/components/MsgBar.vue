@@ -11,12 +11,12 @@
             <NoticeBody
                 v-if="msgIndex.time && isShowTime(msgs[index - 1] ? msgs[index - 1].time : undefined, msgIndex.time)"
                 :key="'notice-time-' + (msgIndex.time / ( 4 * 60 )).toFixed(0)"
-                :data="{ sub_type: 'time', time: msgIndex.time }" />
+                :data="SystemNotice.time(msgIndex.time)" />
             <!-- [已删除]消息 -->
             <NoticeBody
                 v-if="isDeleteMsg(msgIndex)"
-                :key="'delete-' + msgIndex.message_id"
-                :data="{ sub_type: 'delete' }" />
+                :key="'delete-' + msgIndex.uuid"
+                :data="SystemNotice.delete()" />
             <!-- 消息体 -->
             <MsgBody v-else-if="msgIndex instanceof Msg"
                 :key="'msg-' + msgIndex.uuid"
@@ -33,8 +33,8 @@
                 @send-poke="arg => $emit('sendPoke', arg)"
                 />
             <!-- 其他通知消息 -->
-            <NoticeBody v-else-if="msgIndex.post_type === 'notice'"
-                :id="uuid()"
+            <NoticeBody v-else-if="msgIndex instanceof Notice"
+                :id="msgIndex.uuid"
                 :key="'notice-' + index"
                 :data="msgIndex" />
         </template>
@@ -49,7 +49,9 @@ import { v4 as uuid } from 'uuid'
 import { isDeleteMsg, isShowTime } from '@renderer/function/utils/msgUtil';
 import { runtimeData } from '@renderer/function/msg';
 import { Logger, LogType } from '@renderer/function/base';
-import { Message, Msg } from '@renderer/function/model/msg';
+import { Msg } from '@renderer/function/model/msg';
+import { Message } from '@renderer/function/model/message';
+import { Notice, SystemNotice } from '@renderer/function/model/notice';
 
 export default defineComponent({
     components: { MsgBody, NoticeBody },
@@ -84,6 +86,8 @@ export default defineComponent({
                 onMove: 'no',
             },
             Msg,
+            Notice,
+            SystemNotice,
         }
     },
     methods: {

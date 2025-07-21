@@ -12,3 +12,25 @@ get_message:
     message: /message
     time: /time
     sender: /sender
+
+revoke_msg:
+    name: delete_msg
+
+get_group_member_list:
+    name: get_group_member_list
+    source: $.data[*]
+    age: $.age
+    area: $.area
+    card: $.card
+    card_changeable: $.card_changeable
+    group_id: $.group_id
+    join_time: $.join_time
+    last_sent_time: $.last_sent_time
+    level: $.level
+    nickname: $.nickname
+    role: $.role
+    sex: $.sex
+    title: $.title
+    title_expire_time: $.title_expire_time
+    user_id: $.user_id
+    unfriendly: $.unfriendly

@@ -807,9 +807,6 @@ msgstr ""
 msgid "管理员禁言了"
 msgstr ""
 
-msgid "管理员解除了 {name} 的禁言"
-msgstr ""
-
 msgid "天"
 msgstr ""
 

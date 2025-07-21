@@ -12,7 +12,8 @@ import {
 } from '../elements/information'
 import { sendStatEvent } from './appUtil'
 import { callBackend } from './systemUtil'
-import { Message, Msg, SelfMsg } from '../model/msg'
+import { Msg, SelfMsg } from '../model/msg'
+import { Message } from '../model/message'
 import { AtSeg, Seg } from '../model/seg'
 
 const logger = new Logger()

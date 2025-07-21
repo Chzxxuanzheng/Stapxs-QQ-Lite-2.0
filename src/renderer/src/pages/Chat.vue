@@ -67,8 +67,8 @@
                 <a>{{ $t('没有更多消息了') }}</a>
             </div>
             <!-- 时间戳，在下滑加载的时候会显示，方便在大段的相连消息上让用户知道消息时间 -->
-            <NoticeBody v-if="tags.nowGetHistroy && list.length > 0"
-                :data="{ sub_type: 'time', time: list[0].time }" />
+            <NoticeBody v-if="tags.nowGetHistroy && list.length > 0 && list[0].time"
+                :data="SystemNotice.time(list[0].time)" />
             <MsgBar
                 :msgs="list"
                 :multipleSelectList="multipleSelectList"
@@ -292,9 +292,9 @@
                                     ? $t('已被禁言至：{time}', {
                                         time: Intl.DateTimeFormat(
                                             trueLang, getTimeConfig(
-                                                new Date(chat.info.me_info.shut_up_timestamp * 1000),
+                                                new Date(chat.info.me_info.shut_up_timestamp),
                                             ),
-                                        ).format(new Date(chat.info.me_infotimestamp * 1000)),
+                                        ).format(new Date(chat.info.me_info.shut_up_timestamp)),
                                     }) : ''"
                             @paste="addImg"
                             @keyup="mainKeyUp"
@@ -509,8 +509,10 @@
         GroupMemberInfoElem,
         ChatInfoElem,
     } from '@renderer/function/elements/information'
-    import { Message, Msg, SelfMsg } from '@renderer/function/model/msg'
+    import { Msg, SelfMsg } from '@renderer/function/model/msg'
+    import { Message } from '@renderer/function/model/message'
     import { Seg, FileSeg } from '@renderer/function/model/seg'
+    import { SystemNotice } from '@renderer/function/model/notice'
 
     export default defineComponent({
         name: 'ViewChat',
@@ -612,6 +614,7 @@
                     305, 306, 307, 314, 315, 318, 319, 320, 322, 324, 326,
                 ],
                 getMsgRawTxt,
+                SystemNotice,
             }
         },
         watch: {
@@ -920,7 +923,7 @@
              * @param event 右击事件
              * @param data 消息信息
              */
-            showMsgMenu(event: Event, data: any) {
+            showMsgMenu(event: Event, data: Msg) {
                 this.selectedMsg = data
 
                 if (Option.get('log_level') === 'debug') {
@@ -1291,7 +1294,11 @@
                 const msg = this.selectedMsg
                 if (msg !== null) {
                     const msgId = msg.message_id
-                    Connector.send('delete_msg', { message_id: msgId }, 'deleteMsg')
+                    Connector.callApi('revoke_msg', { message_id: msgId })
+                        .catch(err=>{
+                            new Logger().error(err, '撤回消息失败：')
+                            new PopInfo().add(PopType.ERR, this.$t('撤回失败'), true)
+                        })
                     // 关闭消息菜单
                     this.closeMsgMenu()
                 }

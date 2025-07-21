@@ -56,7 +56,7 @@
                 </template>
                 <template v-else-if="!hasCard()">
                     <div v-for="(item, index) in data.message"
-                        :key="data.message_id + '-m-' + index"
+                        :key="data.uuid + '-m-' + index"
                         :class="View.isMsgInline(item.type) ? 'msg-inline' : ''">
                         <div v-if="item.type === undefined" />
                         <span v-else-if="isDebugMsg" class="msg-text">{{ item }}</span>
@@ -200,7 +200,7 @@
                 </template>
                 <template v-else>
                     <template v-for="(item, index) in data.message"
-                        :key="data.message_id + '-m-' + index">
+                        :key="data.uuid + '-m-' + index">
                         <CardMessage v-if="item.type == 'xml' || item.type == 'json'"
                             :id="data.uuid"
                             :item="item as XmlSeg|JsonSeg" />
@@ -291,6 +291,7 @@
             :class="'sending right' + (isMe ? ' me' : '')">
             <font-awesome-icon :icon="['fas', 'spinner']" />
         </div>
+        <!-- lgr没有...没法调试 -->
         <!-- <div v-if="data.emoji_like"
             :class="'emoji-like' + (isMe ? ' me' : '')">
             <div class="emoji-like-body">
@@ -794,7 +795,7 @@
 
             async showPock() {
                 // 如果是最后一条消息并且在最近发送
-                if (this.data.uuid != runtimeData.messageList.at(-1).uuid) return
+                if (this.data.uuid != runtimeData.messageList.at(-1)?.uuid) return
                 if (!this.data.time) return
                 if ((new Date().getTime() - getViewTime(this.data.time)) / 1000 < 5) return
 

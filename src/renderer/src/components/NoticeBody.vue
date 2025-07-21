@@ -6,45 +6,94 @@
 -->
 
 <template>
-    <div :id="'notice-' + id"
-        class="note">
-        <div v-if="data.notice_type && data.notice_type.indexOf('recall') >= 0" class="note-recall note-base">
-            <a>{{ info.name }}</a>
-            <span>{{ $t('撤回了一条消息') }}</span>
-            <div />
-        </div>
-        <div v-else-if="data.notice_type == 'group_ban'" class="note-ban note-base">
-            <template v-if="data.sub_type === 'ban'">
-                <template v-if="isMe(data.user_id)">
-                    <span>{{ $t('成员类型_admin') }}</span>
-                    <a>&nbsp;{{ getName(data.operator_id) }}&nbsp;</a>
-                    <span>{{ $t('禁言了你') }}</span>
-                    <span>&nbsp;{{ fTime(data.duration) }}</span>
-                </template>
-                <template v-else>
-                    <span>{{ $t('管理员禁言了') }}</span>
-                    <a>&nbsp;{{ getName(data.user_id) }}&nbsp;</a>
-                    <span>{{ fTime(data.duration) }}</span>
-                </template>
+    <div :id="'notice-' + id" class="note">
+
+        <!--
+        ============================
+        接收到的消息
+        ============================
+        -->
+        <!-- 撤回 -->
+        <div v-if="data instanceof RevokeNotice" class="note-recall note-base">
+            <template v-if="data.selfRevoke">
+                <a>{{ data.user }}</a>
+                <span>{{ $t('撤回了一条消息') }}</span>
+                <div />
             </template>
-            <span v-else>{{
-                $t('管理员解除了 {name} 的禁言', { name: isMe(data.user_id) ? $t('你') : getName(data.user_id)})
-            }}</span>
+            <template v-else>
+                <a>{{ data.operator }}</a>
+                <span>{{ $t('撤回了') }}</span>
+                <a>{{ data.user }}</a>
+                <span>{{ $t('的消息') }}</span>
+            </template>
         </div>
-        <div v-else-if="data.sub_type === 'delete'" class="note-recall note-base">
+        <!-- 禁言 -->
+        <div v-else-if="data instanceof BanNotice" class="note-ban note-base">
+            <a>{{ data.operator }}</a>
+            <span>{{ data.tome ? $t('禁言了你') : data.user }}</span>
+            <span>{{ data.fTime }}</span>
+        </div>
+        <!-- 解除禁言 -->
+        <div v-else-if="data instanceof BanLiftNotice" class="note-ban note-base">
+            <a>{{ data.operator }}</a>
+            <span>{{ $t('解除了') }}</span>
+            <a>{{ data.tome ? $t('你') : data.user }}</a>
+            <span>{{ $t('的禁言') }}</span>
+        </div>
+        <!-- 戳一戳 -->
+        <div v-else-if="data instanceof PokeNotice" class="note-notify note-base">
+            <span>{{ data.user }}</span>
+            <img :src="data.img">
+            <a>{{ data.action }}</a>
+            <span>{{ data.target }}</span>
+            <a>{{ data.suffix }}</a>
+            <div class="space" />
+        </div>
+        <div v-else-if="data instanceof JoinNotice" class="note-notify note-base">
+            <template v-if="data.join_type === 'approve'">
+                <span>{{ data.operator }}</span>
+                <a>{{ $t('通过了') }}</a>
+                <span>{{ data.user }}</span>
+                <a>{{ $t('的入群申请') }}</a>
+            </template>
+            <template v-else-if="data.join_type === 'invite'">
+                <span>{{ data.operator }}</span>
+                <a>{{ $t('邀请') }}</a>
+                <span>{{ data.user }}</span>
+                <a>{{ $t('加入了群聊') }}</a>
+            </template>
+            <template v-else-if="data.join_type === 'self'">
+                <span>{{ data.user }}</span>
+                <a>{{ $t('加入了群聊') }}</a>
+            </template>
+        </div>
+        <div v-else-if="data instanceof LeaveNotice" class="note-notify note-base">
+            <template v-if="data.kick">
+                <span>{{ data.operator }}</span>
+                <a>{{ $t('将') }}</a>
+                <span>{{ data.user }}</span>
+                <a>{{ $t('移出群聊') }}</a>
+            </template>
+            <template v-else>
+                <span>{{ data.user }}</span>
+                <a>{{ $t('离开了群聊') }}</a>
+            </template>
+        </div>
+
+
+        <!--
+        ============================
+        内部系统消息
+        ============================
+        -->
+        <!-- 缺失消息 -->
+        <div v-else-if="data instanceof DeleteNotice" class="note-recall note-base">
             <span>{{ $t('这条消息迷失在虚空里了') }}</span>
-            <div />
         </div>
-        <div v-else-if="data.sub_type === 'poke'"
-            class="note-notify note-base"
-            v-html="data.str + '<div class=\'space\'</div>'" />
-        <div v-else-if="data.sub_type === 'time' && data.time != undefined"
+        <!-- 时间 -->
+        <div v-else-if="data instanceof TimeNotice && data.time != undefined"
             class="note-time note-base">
-            <a>{{ Intl.DateTimeFormat(
-                trueLang,
-                getTimeConfig(new Date(data.time)),
-            ).format(new Date(data.time))
-            }}</a>
+            <a>{{ data.formatTime() }}</a>
         </div>
     </div>
 </template>
@@ -58,15 +107,33 @@
         callBackend,
     } from '@renderer/function/utils/systemUtil'
     import { pokeAnime } from '@renderer/function/utils/msgUtil'
+    import { BanNotice, DeleteNotice, BanLiftNotice, Notice, PokeNotice, RevokeNotice, TimeNotice, LeaveNotice, JoinNotice, ErrorNotice } from '@renderer/function/model/notice'
 
     export default defineComponent({
         name: 'NoticeBody',
-        props: ['data', 'id'],
+        props: {
+            data: {
+                type: Object as () => Notice,
+                required: true,
+            },
+            id: {
+                type: String as () => string|undefined,
+            },
+        },
         data() {
             return {
                 trueLang: getTrueLang(),
                 getTimeConfig,
                 info: ref(this.data) as { [key: string]: any },
+                RevokeNotice,
+                PokeNotice,
+                TimeNotice,
+                DeleteNotice,
+                BanNotice,
+                BanLiftNotice,
+                LeaveNotice,
+                JoinNotice,
+                ErrorNotice,
             }
         },
         async mounted() {
@@ -76,83 +143,23 @@
                 width: number
                 height: number
             } | null
-            windowInfo = await callBackend(undefined, 'win:getWindowInfo', true)
             // 补全撤回者信息
-            if (
-                this.info.notice_type &&
-                this.info.notice_type.indexOf('recall') >= 0
-            ) {
-                if (runtimeData.chatInfo.show.type === 'group') {
-                    const id = this.info.operator_id
-                    // 寻找群成员信息
-                    if (runtimeData.chatInfo.info.group_members !== undefined) {
-                        const back =
-                            runtimeData.chatInfo.info.group_members.filter(
-                                (item) => {
-                                    return item.user_id === Number(id)
-                                },
-                            )
-                        if (back.length === 1) {
-                            this.info.name =
-                                back[0].card === '' || back[0].card == null? back[0].nickname: back[0].card
-                        } else {
-                            this.info.name = id
-                        }
-                    } else {
-                        this.info.name = id
-                    }
-                } else {
-                    this.info.name = runtimeData.chatInfo.show.name
-                }
+            if (runtimeData.chatInfo.show.type === 'group') {
+                this.data.initUserInfo(runtimeData.chatInfo.info.group_members)
+            }else {
+                this.data.initUserInfo(runtimeData.chatInfo.show.name, runtimeData.chatInfo.show.id)
             }
             // poke 通知创建对应的动画
             // PS：只有最后一条 poke 通知会触发动画，避免反复触发动画
-            if (this.info.sub_type === 'poke' && this.info.pokeMe &&
-                this.info == runtimeData.messageList[runtimeData.messageList.length - 1]) {
+            windowInfo = await callBackend(undefined, 'win:getWindowInfo', true)
+            if (this.data instanceof PokeNotice && this.data.tome &&
+                this.info == runtimeData.messageList.at(-1)) {
                     let item = document.getElementById('app')
                     if (['electron', 'tauri'].includes(runtimeData.tags.clientType)) {
                         item = document.getElementById('notice-' + this.id)?.getElementsByClassName('space')[0] as HTMLElement
                     }
                     pokeAnime(item, windowInfo)
             }
-        },
-        methods: {
-            isMe(id: number) {
-                return runtimeData.loginInfo.uin === id
-            },
-            getName(id: number) {
-                const back = runtimeData.chatInfo.info.group_members.filter(
-                    (item) => {
-                        return item.user_id === id
-                    },
-                )
-                if (back.length === 1) {
-                    return back[0].card === '' || back[0].card == null? back[0].nickname: back[0].card
-                }
-                return id
-            },
-            fTime(time: number) {
-                // 将秒数转换为可阅读的时间，最大单位天
-                const day = Math.floor(time / 86400)
-                const hour = Math.floor((time % 86400) / 3600)
-                const minute = Math.floor((time % 3600) / 60)
-                const second = time % 60
-
-                let back = ''
-                if (day > 0) {
-                    back += `${day} ${this.$t('天')} `
-                }
-                if (hour > 0) {
-                    back += `${hour} ${this.$t('小时')} `
-                }
-                if (minute > 0) {
-                    back += `${minute} ${this.$t('分钟')} `
-                }
-                if (second > 0) {
-                    back += `${second} ${this.$t('秒')} `
-                }
-                return back
-            },
         },
     })
 </script>

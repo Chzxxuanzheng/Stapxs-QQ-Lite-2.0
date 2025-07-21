@@ -1,7 +1,7 @@
 import app from '@renderer/main';
 import { getSizeFromBytes, stdUrl } from '../utils/systemUtil';
 import { MsgBodyFuns } from './msg-body';
-import { getFace } from '../utils/msgUtil';
+import { createMsg, getFace } from '../utils/msgUtil';
 import { Connector } from '../connect';
 import { PopInfo, PopType } from '../base';
 import { downloadFile } from '../utils/appUtil';
@@ -355,9 +355,27 @@ export class ForwardSeg extends Seg {
 export class ReplySeg extends Seg {
     static readonly type = 'reply'
     id: string
+    replyMsg?: Msg|null
     constructor(data: { id: string }) {
         super()
         this.id = data['id']
+    }
+
+    async init(): Promise<void> {
+        // 不知道为啥这里有时候会失败...重试5次吧
+        for (let retry = 0; retry < 5; retry++) {
+            try{
+                const [msgData] = await Connector.callApi('get_message', { message_id: this.id })
+                if (msgData) {
+                    this.replyMsg = createMsg(msgData)
+                    return
+                }
+            } catch {
+                await new Promise(resolve => setTimeout(resolve, 100))
+            }
+        }
+
+        this.replyMsg = null
     }
 
     get plaintext(): string {
