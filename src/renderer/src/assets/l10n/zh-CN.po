@@ -342,6 +342,12 @@ msgstr ""
 msgid "撤回了一条消息"
 msgstr ""
 
+msgid "撤回了"
+msgstr ""
+
+msgid "的消息"
+msgstr ""
+
 msgid "已读"
 msgstr ""
 
@@ -1246,4 +1252,10 @@ msgid "通信过滤器"
 msgstr ""
 
 msgid "输入你要过滤的api日志, 输入all表示全都输出, ex: send_msg, get_message"
+msgstr ""
+
+msgid "显示撤回消息"
+msgstr ""
+
+msgid "既然来了,那就别想走"
 msgstr ""

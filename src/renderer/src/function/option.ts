@@ -70,6 +70,7 @@ export const optDefault: { [key: string]: any } = {
     open_ga_bot: true,
     dont_parse_delete: false,
     jump_forward: true,
+    show_revoke_msg: false,
     // Dev
     msg_type: 2,
     log_level: 'err',

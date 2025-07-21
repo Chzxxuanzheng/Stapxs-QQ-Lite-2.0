@@ -1224,9 +1224,7 @@ function revokeMsg(_: string, msg: any) {
         logger.error(null, '没有找到这条被撤回的消息 ……')
         return
     }
-    // 自己发送的消息被撤回，直接删除
-    if (matchMsg.sender.user_id === runtimeData.loginInfo.uin) runtimeData.messageList.splice(matchMsgId, 1)
-    else matchMsg.revoke = true
+    matchMsg.revoke = true
 
     // 只有在当前群才会显示
     if (notice.session.id === runtimeData.chatInfo.show.id)
@@ -1234,6 +1232,11 @@ function revokeMsg(_: string, msg: any) {
 
     // 撤回通知
     new Notify().closeAll(String(chatId))
+
+    // 别人撤销的消息不删除
+    if (runtimeData.sysConfig.show_revoke_msg &&
+        notice.operator_id !== runtimeData.loginInfo.uin) return
+    runtimeData.messageList.splice(matchMsgId, 1)
 }
 
 let qed_try_times = 0
