@@ -30,25 +30,39 @@
     border-radius: 7px;
     margin: 10px 15px 0 0;
 }
-.message > div.sending {
-    width: 13px;
+div.icon {
+    display: flex;
     height: auto;
-    display: none;
-    align-items: flex-end;
     margin-left: 10px;
     margin-right: 10px;
     margin-bottom: 3px;
+    align-items: flex-end;
 }
-.message > div.sending.me {
-    display: flex;
+div.icon > div {
+    width: 1rem;
+    height: 1rem;
+    padding: 10%;
+    border-radius: 30%;
+    transition: 0.1s;
 }
-.message > div.sending.right.me {
-    display: none;
+div.icon > div:hover {
+    background-color: var(--color-card-1);
 }
-.message > div.sending.left.me > svg {
+div.icon > div > svg {
+  opacity: 0.8;
+  width: 0.8rem;
+}
+div.icon.left {
+  display: none;
+}
+div.icon.left.me {
+  display: flex;
+}
+div.icon.right.me {
+  display: none;
+}
+div.rotate > div > svg {
     animation: rotate 1.5s linear infinite;
-    color: var(--color-font-2);
-    width: 0.8rem;
 }
 
 .message-body {
@@ -60,13 +74,6 @@
 }
 .message.merge > div.message-body {
     max-width: calc(100% - 50px);
-}
-.message.revoke {
-    display: none;
-}
-.message.revoke.me {
-    display: flex;
-    opacity: 0.4;
 }
 .message-body a {
     color: var(--color-font);
@@ -117,16 +124,25 @@
     font-size: 0.75rem;
     opacity: 0.7;
 }
-.message-body > div {
+.message-body.me > div.message-content > div.main {
+    background: var(--color-main);
+}
+
+.message-content {
+    display: flex;
+}
+.message-content > div.main {
     background: var(--color-card-1);
     border-radius: 7px;
     width: fit-content;
     margin-top: 5px;
     padding: 10px;
 }
-.message-body.me > div {
-    background: var(--color-main);
+
+.message-content > div.not-exist {
+    opacity: 0.4;
 }
+
 .message-space {
     flex: 1;
 }
@@ -661,15 +677,10 @@
         display: unset !important;
     }
 
-    .message > div.sending.right.me {
-        display: flex;
-    }
-    .message > div.sending.left.me {
+    div.icon.left.me {
         display: none;
     }
-    .message > div.sending.right.me > svg {
-        animation: rotate 1.5s linear infinite;
-        color: var(--color-font-2);
-        width: 0.75rem;
+    div.icon.right.me {
+        display: flex;
     }
 }

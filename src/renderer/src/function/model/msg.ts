@@ -20,7 +20,7 @@ import { Message } from './message';
 import { Session } from './session';
 
 const logger = new Logger()
-
+type IconData = { icon: string, rotate: boolean, desc: string, color: string }
 /**
  * 聊天消息
  */
@@ -48,7 +48,7 @@ export class Msg extends Message {
             this.sender = sender
             this.session = session
             this.raw_message = this.generateRawMsg()
-        } else{
+        }else {
             const data = arg1 as any
             super(data)
             if (!data['sender']) throw new Error('发送者信息缺失')
@@ -126,6 +126,21 @@ export class Msg extends Message {
     }
 
     /**
+     * 消息图标信息
+     */
+    get icon(): IconData | undefined {
+        if (this.revoke) return {
+            icon: 'undo',
+            rotate: false,
+            desc: app.config.globalProperties.$t('该消息已被撤回'),
+            color: 'var(--color-font-2)',
+        }
+        return undefined
+    }
+
+    iconClick(): void {return}
+
+    /**
      * 判断是否有卡片消息
      * @returns 是否是卡片消息
      */
@@ -144,7 +159,7 @@ export class Msg extends Message {
  */
 @autoReactive
 export class SelfMsg extends Msg {
-    state: 'notSend' | 'sending' | 'sent' | 'failed' = 'sending'
+    state: 'notSend' | 'sending' | 'sent' | 'failed' = 'notSend'
     private static lock: number = 0
     static readonly sendIds: TimeoutSet<string> = new TimeoutSet()
     
@@ -163,7 +178,8 @@ export class SelfMsg extends Msg {
      * @returns 是否发送成功
      */
     async send(): Promise<boolean> {
-        if (this.state !== 'sending') throw new Error('该消息正在发送，不能发送')
+        if (this.state === 'sending') throw new Error('该消息正在发送,不能发送')
+        if (this.state === 'sent') throw new Error('该消息已经发送成功,不能发送')
         if (!this.session) throw new Error('会话信息缺失')
         //#region 拼装参数 =======================================================
         const param: any = this.session.createSendParam()
@@ -269,6 +285,27 @@ export class SelfMsg extends Msg {
     override get exist(): boolean {
         if (this.state !== 'sent') return false
         return super.exist
+    }
+
+    override get icon(): IconData|undefined {
+        if (this.state === 'sending') return {
+            icon: 'spinner',
+            rotate: true,
+            desc: app.config.globalProperties.$t('正在发送'),
+            color: 'var(--color-font-2)',
+        }
+        if (this.state === 'failed') return {
+            icon: 'exclamation-triangle',
+            rotate: false,
+            desc: app.config.globalProperties.$t('发送失败'),
+            color: '#999900bc',
+        }
+        return super.icon
+    }
+
+    override iconClick(): void {
+        if (this.state !== 'failed') return
+        this.send()
     }
 }
 

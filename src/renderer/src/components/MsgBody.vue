@@ -15,7 +15,6 @@
             'message': true,
             'me': isMe,
             'selected': selected,
-            'revoke': !data.exist,
             type,
         }"
         :data-raw="getMsgRawTxt(data)"
@@ -28,10 +27,6 @@
             @dblclick="sendPoke">
         <div v-if="isMe && type != 'merge'"
             class="message-space" />
-        <div v-if="data instanceof SelfMsg && data.state === 'sending'"
-            :class="'sending left' + (isMe ? ' me' : '')">
-            <font-awesome-icon :icon="['fas', 'spinner']" />
-        </div>
         <div :class="isMe ? type == 'merge' ? 'message-body' : 'message-body me' : 'message-body'">
             <template v-if="runtimeData.chatInfo.show.type == 'group' && !isMe">
                 <span v-if="data.sender.role === Role.Bot" class="robot">{{ $t('机器人') }}</span>
@@ -49,247 +44,273 @@
             <a v-if="selected" class="time">
                 {{ data.formatTime('year') }}
             </a>
-            <div>
-                <!-- 消息体 -->
-                <template v-if="data.message.length === 0">
-                    <span class="msg-text" style="opacity: 0.5">{{ $t('空消息') }}</span>
-                </template>
-                <template v-else-if="!hasCard()">
-                    <div v-for="(item, index) in data.message"
-                        :key="data.uuid + '-m-' + index"
-                        :class="View.isMsgInline(item.type) ? 'msg-inline' : ''">
-                        <div v-if="item.type === undefined" />
-                        <span v-else-if="isDebugMsg" class="msg-text">{{ item }}</span>
-                        <template v-else-if="item instanceof TxtSeg">
-                            <div v-if="hasMarkdown()" class="msg-md-title" />
-                            <!-- {{ item.text }} -->
-                            <span v-else v-show="item.praseMsg !== ''"
-                                class="msg-text" @click="textClick" v-html="item.praseMsg" />
-                        </template>
-                        <div v-else-if="item instanceof MdSeg" v-once
-                            :id="getMdHTML(item.content, 'msg-md-' + data.message_id)"
-                            class="msg-md" />
-                        <img v-else-if="item instanceof ImgSeg && item.file == 'marketface'"
-                            :class=" imgStyle(data.message.length, index, item.asface) + ' msg-mface'"
-                            :src="item.src"
-                            @load="imageLoaded"
-                            @error="imgLoadFail">
-                        <img v-else-if="item instanceof ImgSeg"
-                            :title="(!item.summary || item.summary == '') ? $t('预览图片') : item.summary"
-                            :alt="$t('图片')"
-                            :class=" imgStyle(data.message.length, index, item.asface)"
-                            :src="item.src"
-                            @load="imageLoaded"
-                            @error="imgLoadFail"
-                            @click="imgClick(data.message_id)">
-                        <template v-else-if="item instanceof FaceSeg">
-                            <img v-if="item.src"
-                                :alt="item.text"
-                                class="msg-face"
+            <div class="message-content">
+                <div v-if="data.icon" :class="{
+                    rotate: data.icon.rotate,
+                    icon: true,
+                    left: true,
+                    me: isMe,
+                }">
+                    <div @click="data.iconClick">
+                        <font-awesome-icon
+                            :style="{color: data.icon.color}"
+                            :title="data.icon.desc"
+                            :aria-label="data.icon.desc"
+                            :icon="['fas', data.icon.icon]" />
+                    </div>
+                </div>
+                <div :class="{main: true, 'not-exist': !data.exist}">
+                    <!-- 消息体 -->
+                    <template v-if="data.message.length === 0">
+                        <span class="msg-text" style="opacity: 0.5">{{ $t('空消息') }}</span>
+                    </template>
+                    <template v-else-if="!hasCard()">
+                        <div v-for="(item, index) in data.message"
+                            :key="data.uuid + '-m-' + index"
+                            :class="View.isMsgInline(item.type) ? 'msg-inline' : ''">
+                            <div v-if="item.type === undefined" />
+                            <span v-else-if="isDebugMsg" class="msg-text">{{ item }}</span>
+                            <template v-else-if="item instanceof TxtSeg">
+                                <div v-if="hasMarkdown()" class="msg-md-title" />
+                                <!-- {{ item.text }} -->
+                                <span v-else v-show="item.praseMsg !== ''"
+                                    class="msg-text" @click="textClick" v-html="item.praseMsg" />
+                            </template>
+                            <div v-else-if="item instanceof MdSeg" v-once
+                                :id="getMdHTML(item.content, 'msg-md-' + data.message_id)"
+                                class="msg-md" />
+                            <img v-else-if="item instanceof ImgSeg && item.file == 'marketface'"
+                                :class=" imgStyle(data.message.length, index, item.asface) + ' msg-mface'"
                                 :src="item.src"
-                                :title="item.text">
-                            <font-awesome-icon v-else :class="'msg-face-svg' + (isMe ? ' me' : '')" :icon="['fas', 'face-grin-wide']" />
-                        </template>
-                        <div v-else-if="item instanceof AtSeg"
-                            :class="getAtClass(item.qq)">
-                            <a :data-id="item.qq"
-                                :data-group="data.session?.id"
-                                @mouseenter="showUserInfo">{{ getAtName(item) }}</a>
-                        </div>
-                        <div v-else-if="item instanceof FileSeg" :class="'msg-file' + (isMe ? ' me' : '')">
-                            <div>
+                                @load="imageLoaded"
+                                @error="imgLoadFail">
+                            <img v-else-if="item instanceof ImgSeg"
+                                :title="(!item.summary || item.summary == '') ? $t('预览图片') : item.summary"
+                                :alt="$t('图片')"
+                                :class=" imgStyle(data.message.length, index, item.asface)"
+                                :src="item.src"
+                                @load="imageLoaded"
+                                @error="imgLoadFail"
+                                @click="imgClick(data.message_id)">
+                            <template v-else-if="item instanceof FaceSeg">
+                                <img v-if="item.src"
+                                    :alt="item.text"
+                                    class="msg-face"
+                                    :src="item.src"
+                                    :title="item.text">
+                                <font-awesome-icon v-else :class="'msg-face-svg' + (isMe ? ' me' : '')" :icon="['fas', 'face-grin-wide']" />
+                            </template>
+                            <div v-else-if="item instanceof AtSeg"
+                                :class="getAtClass(item.qq)">
+                                <a :data-id="item.qq"
+                                    :data-group="data.session?.id"
+                                    @mouseenter="showUserInfo">{{ getAtName(item) }}</a>
+                            </div>
+                            <div v-else-if="item instanceof FileSeg" :class="'msg-file' + (isMe ? ' me' : '')">
                                 <div>
-                                    <a>
-                                        <font-awesome-icon :icon="['fas', 'file']" />
-                                        {{ runtimeData.chatInfo.show.type == 'group' ? $t('群文件') : $t('离线文件') }}
-                                    </a>
-                                    <p>{{ item.name }}</p>
+                                    <div>
+                                        <a>
+                                            <font-awesome-icon :icon="['fas', 'file']" />
+                                            {{ runtimeData.chatInfo.show.type == 'group' ? $t('群文件') : $t('离线文件') }}
+                                        </a>
+                                        <p>{{ item.name }}</p>
+                                    </div>
+                                    <i>{{ fileSize }}</i>
                                 </div>
-                                <i>{{ fileSize }}</i>
+                                <div>
+                                    <font-awesome-icon
+                                        v-if="item.download_percent === undefined"
+                                        :icon="['fas', 'angle-down']"
+                                        @click="item.download()" />
+                                    <svg v-else-if="item.download_percent !== undefined && item.download_percent < 100"
+                                        class="download-bar"
+                                        xmlns="http://www.w3.org/2000/svg">
+                                        <circle cx="50%" cy="50%" r="40%"
+                                            stroke-width="15%" ill="none" stroke-linecap="round" />
+                                        <circle cx="50%" cy="50%" r="40%"
+                                            stroke-width="15%" fill="none"
+                                            :stroke-dasharray="item.download_percent === undefined ? '0,10000' :
+                                                `${(Math.floor(2 * Math.PI * 25) * item.download_percent) / 100},10000`" />
+                                    </svg>
+                                    <font-awesome-icon v-else :icon="['fas', 'check']" />
+                                </div>
+                                <div v-if="item.fileView"
+                                    class="file-view">
+                                    <img v-if="['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(item.fileView.ext)"
+                                        :src="item.fileView.url">
+                                    <video v-else-if="['mp4', 'avi', 'mkv', 'flv'].includes(item.fileView.ext)"
+                                        playsinline controls muted
+                                        autoplay>
+                                        <source :src="item.fileView.url"
+                                            :type="'video/' + item.fileView.ext">
+                                        现在还有不支持 video tag 的浏览器吗？
+                                    </video>
+                                    <span v-else-if="['txt', 'md'].includes(item.fileView.ext) && item.size && item.size < 2000000" class="txt">
+                                        <a>&gt; {{ item.name }} - {{ $t('文件预览') }}</a>
+                                        {{ getTxtUrl(item.fileView) }}{{ item.fileView.txt }}
+                                    </span>
+                                </div>
                             </div>
-                            <div>
-                                <font-awesome-icon
-                                    v-if="item.download_percent === undefined"
-                                    :icon="['fas', 'angle-down']"
-                                    @click="item.download()" />
-                                <svg v-else-if="item.download_percent !== undefined && item.download_percent < 100"
-                                    class="download-bar"
-                                    xmlns="http://www.w3.org/2000/svg">
-                                    <circle cx="50%" cy="50%" r="40%"
-                                        stroke-width="15%" ill="none" stroke-linecap="round" />
-                                    <circle cx="50%" cy="50%" r="40%"
-                                        stroke-width="15%" fill="none"
-                                        :stroke-dasharray="item.download_percent === undefined ? '0,10000' :
-                                            `${(Math.floor(2 * Math.PI * 25) * item.download_percent) / 100},10000`" />
-                                </svg>
-                                <font-awesome-icon v-else :icon="['fas', 'check']" />
-                            </div>
-                            <div v-if="item.fileView"
-                                class="file-view">
-                                <img v-if="['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(item.fileView.ext)"
-                                    :src="item.fileView.url">
-                                <video v-else-if="['mp4', 'avi', 'mkv', 'flv'].includes(item.fileView.ext)"
-                                    playsinline controls muted
+                            <div v-else-if="item instanceof VideoSeg"
+                                class="msg-video">
+                                <video playsinline controls muted
                                     autoplay>
-                                    <source :src="item.fileView.url"
-                                        :type="'video/' + item.fileView.ext">
+                                    <source :src="item.url"
+                                        type="video/mp4">
                                     现在还有不支持 video tag 的浏览器吗？
                                 </video>
-                                <span v-else-if="['txt', 'md'].includes(item.fileView.ext) && item.size && item.size < 2000000" class="txt">
-                                    <a>&gt; {{ item.name }} - {{ $t('文件预览') }}</a>
-                                    {{ getTxtUrl(item.fileView) }}{{ item.fileView.txt }}
-                                </span>
                             </div>
-                        </div>
-                        <div v-else-if="item instanceof VideoSeg"
-                            class="msg-video">
-                            <video playsinline controls muted
-                                autoplay>
-                                <source :src="item.url"
-                                    type="video/mp4">
-                                现在还有不支持 video tag 的浏览器吗？
-                            </video>
-                        </div>
-                        <template v-else-if="item instanceof ForwardSeg">
-                            <div class="msg-raw-forward"
-                                @click="openMerge(item)">
-                                <span>{{ $t('合并转发消息') }}</span>
-                                <div class="forward-msg">
-                                    <div v-if="!item.content">
-                                        <div class="loading" style="opacity: 0.9;">
-                                            <font-awesome-icon :icon="['fas', 'spinner']" />
-                                            {{ $t('加载中') }}
+                            <template v-else-if="item instanceof ForwardSeg">
+                                <div class="msg-raw-forward"
+                                    @click="openMerge(item)">
+                                    <span>{{ $t('合并转发消息') }}</span>
+                                    <div class="forward-msg">
+                                        <div v-if="!item.content">
+                                            <div class="loading" style="opacity: 0.9;">
+                                                <font-awesome-icon :icon="['fas', 'spinner']" />
+                                                {{ $t('加载中') }}
+                                            </div>
+                                        </div>
+                                        <div v-for="(i, indexItem) in item.content.slice(0, 3)" v-else-if="item.content.length > 0"
+                                            :key="'raw-forward-' + indexItem">
+                                            {{ i.sender.nickname }}:
+                                            <span :key="'raw-forward-item-' + i.uuid">
+                                                {{ i.raw_message }}
+                                            </span>
+                                        </div>
+                                        <div v-else>
+                                            {{ $t('加载失败') }}
                                         </div>
                                     </div>
-                                    <div v-for="(i, indexItem) in item.content.slice(0, 3)" v-else-if="item.content.length > 0"
-                                        :key="'raw-forward-' + indexItem">
-                                        {{ i.sender.nickname }}:
-                                        <span :key="'raw-forward-item-' + i.uuid">
-                                            {{ i.raw_message }}
+                                    <div>
+                                        <span v-if="item.content !== undefined">
+                                            {{ $t('查看 {count} 条转发消息', { count: item.content.length }) }}
+                                        </span>
+                                        <span v-else>
+                                            {{ $t('聊天记录') }}
                                         </span>
                                     </div>
-                                    <div v-else>
-                                        {{ $t('加载失败') }}
-                                    </div>
                                 </div>
-                                <div>
-                                    <span v-if="item.content !== undefined">
-                                        {{ $t('查看 {count} 条转发消息', { count: item.content.length }) }}
-                                    </span>
-                                    <span v-else>
-                                        {{ $t('聊天记录') }}
-                                    </span>
-                                </div>
+                            </template>
+                            <div v-else-if="item instanceof ReplySeg"
+                                :class="isMe ? type == 'merge' ? 'msg-replay' : 'msg-replay me' : 'msg-replay'"
+                                @click="scrollToMsg(item.id)">
+                                <font-awesome-icon :icon="['fas', 'reply']" />
+                                <a :class="getRepMsg(item.id) ? '' : 'msg-unknown'"
+                                    style="cursor: pointer">
+                                    {{ getRepMsg(item.id) ?? $t('（查看回复消息）') }}
+                                </a>
                             </div>
-                        </template>
-                        <div v-else-if="item instanceof ReplySeg"
-                            :class="isMe ? type == 'merge' ? 'msg-replay' : 'msg-replay me' : 'msg-replay'"
-                            @click="scrollToMsg(item.id)">
-                            <font-awesome-icon :icon="['fas', 'reply']" />
-                            <a :class="getRepMsg(item.id) ? '' : 'msg-unknown'"
-                                style="cursor: pointer">
-                                {{ getRepMsg(item.id) ?? $t('（查看回复消息）') }}
-                            </a>
-                        </div>
-                        <div v-else-if="item.type == 'poke'" v-once :class="showPock()">
-                            <font-awesome-icon class="poke-hand" style="margin-right: 5px;" :icon="['fas', 'fa-hand-point-up']" />
-                            {{ $t('戳了戳你') }}
-                        </div>
-                        <span v-else class="msg-unknown">{{ '( ' + $t('不支持的消息') + ': ' + item.type + ' )' }}</span>
-                    </div>
-                </template>
-                <template v-else>
-                    <template v-for="(item, index) in data.message"
-                        :key="data.uuid + '-m-' + index">
-                        <CardMessage v-if="item.type == 'xml' || item.type == 'json'"
-                            :id="data.uuid"
-                            :item="item as XmlSeg|JsonSeg" />
-                    </template>
-                </template>
-                <!-- 链接预览框 -->
-                <div v-if="pageViewInfo !== undefined && Object.keys(pageViewInfo).length > 0"
-                    :class="'msg-link-view ' + linkViewStyle">
-                    <template v-if="pageViewInfo.type == undefined">
-                        <div :class="'bar' + (isMe ? ' me' : '')" />
-                        <div>
-                            <img v-if="pageViewInfo.img !== undefined"
-                                :id="data.message_id + '-linkview-img'"
-                                alt="预览图片"
-                                title="查看图片"
-                                :src="pageViewInfo.img"
-                                @load="linkViewPicFin"
-                                @error="linkViewPicErr">
-                            <div class="body">
-                                <p v-show="pageViewInfo.site">
-                                    {{ pageViewInfo.site }}
-                                </p>
-                                <span :href="pageViewInfo.url">{{
-                                    pageViewInfo.title
-                                }}</span>
-                                <span>{{ pageViewInfo.desc }}</span>
+                            <div v-else-if="item.type == 'poke'" v-once :class="showPock()">
+                                <font-awesome-icon class="poke-hand" style="margin-right: 5px;" :icon="['fas', 'fa-hand-point-up']" />
+                                {{ $t('戳了戳你') }}
                             </div>
+                            <span v-else class="msg-unknown">{{ '( ' + $t('不支持的消息') + ': ' + item.type + ' )' }}</span>
                         </div>
                     </template>
                     <template v-else>
-                        <!-- 特殊 URL 的预览 -->
-                        <div v-if="pageViewInfo.type == 'bilibili'" class="link-view-bilibili">
-                            <div class="user">
-                                <img :src="runtimeData.tags.proxyPort ? `http://localhost:${runtimeData.tags.proxyPort}/assets?url=${encodeURIComponent(pageViewInfo.data.owner.face)}` : pageViewInfo.data.owner.face">
-                                <span>{{ pageViewInfo.data.owner.name }}</span>
-                                <a>{{ Intl.DateTimeFormat(trueLang, {
-                                    year: 'numeric',
-                                    month: 'numeric',
-                                    day: 'numeric',
-                                    hour: 'numeric',
-                                    minute: 'numeric'
-                                }).format(getViewTime(pageViewInfo.data.public)) }}</a>
-                            </div>
-                            <img :src="runtimeData.tags.proxyPort ? `http://localhost:${runtimeData.tags.proxyPort}/assets?url=${encodeURIComponent(pageViewInfo.data.pic)}` : pageViewInfo.data.pic">
-                            <span>{{ pageViewInfo.data.title }}</span>
-                            <a>{{ pageViewInfo.data.desc }}</a>
-                            <div class="data">
-                                <font-awesome-icon :icon="['fas', 'play']" />
-                                {{ pageViewInfo.data.stat.view }}
-                                <font-awesome-icon :icon="['fas', 'coins']" />
-                                {{ pageViewInfo.data.stat.coin }}
-                                <font-awesome-icon :icon="['fas', 'star']" />
-                                {{ pageViewInfo.data.stat.favorite }}
-                                <font-awesome-icon :icon="['fas', 'thumbs-up']" />
-                                {{ pageViewInfo.data.stat.like }}
-                            </div>
-                        </div>
-                        <div v-else-if="pageViewInfo.type == 'music163'" class="link-view-music163">
+                        <template v-for="(item, index) in data.message"
+                            :key="data.uuid + '-m-' + index">
+                            <CardMessage v-if="item.type == 'xml' || item.type == 'json'"
+                                :id="data.uuid"
+                                :item="item as XmlSeg|JsonSeg" />
+                        </template>
+                    </template>
+                    <!-- 链接预览框 -->
+                    <div v-if="pageViewInfo !== undefined && Object.keys(pageViewInfo).length > 0"
+                        :class="'msg-link-view ' + linkViewStyle">
+                        <template v-if="pageViewInfo.type == undefined">
+                            <div :class="'bar' + (isMe ? ' me' : '')" />
                             <div>
-                                <img :src="pageViewInfo.data.cover">
-                                <div :id="'music163-audio-' + data.message_id" :class="isMe ? 'me' : ''">
-                                    <a>{{ pageViewInfo.data.info.name }}
-                                        <a v-if="pageViewInfo.data.info.free != null">{{ $t('（试听）') }}</a>
-                                    </a>
-                                    <span>{{ pageViewInfo.data.info.author.join('/') }}</span>
-                                    <audio :src="runtimeData.tags.proxyPort ? `http://localhost:${runtimeData.tags.proxyPort}/proxy?url=${pageViewInfo.data.play_link}` : pageViewInfo.data.play_link"
-                                        @loadedmetadata="audioLoaded()"
-                                        @timeupdate="audioUpdate()" />
-                                    <div>
-                                        <input value="0" min="0" step="0.1"
-                                            type="range" @input="audioChange()">
-                                        <div><div /><div /></div>
-                                        <font-awesome-icon v-if="!pageViewInfo.data.loaded" :icon="['fas', 'spinner']" spin />
-                                        <template v-else>
-                                            <font-awesome-icon v-if="!pageViewInfo.data.play" :icon="['fas', 'play']" @click="audioControll()" />
-                                            <font-awesome-icon v-else :icon="['fas', 'pause']" @click="audioControll()" />
-                                        </template>
-                                        <span>00:00 / 00:00</span>
+                                <img v-if="pageViewInfo.img !== undefined"
+                                    :id="data.message_id + '-linkview-img'"
+                                    alt="预览图片"
+                                    title="查看图片"
+                                    :src="pageViewInfo.img"
+                                    @load="linkViewPicFin"
+                                    @error="linkViewPicErr">
+                                <div class="body">
+                                    <p v-show="pageViewInfo.site">
+                                        {{ pageViewInfo.site }}
+                                    </p>
+                                    <span :href="pageViewInfo.url">{{
+                                        pageViewInfo.title
+                                    }}</span>
+                                    <span>{{ pageViewInfo.desc }}</span>
+                                </div>
+                            </div>
+                        </template>
+                        <template v-else>
+                            <!-- 特殊 URL 的预览 -->
+                            <div v-if="pageViewInfo.type == 'bilibili'" class="link-view-bilibili">
+                                <div class="user">
+                                    <img :src="runtimeData.tags.proxyPort ? `http://localhost:${runtimeData.tags.proxyPort}/assets?url=${encodeURIComponent(pageViewInfo.data.owner.face)}` : pageViewInfo.data.owner.face">
+                                    <span>{{ pageViewInfo.data.owner.name }}</span>
+                                    <a>{{ Intl.DateTimeFormat(trueLang, {
+                                        year: 'numeric',
+                                        month: 'numeric',
+                                        day: 'numeric',
+                                        hour: 'numeric',
+                                        minute: 'numeric'
+                                    }).format(getViewTime(pageViewInfo.data.public)) }}</a>
+                                </div>
+                                <img :src="runtimeData.tags.proxyPort ? `http://localhost:${runtimeData.tags.proxyPort}/assets?url=${encodeURIComponent(pageViewInfo.data.pic)}` : pageViewInfo.data.pic">
+                                <span>{{ pageViewInfo.data.title }}</span>
+                                <a>{{ pageViewInfo.data.desc }}</a>
+                                <div class="data">
+                                    <font-awesome-icon :icon="['fas', 'play']" />
+                                    {{ pageViewInfo.data.stat.view }}
+                                    <font-awesome-icon :icon="['fas', 'coins']" />
+                                    {{ pageViewInfo.data.stat.coin }}
+                                    <font-awesome-icon :icon="['fas', 'star']" />
+                                    {{ pageViewInfo.data.stat.favorite }}
+                                    <font-awesome-icon :icon="['fas', 'thumbs-up']" />
+                                    {{ pageViewInfo.data.stat.like }}
+                                </div>
+                            </div>
+                            <div v-else-if="pageViewInfo.type == 'music163'" class="link-view-music163">
+                                <div>
+                                    <img :src="pageViewInfo.data.cover">
+                                    <div :id="'music163-audio-' + data.message_id" :class="isMe ? 'me' : ''">
+                                        <a>{{ pageViewInfo.data.info.name }}
+                                            <a v-if="pageViewInfo.data.info.free != null">{{ $t('（试听）') }}</a>
+                                        </a>
+                                        <span>{{ pageViewInfo.data.info.author.join('/') }}</span>
+                                        <audio :src="runtimeData.tags.proxyPort ? `http://localhost:${runtimeData.tags.proxyPort}/proxy?url=${pageViewInfo.data.play_link}` : pageViewInfo.data.play_link"
+                                            @loadedmetadata="audioLoaded()"
+                                            @timeupdate="audioUpdate()" />
+                                        <div>
+                                            <input value="0" min="0" step="0.1"
+                                                type="range" @input="audioChange()">
+                                            <div><div /><div /></div>
+                                            <font-awesome-icon v-if="!pageViewInfo.data.loaded" :icon="['fas', 'spinner']" spin />
+                                            <template v-else>
+                                                <font-awesome-icon v-if="!pageViewInfo.data.play" :icon="['fas', 'play']" @click="audioControll()" />
+                                                <font-awesome-icon v-else :icon="['fas', 'pause']" @click="audioControll()" />
+                                            </template>
+                                            <span>00:00 / 00:00</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    </template>
+                        </template>
+                    </div>
+                </div>
+                <div v-if="data.icon" :class="{
+                    rotate: data.icon.rotate,
+                    right: true,
+                    icon: true,
+                    me: isMe,
+                }">
+                    <div @click="data.iconClick">
+                        <font-awesome-icon
+                            :style="{color: data.icon.color}"
+                            :title="data.icon.desc"
+                            :aria-label="data.icon.desc"
+                            :icon="['fas', data.icon.icon]" />
+                    </div>
                 </div>
             </div>
-        </div>
-        <div v-if="data instanceof SelfMsg && data.state === 'sending'"
-            :class="'sending right' + (isMe ? ' me' : '')">
-            <font-awesome-icon :icon="['fas', 'spinner']" />
         </div>
         <!-- lgr没有...没法调试 -->
         <!-- <div v-if="data.emoji_like"
