@@ -1433,7 +1433,8 @@ input {
     flex: 1;
 }
 
-.select-tag {
+.select-tag-enter-from,
+.select-tag-leave-to {
     background: var(--color-card-1);
     justify-content: space-evenly;
     margin: 0 20px 10px 20px;
@@ -1445,7 +1446,16 @@ input {
     display: flex;
     height: 0;
 }
-.select-tag.show {
+.select-tag-enter-to,
+.select-tag-leave-from {
+    background: var(--color-card-1);
+    justify-content: space-evenly;
+    transition: all 0.3s;
+    align-items: center;
+    flex-direction: row;
+    border-radius: 7px;
+    overflow: hidden;
+    display: flex;
     margin: 0 20px 10px 20px;
     margin-top: 20px;
     padding: 15px 10px;

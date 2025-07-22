@@ -58,37 +58,13 @@
             <span>{{ $t('加载中') }}</span>
         </div>
         <!-- 消息显示区 -->
-        <div v-if="!details[3].open"
-            id="msgPan" class="chat"
+        <div id="msgPan" class="chat"
             style="scroll-behavior: smooth"
             @scroll="chatScroll">
-            <div v-if="!runtimeData.tags.canLoadHistory" class="note note-nomsg">
-                <hr>
-                <a>{{ $t('没有更多消息了') }}</a>
-            </div>
-            <!-- 时间戳，在下滑加载的时候会显示，方便在大段的相连消息上让用户知道消息时间 -->
-            <NoticeBody v-if="tags.nowGetHistroy && list.length > 0 && list[0].time"
-                :data="SystemNotice.time(list[0].time)" />
             <MsgBar
-                :msgs="list"
-                :multipleSelectList="multipleSelectList"
+                :ref="'msgBar'"
+                :msgs="details[3].open ? tags.search.list :list"
                 :tags="tags"
-                @msgClick="msgClick"
-                @showMsgMenu="showMsgMenu"
-                @scrollToMsg="scrollToMsg"
-                @imageLoaded="imgLoadedScroll"
-                @sendPoke="sendPoke"
-                @replyMsg="replyMsg"
-                />
-        </div>
-        <div v-else id="msgPan"
-            class="chat" style="scroll-behavior: smooth">
-            <!-- 搜索消息结果显示 -->
-            <MsgBar
-                :msgs="tags.search.list"
-                :multipleSelectList="multipleSelectList"
-                :tags="tags"
-                @msgClick="msgClick"
                 @showMsgMenu="showMsgMenu"
                 @scrollToMsg="scrollToMsg"
                 @imageLoaded="imgLoadedScroll"
@@ -175,28 +151,31 @@
                     </Transition>
                 </div>
                 <!-- 多选指示器 -->
-                <div :class=" multipleSelectList.length > 0 ? 'select-tag show' : 'select-tag'">
-                    <div>
-                        <font-awesome-icon :icon="['fas', 'share']" @click="showForWard" />
-                        <span>{{ $t('合并转发') }}</span>
+                 {{ refs().msgBar?.isMultiselectMode() }}
+                <Transition name="select-tag">
+                    <div v-show="refs().msgBar?.isMultiselectMode()" class="select-tag">
+                        <div>
+                            <font-awesome-icon :icon="['fas', 'share']" @click="showForWard" />
+                            <span>{{ $t('合并转发') }}</span>
+                        </div>
+                        <div>
+                            <font-awesome-icon :icon="['fas', 'scissors']" />
+                            <span>{{ $t('截图') }}</span>
+                        </div>
+                        <div>
+                            <font-awesome-icon :icon="['fas', 'trash-can']" @click="delMsgs" />
+                            <span>{{ $t('删除') }}</span>
+                        </div>
+                        <div>
+                            <font-awesome-icon :icon="['fas', 'copy']" @click="copyMsgs" />
+                            <span>{{ $t('复制') }}</span>
+                        </div>
+                        <div>
+                            <span @click="refs().msgBar?.cancelMultiselect()">{{ refs().msgBar?.getMultiselectListLength() }}</span>
+                            <span>{{ $t('取消') }}</span>
+                        </div>
                     </div>
-                    <div>
-                        <font-awesome-icon :icon="['fas', 'scissors']" />
-                        <span>{{ $t('截图') }}</span>
-                    </div>
-                    <div>
-                        <font-awesome-icon :icon="['fas', 'trash-can']" @click="delMsgs" />
-                        <span>{{ $t('删除') }}</span>
-                    </div>
-                    <div>
-                        <font-awesome-icon :icon="['fas', 'copy']" @click="copyMsgs" />
-                        <span>{{ $t('复制') }}</span>
-                    </div>
-                    <div>
-                        <span @click="multipleSelectList = []">{{ multipleSelectList.length }}</span>
-                        <span>{{ $t('取消') }}</span>
-                    </div>
-                </div>
+                </Transition>
                 <!-- 搜索指示器 -->
                 <div :class="details[3].open ? 'search-tag show' : 'search-tag'">
                     <font-awesome-icon :icon="['fas', 'search']" />
@@ -416,7 +395,7 @@
                 </div>
                 <div v-show="tags.menuDisplay.config"
                     @click="openChatInfoPan();
-                            ($refs.infoRef as any).openMoreConfig(selectedMsg?.sender.user_id);
+                            refs().infoRef?.openMoreConfig(selectedMsg!.sender.user_id);
                             closeMsgMenu();">
                     <div><font-awesome-icon :icon="['fas', 'cog']" /></div>
                     <a>{{ $t('成员设置') }}</a>
@@ -481,11 +460,10 @@
     import NoticeBody from '@renderer/components/NoticeBody.vue'
     import imageCompression from 'browser-image-compression'
 
-    import { defineComponent, reactive } from 'vue'
+    import { defineComponent, reactive, nextTick } from 'vue'
     import { v4 as uuid } from 'uuid'
     import {
         downloadFile,
-        loadHistory as loadHistoryFirst,
     } from '@renderer/function/utils/appUtil'
     import {
         addBackendListener,
@@ -501,9 +479,8 @@
     import { scrollToMsg } from '@renderer/function/utils/appUtil'
     import { Logger, LogType, PopInfo, PopType } from '@renderer/function/base'
     import { Connector } from '@renderer/function/connect'
-    import { runtimeData } from '@renderer/function/msg'
+    import { getMessageList, runtimeData } from '@renderer/function/msg'
     import {
-        BaseChatInfoElem,
         MsgItemElem,
         SQCodeElem,
         GroupMemberInfoElem,
@@ -512,7 +489,14 @@
     import { Msg, SelfMsg } from '@renderer/function/model/msg'
     import { Message } from '@renderer/function/model/message'
     import { Seg, FileSeg } from '@renderer/function/model/seg'
-    import { SystemNotice } from '@renderer/function/model/notice'
+    import { InfoNotice, SystemNotice } from '@renderer/function/model/notice'
+
+    type ComponentRefs = {
+        msgBar: InstanceType<typeof MsgBar>|undefined
+        mergePan: InstanceType<typeof MergePan>|undefined
+        forwardPan: InstanceType<typeof ForwardPan>|undefined
+        infoRef: InstanceType<typeof Info>|undefined
+    }
 
     export default defineComponent({
         name: 'ViewChat',
@@ -544,7 +528,6 @@
                 getTimeConfig: getTimeConfig,
                 forwardList: runtimeData.userList,
                 trueLang: getTrueLang(),
-                multipleSelectList: [] as Msg[],
                 replayMsg: undefined as undefined | Msg,
                 tags: {
                     nowGetHistroy: false,
@@ -625,11 +608,12 @@
                 this.msgMenus = data.msgMenus
                 this.sendCache = []
                 this.imgCache = [] as string[]
-                this.multipleSelectList = []
                 this.initMenuDisplay()
             },
         },
         async mounted() {
+            // 初始化菜单显示状态
+            this.loadHistory(true)
             // 消息列表刷新
             this.updateList(this.list.length, 0)
             // PS：由于监听 list 本身返回的新旧值是一样，于是监听 length（反正也只要知道长度）
@@ -685,7 +669,7 @@
                 const bar = document.getElementById('send-more')
                 // 顶部
                 if (body.scrollTop === 0 && this.list.length > 0) {
-                    this.loadMoreHistory()
+                    if (!this.details[3].open) this.loadHistory()
                 }
                 // 底部
                 if ((body.scrollTop + body.clientHeight + 10) >= body.scrollHeight) {
@@ -719,37 +703,111 @@
 
             /**
              * 加载更多历史消息
+             * TODO 移动到会话里
              */
-            loadMoreHistory() {
+            async loadHistory(init: boolean = false) {
+                if (this.tags.nowGetHistroy) return
+                if (runtimeData.tags.canLoadHistory === false) return
+
+                // 锁定加载防止反复触发
+                this.tags.nowGetHistroy = true
+                // 移除上次的失败提示
+                const start = runtimeData.messageList[0]
                 if (
-                    !this.tags.nowGetHistroy &&
-                    runtimeData.tags.canLoadHistory !== false
+                    start instanceof InfoNotice &&
+                    start.message === this.$t('获取历史记录失败')
                 ) {
-                    // 获取列表第一条消息 ID
-                    const firstMsgId = this.list[0].message_id
-                    // 锁定加载防止反复触发
-                    this.tags.nowGetHistroy = true
-                    // 发起获取历史消息请求
-                    const fullPage =
-                        runtimeData.jsonMap.message_list?.pagerType == 'full'
-                    const type = runtimeData.chatInfo.show.type
-                    const id = runtimeData.chatInfo.show.id
-                    let name
-                    if (runtimeData.jsonMap.message_list && type != 'group') {
-                        name = runtimeData.jsonMap.message_list.private_name
-                    } else {
-                        name = runtimeData.jsonMap.message_list.name
+                    runtimeData.messageList.shift()
+                }
+                // 获取列表第一条消息
+                let startMsg: Msg | undefined
+                if (!init) {
+                    for (const msg of this.list) {
+                        console.log(msg)
+                        // TODO 撤回消息有点问题, 重构会话时处理
+                        // 如果消息不是 Msg 实例，则跳过
+                        if (!(msg instanceof Msg)) continue
+                        // 如果消息没有 message_id，则跳过
+                        if (!msg.message_id) continue
+                        startMsg = msg
+                        break
                     }
-                    Connector.send(
-                        name ?? 'get_chat_history',
-                        {
-                            group_id: type == 'group' ? id : undefined,
-                            user_id: type != 'group' ? id : undefined,
-                            message_id: firstMsgId,
-                            count: fullPage? runtimeData.messageList.length + 20: 20,
-                        },
-                        'getChatHistory',
+                    console.log(startMsg)
+                }
+                // 添加提示
+                const notice: SystemNotice[] = []
+                notice.push(SystemNotice.info(this.$t('获取历史记录ing')))
+                if (startMsg?.time) notice.push(
+                    SystemNotice.time(
+                        startMsg.time,
+                    ),
+                )
+                runtimeData.messageList = ([...notice] as Message[]).concat(
+                    runtimeData.messageList,
+                )
+                // 发起获取历史消息请求
+                const type = runtimeData.chatInfo.show.type
+                const id = runtimeData.chatInfo.show.id
+                const apiName = type == 'group' ? 'get_group_msg_history' : 'get_private_msg_history'
+                const data = await Connector.callApi(
+                    apiName,
+                    {
+                        group_id: type == 'group' ? id : undefined,
+                        user_id: type != 'group' ? id : undefined,
+                        message_id: startMsg?.message_id,
+                        count: 20,
+                    },
+                )
+
+                // 删除提示
+                for (const _ of notice) runtimeData.messageList.shift()
+
+                // 组装消息
+                let msgs: Message[]
+                if (!data) {
+                    msgs = [SystemNotice.info(this.$t('获取历史记录失败'))]
+                    new PopInfo().add(
+                        PopType.ERR,
+                        app.config.globalProperties.$t('加载历史消息失败'),
+                        false,
                     )
+                }else {
+                    if (data.length === 0) {
+                        msgs = [SystemNotice.info(this.$t('没有更多历史消息'))]
+                        runtimeData.tags.canLoadHistory = false
+                    }else {
+                        msgs = getMessageList(data)
+                        // 如果最后一条消息和开始的消息相同，则删除最后一条消息
+                        if (msgs.at(-1)?.message_id === startMsg?.message_id) {
+                            msgs.pop()
+                        }
+                    }
+                }
+
+                const pan = document.getElementById('msgPan')
+                if (!pan) return
+
+                if (init) {
+                    // 重设消息列表
+                    runtimeData.messageList = msgs
+                    nextTick(()=>{
+                        this.scrollBottom(false)
+                        setTimeout(()=>this.tags.nowGetHistroy = false, 200)
+                    })
+                }else {
+                    runtimeData.messageList = msgs.concat(runtimeData.messageList)
+                    // 滚屏设置
+                    const oldScrollHeight = pan.scrollHeight
+                    nextTick(() => {
+                        setTimeout(() => {
+                            new Logger().debug(`滚动前高度：${oldScrollHeight}，当前高度：${pan.scrollHeight}，滚动位置：${pan.scrollHeight - oldScrollHeight}`)
+                            pan.style.scrollBehavior = 'unset'
+                            // 纠正滚动位置
+                            pan.scrollTop = pan.scrollHeight - oldScrollHeight
+                            pan.style.scrollBehavior = 'smooth'
+                            setTimeout(()=>this.tags.nowGetHistroy = false,200)
+                        }, 200)
+                    })
                 }
             },
 
@@ -930,7 +988,8 @@
                     new Logger().debug('右击消息：' + data)
                 }
                 // 如果开着多选模式，不打开右击菜单
-                if (this.multipleSelectList.length > 0) {
+                const msgBar = this.refs().msgBar
+                if (!msgBar || msgBar.isMultiselectMode()) {
                     return
                 }
 
@@ -1175,7 +1234,7 @@
                 this.replayMsg = undefined
             },
             showForWard() {
-                const forwardPan = this.$refs.forwardPan as InstanceType<typeof ForwardPan>
+                const forwardPan = this.refs().forwardPan
                 if(this.multipleSelectList.length > 0) {
                     const msgList = runtimeData.messageList.filter((item) => {
                         return this.multipleSelectList.indexOf(item.message_id) >= 0
@@ -1199,8 +1258,10 @@
             },
 
             intoMultipleSelect() {
+                const msgBar = this.refs().msgBar
+                msgBar?.startMultiselect()
                 if (this.selectedMsg) {
-                    this.multipleSelectList.push(this.selectedMsg)
+                    msgBar?.forceAddToMultiselectList(this.selectedMsg)
                 }
                 this.closeMsgMenu()
             },
@@ -1769,16 +1830,7 @@
                     !this.tags.nowGetHistroy &&
                     !this.tags.showBottomButton
                 ) {
-                    runtimeData.messageList = []
-                    const info = {
-                        type: this.chat.show.type,
-                        id: this.chat.show.id,
-                        name: this.chat.show.name,
-                        avatar: this.chat.show.avatar,
-                        jump: this.chat.show.jump,
-                    } as BaseChatInfoElem
-                    loadHistoryFirst(info)
-                    this.tags.nowGetHistroy = true
+                    this.loadHistory(false)
                 }
 
                 // =================== 渲染监听操作 ===================
@@ -1808,30 +1860,27 @@
                                     this.scrollTo(newPan.scrollHeight, false)
                                 }
                             }
-                            // 解除锁定加载
-                            this.tags.nowGetHistroy = false
                         }
                         // 刷新图片列表
                         // TODO: 需要优化性能
                         let initMainList = false
                         if (this.getImgList.length == 0) initMainList = true
                         this.getImgList = []
-                        this.list.forEach((item: any) => {
-                            if (item.message !== undefined) {
-                                item.message.forEach((msg: MsgItemElem) => {
-                                    if (
-                                        msg.type === 'image' &&
-                                        msg.file != 'marketface'
-                                    ) {
-                                        const info = {
-                                            index: item.message_id,
-                                            message_id: item.message_id,
-                                            img_url: runtimeData.tags.proxyPort && msg.url.startsWith('http') ? `http://localhost:${runtimeData.tags.proxyPort}/assets?url=${encodeURIComponent(msg.url)}` : msg.url
-                                        }
-                                        this.getImgList.push(info)
+                        this.list.forEach((item: Message) => {
+                            if (!(item instanceof Msg)) return
+                            item.message.forEach((msg: MsgItemElem) => {
+                                if (
+                                    msg.type === 'image' &&
+                                    msg.file != 'marketface'
+                                ) {
+                                    const info = {
+                                        index: item.uuid,
+                                        message_id: item.message_id,
+                                        img_url: msg.url
                                     }
-                                })
-                            }
+                                    this.getImgList.push(info)
+                                }
+                            })
                         })
                         const viewer = app.config.globalProperties.$viewer
                         if (!viewer.isShown || initMainList) {
@@ -1857,20 +1906,6 @@
                 }
             },
 
-            msgClick(_: Event, data: any) {
-                const message_id = data.message_id
-                if (this.multipleSelectList.length > 0) {
-                    if (this.multipleSelectList.indexOf(message_id) > -1) {
-                        this.multipleSelectList =
-                            this.multipleSelectList.filter((item) => {
-                                return item != message_id
-                            })
-                    } else {
-                        this.multipleSelectList.push(message_id)
-                    }
-                }
-            },
-
             delMsgs() {
                 new PopInfo().add(
                     PopType.INFO,
@@ -1879,25 +1914,28 @@
             },
 
             copyMsgs() {
-                const msgList = this.list.filter((item: any) => {
-                    return this.multipleSelectList.indexOf(item.message_id) > -1
-                })
+                const msgBar = this.refs().msgBar
+                if (!msgBar) return
+                const msgList = msgBar.getMultiselectList()
                 let msg = ''
                 let lastDate = ''
-                msgList.forEach((item: any) => {
+                msgList.forEach((item: Msg) => {
+                    let time: Date | undefined
                     // 去除 item.time 时间戳中的时间，只保留日期
-                    const time = new Date(getViewTime(item.time))
-                    const date =
-                        time.getFullYear() +
-                        '-' +
-                        (time.getMonth() + 1) +
-                        '-' +
-                        time.getDate()
-                    if (date != lastDate) {
-                        msg += '\n—— ' + date + ' ——\n'
-                        lastDate = date
+                    if (item.time) {
+                        const time = new Date(getViewTime(item.time))
+                        const date =
+                            time.getFullYear() +
+                            '-' +
+                            (time.getMonth() + 1) +
+                            '-' +
+                            time.getDate()
+                        if (date != lastDate) {
+                            msg += '\n—— ' + date + ' ——\n'
+                            lastDate = date
+                        }
                     }
-                    msg +=
+                    if (time) {
                         item.sender.nickname +
                         ' ' +
                         time.getHours() +
@@ -1908,12 +1946,16 @@
                         '\n' +
                         getMsgRawTxt(item) +
                         '\n\n'
+                    }
+                    else msg += item.preMsg + '\n\n'
+
                 })
+                msg = msg.trim()
                 const popInfo = new PopInfo()
                 app.config.globalProperties.$copyText(msg).then(
                     () => {
                         popInfo.add(PopType.INFO, this.$t('复制成功'), true)
-                        this.multipleSelectList = []
+                        msgBar.cancelMultiselect()
                     },
                     () => {
                         popInfo.add(PopType.ERR, this.$t('复制失败'), true)
@@ -2075,7 +2117,7 @@
                         && moveY < heightAllow
                         && x - this.tags.chatTouch.startX > 0
                     if(allowMove) {
-                        const isMergeShow = (this.$refs.mergePan as InstanceType<typeof MergePan>).isMergeOpen()
+                        const isMergeShow = this.refs().mergePan?.isMergeOpen()
                         if(this.tags.openChatInfo) {
                             // 聊天信息面板返回
                             const infoPan = chatPan.getElementsByClassName('chat-info-pan')[0] as HTMLDivElement
@@ -2116,7 +2158,7 @@
                 this.tags.chatTouch.startY = -1
                 const chatPan = document.getElementById('chat-pan')
                 if(chatPan) {
-                    const isMergeShow = (this.$refs.mergePan as InstanceType<typeof MergePan>).isMergeOpen()
+                    const isMergeShow = this.refs().mergePan?.isMergeOpen()
                     if(!this.tags.chatTouch.openSuccess) {
                         if(this.tags.openChatInfo) {
                             const infoPan = chatPan.getElementsByClassName('chat-info-pan')[0] as HTMLDivElement
@@ -2136,7 +2178,7 @@
                         if(this.tags.openChatInfo) {
                             this.openChatInfoPan()
                         } else if(isMergeShow) {
-                            (this.$refs.mergePan as InstanceType<typeof MergePan>).closeMergeMsg()
+                            this.refs().mergePan?.closeMergeMsg()
                             setTimeout(() => {
                                 const mergePan = chatPan.getElementsByClassName('merge-pan')[0] as HTMLDivElement
                                 if(mergePan) {
@@ -2162,6 +2204,9 @@
                 }
                 this.tags.chatTouch.openSuccess = false
                 this.tags.chatTouch.onScroll = false
+            },
+            refs(): ComponentRefs {
+                return this.$refs as ComponentRefs
             }
         },
     })

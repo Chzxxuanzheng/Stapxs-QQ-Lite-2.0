@@ -587,11 +587,11 @@ export function getShowName(base: string, remark: string) {
  */
 export function isShowTime(
     timePrv: number | undefined,
-    timeNow: number,
+    timeNow: number | undefined,
     alwaysShow = false,
 ): boolean {
     if (alwaysShow) return true
-    if (timePrv == undefined) return false
+    if (!timePrv || !timeNow) return false
     // 五分钟 13 位时间戳相差 300 000
     return timeNow - timePrv >= 300000
 }

@@ -324,8 +324,8 @@ export abstract class SystemNotice extends Notice {
         return new DeleteNotice()
     }
 
-    static error(message: string): ErrorNotice {
-        return new ErrorNotice({ message })
+    static info(message: string): InfoNotice {
+        return new InfoNotice({ message })
     }
 }
 
@@ -345,7 +345,7 @@ export class DeleteNotice extends SystemNotice {
     }
 }
 
-export class ErrorNotice extends SystemNotice {
+export class InfoNotice extends SystemNotice {
     override readonly type: string = 'error'
     message: string
     

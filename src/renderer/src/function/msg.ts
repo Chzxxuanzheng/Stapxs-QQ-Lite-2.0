@@ -502,21 +502,13 @@ const msgFunctions = {
     getChatHistoryFist: (_: string, msg: { [key: string]: any }) => {
         saveMsg(msg, 'top')
     },
+    /**
+     * @deprecated
+     * @param _ 
+     * @param msg 
+     */
     getChatHistory: (_: string, msg: { [key: string]: any }) => {
-        const pan = document.getElementById('msgPan')
-        if(pan) {
-            const oldScrollHeight = pan.scrollHeight
-            saveMsg(msg, 'top')
-            nextTick(() => {
-                setTimeout(() => {
-                    logger.debug(`滚动前高度：${oldScrollHeight}，当前高度：${pan.scrollHeight}，滚动位置：${pan.scrollHeight - oldScrollHeight}`)
-                    pan.style.scrollBehavior = 'unset'
-                    // 纠正滚动位置
-                    pan.scrollTop = pan.scrollHeight - oldScrollHeight
-                    pan.style.scrollBehavior = 'smooth'
-                }, 200);
-            })
-        }
+
     },
 
     getChatHistoryOnMsg: (

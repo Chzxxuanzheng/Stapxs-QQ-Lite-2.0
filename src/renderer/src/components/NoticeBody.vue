@@ -87,13 +87,17 @@
         ============================
         -->
         <!-- 缺失消息 -->
-        <div v-else-if="data instanceof DeleteNotice" class="note-recall note-base">
+        <div v-else-if="data instanceof DeleteNotice" class="note-base">
             <span>{{ $t('这条消息迷失在虚空里了') }}</span>
         </div>
         <!-- 时间 -->
         <div v-else-if="data instanceof TimeNotice && data.time != undefined"
             class="note-time note-base">
             <a>{{ data.formatTime() }}</a>
+        </div>
+        <!-- 通知 -->
+        <div v-else-if="data instanceof InfoNotice" class="note-base">
+            <a>{{ data.message }}</a>
         </div>
     </div>
 </template>
@@ -107,7 +111,7 @@
         callBackend,
     } from '@renderer/function/utils/systemUtil'
     import { pokeAnime } from '@renderer/function/utils/msgUtil'
-    import { BanNotice, DeleteNotice, BanLiftNotice, Notice, PokeNotice, RevokeNotice, TimeNotice, LeaveNotice, JoinNotice, ErrorNotice } from '@renderer/function/model/notice'
+    import { BanNotice, DeleteNotice, BanLiftNotice, Notice, PokeNotice, RevokeNotice, TimeNotice, LeaveNotice, JoinNotice, InfoNotice } from '@renderer/function/model/notice'
 
     export default defineComponent({
         name: 'NoticeBody',
@@ -133,7 +137,7 @@
                 BanLiftNotice,
                 LeaveNotice,
                 JoinNotice,
-                ErrorNotice,
+                InfoNotice,
             }
         },
         async mounted() {

@@ -5,7 +5,12 @@
  * @Version: 1.0
 -->
 <template>
-    <TransitionGroup :name="runtimeData.sysConfig.opt_fast_animation ? '' : 'msglist'" tag="div">
+    <TransitionGroup
+        :name="runtimeData.sysConfig.opt_fast_animation ? '' : 'msglist'"
+        :class="{
+            'disable-interaction': multiselectMode,
+        }"
+        tag="div">
         <template v-for="(msgIndex, index) in msgs">
             <!-- 时间戳 -->
             <NoticeBody
@@ -23,7 +28,7 @@
                 :selected="isSelected(msgIndex)"
                 :data="msgIndex"
                 :type="type"
-                @click="$emit('msgClick', $event, msgIndex)"
+                @click="msgClick($event, msgIndex)"
                 @scroll-to-msg="arg=>$emit('scrollToMsg', arg)"
                 @image-loaded="arg=>$emit('imageLoaded', arg)"
                 @contextmenu.prevent="$emit('showMsgMenu', $event, msgIndex)"
@@ -45,7 +50,6 @@ import { defineComponent } from 'vue'
 import MsgBody from './MsgBody.vue'
 import NoticeBody from './NoticeBody.vue'
 
-import { v4 as uuid } from 'uuid'
 import { isDeleteMsg, isShowTime } from '@renderer/function/utils/msgUtil';
 import { runtimeData } from '@renderer/function/msg';
 import { Logger, LogType } from '@renderer/function/base';
@@ -60,10 +64,6 @@ export default defineComponent({
             type: Array as () => Message[],
             required: true,
         },
-        multipleSelectList: {
-            type: Array as () => Msg[],
-            default: () => [],
-        },
         tags: {
             type: Object as () => { [key: string]: any },
             default: () => ({}),
@@ -75,7 +75,8 @@ export default defineComponent({
     emits: ['msgClick', 'showMsgMenu', 'forward', 'scrollToMsg', 'imageLoaded', 'sendPoke', 'replyMsg'],
     data() {
         return {
-            uuid,
+            multiselectMode: false,
+            multipleSelectList: new Set as Set<Msg>,
 			isDeleteMsg,
 			isShowTime,
             runtimeData,
@@ -91,11 +92,12 @@ export default defineComponent({
         }
     },
     methods: {
+        //#region ====消息互动相关==========================================
         /**
          * 消息触屏开始
          * @param event 触摸事件
          */
-            msgStartMove(event: TouchEvent, msg: any) {
+        msgStartMove(event: TouchEvent, msg: any) {
             const logger = new Logger()
             logger.add(LogType.UI, '消息触屏点击事件开始 ……')
             this.msgTouch.msgOnTouchDown = true
@@ -193,11 +195,99 @@ export default defineComponent({
             const data = (this as any).$options.data(this)
             this.msgTouch = data.msgTouch
         },
-        isSelected(msg: any): boolean{
+        msgClick(event: MouseEvent, msg: Msg) {
+            if (this.multiselectMode) {
+                // 如果处于多选模式，添加或移除消息到多选列表
+                this.toggleMsgInMultiselectList(msg)
+            } else {
+                // 否则，触发单击事件
+                this.$emit('msgClick', event, msg)
+            }
+        },
+        //#endregion
+        
+
+        //#region ====多选模式相关==========================================
+        /**
+         * 开始多选模式
+         */
+        startMultiselect() {
+            this.multiselectMode = true
+        },
+        /**
+         * 取消多选模式
+         */
+        cancelMultiselect() {
+            this.multiselectMode = false
+            this.multipleSelectList.clear()
+        },
+        /**
+         * 是否处于多选模式
+         * @returns {boolean} true: 多选模式，false: 非多选模式
+         */
+        isMultiselectMode(): boolean {
+            return this.multiselectMode
+        },
+        /**
+         * 强制添加消息到多选列表
+         * @param msg 消息对象
+         */
+        forceAddToMultiselectList(msg: Msg) {
+            if (!this.multiselectMode) throw new Error('多选模式未开启，无法添加消息到多选列表。')
+            if (!this.multipleSelectList.has(msg)) this.multipleSelectList.add(msg)
+        },
+        /**
+         * 获取多选列表长度
+         * @returns {number} 多选列表长度
+         */
+        getMultiselectListLength(): number {
+            if (!this.multiselectMode) throw new Error('多选模式未开启，无法获取多选列表长度。')
+            return this.multipleSelectList.size
+        },
+        /**
+         * 获取多选列表
+         * 该列表已经过排序,可以直接使用
+         * 如果仅需要列表长度,不要用该函数,用`getMultiselectListLength`
+         * @returns {Msg[]} 多选列表
+         */
+        getMultiselectList(): Msg[] {
+            const out: Msg[] = []
+            for (const msg of this.msgs) {
+                if (!(msg instanceof Msg)) continue
+                if (this.multipleSelectList.has(msg)) {
+                    out.push(msg)
+                }
+            }
+            return out
+        },
+        toggleMsgInMultiselectList(msg: Msg) {
+            if (!this.multiselectMode) {
+                throw new Error('多选模式未开启，无法添加消息到多选列表。')
+            }
+            if (!this.multipleSelectList.has(msg)) this.multipleSelectList.add(msg)
+            else this.multipleSelectList.delete(msg)
+        },
+        //#endregion
+
+
+        //#region ====工具函数==============================================
+        isSelected(msg: Msg): boolean{
             if (this.type === 'merge') return false
-            return this.multipleSelectList.includes(msg.message_id) ||
+            return this.multipleSelectList.has(msg) ||
                 this.tags.openedMenuMsg?.id == 'chat-' + msg.message_id
-        }
+        },
+        //#endregion
     }
 });
 </script>
+<style scoped>
+.disable-interaction :deep(*) {
+    pointer-events: none;
+}
+.disable-interaction {
+    pointer-events: auto;
+}
+.disable-interaction > div {
+    pointer-events: auto;
+}
+</style>

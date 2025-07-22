@@ -129,6 +129,7 @@ export function openLink(url: string, external = false) {
  * @param info 聊天基本信息
  */
 export function loadHistory(info: BaseChatInfoElem) {
+    throw new Error('断电')
     runtimeData.messageList = []
     if (!loadHistoryMessage(info.id, info.type)) {
         new PopInfo().add(

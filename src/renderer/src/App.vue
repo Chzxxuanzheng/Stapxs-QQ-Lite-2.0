@@ -641,6 +641,9 @@ export default defineComponent({
             }
             runtimeData.mergeMsgStack.length = 0 // 清空合并转发缓存
             runtimeData.tags.canLoadHistory = true // 重置终止加载标志
+            runtimeData.messageList = [] as any // 清空消息列表
+            // 初始化群消息
+            (this.$refs.chat as any)?.loadHistory(true)
             if (data.type == 'group') {
                 // 获取自己在群内的资料
                 Connector.send(

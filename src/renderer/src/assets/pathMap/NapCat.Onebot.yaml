@@ -62,7 +62,6 @@ message_list:
     name: get_group_msg_history
     private_name: get_friend_msg_history
     source: $.data.messages[*]
-    pagerType: full # 分页类型：全量 full / 增量 incremental / 无分页 none
     type: $.data
     message_type:
         user: private
@@ -210,3 +209,51 @@ set_group_title:
 # 禁言成员
 ban_mumber:
     name: set_group_ban
+
+# 发送群合并转发
+# 不知道能不能用,nc的apifox有问题,data里有啥不知道
+send_group_forward:
+    name: send_forward_msg
+    source: $.data
+    message_id: $.message_id
+# 私聊合并转发
+send_private_forward:
+    name: send_forward_msg
+    source: $.data
+    message_id: $.message_id
+
+# 历史消息
+get_group_msg_history:
+    name: get_group_msg_history
+    source: $.data.messages[*]
+    type: $.data
+    message_type:
+        user: private
+        group: group
+    list:
+        message_id: /message_id
+        target_id: /target_id
+        message_type: /message_type
+        time: /time
+        post_type: /post_type
+        group_id: /group_id
+        sender: /sender
+        message: /message
+        raw_message: /raw_message
+get_friend_msg_history:
+    name: get_friend_msg_history
+    source: $.data.messages[*]
+    type: $.data
+    message_type:
+        user: private
+        group: group
+    list:
+        message_id: /message_id
+        target_id: /target_id
+        message_type: /message_type
+        time: /time
+        post_type: /post_type
+        group_id: /group_id
+        sender: /sender
+        message: /message
+        raw_message: /raw_message

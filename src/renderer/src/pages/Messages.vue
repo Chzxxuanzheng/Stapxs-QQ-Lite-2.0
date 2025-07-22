@@ -242,8 +242,6 @@
                     if (this.chat.id != back.id) {
                         // 更新聊天框
                         this.$emit('userClick', back)
-                        // 获取历史消息
-                        this.$emit('loadHistory', back)
                         // 重置消息面板
                         // PS：这儿的作用是在运行时如果切换到了特殊面板，在点击联系人的时候可以切回来
                         if (

@@ -205,8 +205,6 @@ import { callBackend } from '@renderer/function/utils/systemUtil'
                 // 更新聊天框
                 this.$emit('userClick', back)
                 runtimeData.baseOnMsgList.set(back.id, data)
-                // 获取历史消息
-                this.$emit('loadHistory', back)
                 // 切换标签卡
                 const barMsg = document.getElementById('bar-msg')
                 if (barMsg !== null) {

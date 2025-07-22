@@ -76,3 +76,49 @@ group_notices:
         img_id: $.message.images.0.id
         is_read: null
         read_num: null
+# 发送群合并转发
+send_group_forward:
+    name: send_group_forward_msg
+    source: $.data
+    message_id: $.message_id
+# 私聊合并转发
+send_private_forward:
+    name: send_group_forward_msg
+    source: $.data
+    message_id: $.message_id
+
+# 历史消息
+get_group_msg_history:
+    name: get_group_msg_history
+    source: $.data.messages[*]
+    type: $.data
+    message_type:
+        user: private
+        group: group
+    list:
+        message_id: /message_id
+        target_id: /target_id
+        message_type: /message_type
+        time: /time
+        post_type: null
+        group_id: /group_id
+        sender: /sender
+        message: /message
+        raw_message: /raw_message
+get_friend_msg_history:
+    name: get_friend_msg_history
+    source: $.data.messages[*]
+    type: $.data
+    message_type:
+        user: private
+        group: group
+    list:
+        message_id: /message_id
+        target_id: /target_id
+        message_type: /message_type
+        time: /time
+        post_type: null
+        group_id: /group_id
+        sender: /sender
+        message: /message
+        raw_message: /raw_message
