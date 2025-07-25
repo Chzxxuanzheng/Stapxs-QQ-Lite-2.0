@@ -6,11 +6,22 @@
                     <span>{{ $t('转发消息') }}</span>
                     <font-awesome-icon :icon="['fas', 'xmark']" @click="close" />
                 </header>
-                <input :placeholder="$t('搜索 ……')" @input="searchChat">
+                <div>
+                    <input :placeholder="$t('搜索 ……')" @input="searchChat">
+                    <button v-if="!multiselectMode"
+                    @click="multiselectMode=true">多选</button>
+                    <button v-if="multiselectMode"
+                    @click="runForward">发送</button>
+                </div>
                 <div>
                     <div v-for="data in chatList"
                         :key=" 'forwardList-' + data.user_id ? data.user_id : data.group_id"
-                        @click="clickChat(data)">
+                        @click="clickChat(data)"
+                        :class="{
+                            selected: selected.includes(data),
+                        }"
+                        >
+                        <div />
                         <img loading="lazy"
                             :title="getShowName(data.group_name || data.nickname, data.remark)"
                             :src="data.user_id ?
@@ -70,6 +81,8 @@ export default defineComponent({
                 }
             })
             this.chatList = runtimeData.userList
+            this.multiselectMode = runtimeData.sysConfig.default_multiselect_forward ?? false
+            this.selected = []
         },
         /**
          * 逐条发送消息
@@ -248,6 +261,13 @@ export default defineComponent({
             if(!this.multiselectMode){
                 this.selected = [chat]
                 this.runForward()
+            }else {
+                const index = this.selected.indexOf(chat)
+                if (index > -1) {
+                    this.selected.splice(index, 1)
+                } else {
+                    this.selected.push(chat)
+                }
             }
         }
     }

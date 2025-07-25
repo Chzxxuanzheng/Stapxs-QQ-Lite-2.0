@@ -224,6 +224,21 @@
                     </div>
                 </label>
             </div>
+            <div class="opt-item">
+                <div :class="checkDefault('default_multiselect_forward')" />
+                <font-awesome-icon :icon="['fas', 'fa-list-check']" />
+                <div>
+                    <span>{{ $t('转发默认多选') }}</span>
+                    <span>{{ $t('需要用到这个选项的...应该是和我一样的搬石大王吧？') }}</span>
+                </div>
+                <label class="ss-switch">
+                    <input v-model="runtimeData.sysConfig.default_multiselect_forward"
+                        type="checkbox" name="default_multiselect_forward" @change="save">
+                    <div>
+                        <div />
+                    </div>
+                </label>
+            </div>
         </div>
         <div class="ss-card">
             <header>{{ $t('浏览') }}</header>
