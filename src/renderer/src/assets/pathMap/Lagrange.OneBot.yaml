@@ -122,3 +122,6 @@ get_friend_msg_history:
         sender: /sender
         message: /message
         raw_message: /raw_message
+# 设置消息回应
+send_respond:
+    name: set_group_reaction

@@ -36,6 +36,7 @@ export class Msg extends Message {
     atall: boolean = false
     imgList: string[] = []
     session?: Session | undefined;
+    emojis: { [key: string]: {count: number, meSend: boolean} } = {}
     constructor(segs: Seg[], sender: Sender, session: Session)
     constructor(data: any)
     constructor(arg1: Seg[] | any, arg2?: Sender, arg3?: Session) {
@@ -154,6 +155,10 @@ export class Msg extends Message {
         return false
     }
 
+    /**
+     * 序列化转化为合并转发节点
+     * @returns 合并转发节点
+     */
     toMergeForwardNode(){
         return {
             type: 'node',
@@ -162,6 +167,39 @@ export class Msg extends Message {
                 nickname: this.sender.name,
                 content: this.serialize(),
             }
+        }
+    }
+
+    /**
+     * 重新设置表情数据
+     * @param data 表情数据
+     * @description 重新设置表情数据，清空之前的表情数据
+     */
+    resetEmojis(data: { emoji_id: number; count: number }[]): void {
+        this.emojis = {}
+        data.forEach(item => {
+            this.emojis[String(item.emoji_id)] = { count: item.count, meSend: false }
+        })
+    }
+    /**
+     * 设置表情
+     * @param id 表情id
+     * @param add 是否添加
+     */
+    setEmoji(id: string, add: boolean): void {
+        const emojiData = this.emojis[id]
+        if (add) {
+            if (emojiData?.meSend) throw new Error('不能重复添加自己发送的表情')
+            if (emojiData) {
+                emojiData.count++
+            } else {
+                this.emojis[id] = { count: 1, meSend: true }
+            }
+        }else {
+            if (!emojiData) throw new Error('表情不存在')
+            emojiData.count--
+            if (emojiData.count === 0)
+                delete this.emojis[id]
         }
     }
 }

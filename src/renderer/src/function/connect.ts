@@ -336,7 +336,6 @@ export class Connector {
         try{
             const re = await request.waitResponse()
             logger.get(api, re)
-            if (re['status'] !== 'ok') throw new Error()
             return getMsgData(api, re, apiMap)
         }catch (e) {
             if (e instanceof TimeoutError) {

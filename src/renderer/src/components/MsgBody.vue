@@ -345,18 +345,27 @@
                 </div>
             </div>
         </div>
-        <!-- lgr没有...没法调试 -->
-        <!-- <div v-if="data.emoji_like"
-            :class="'emoji-like' + (isMe ? ' me' : '')">
+        <div v-if="data.emojis"
+            :class="{
+                'emoji-like': true,
+                'me': needSpecialMe(),
+            }">
+            <!-- lgrv1的有bug,收不了表情事件...收没做测试 -->
             <div class="emoji-like-body">
-                <div v-for="info in data.emoji_like"
-                    v-show="getFace(info.emoji_id) != ''"
-                    :key="'respond-' + data.message_id + '-' + info.emoji_id">
-                    <img loading="lazy" :src="getFace(info.emoji_id) as any">
-                    <span>{{ info.count }}</span>
-                </div>
+                <TransitionGroup name="emoji-like">
+                    <div v-for="info, id in data.emojis"
+                        :class="{
+                            'me-send': info.meSend
+                        }"
+                        v-show="getFace(Number(id)) != ''"
+                        @click="$emit('emojiClick', id as string, data)"
+                        :key="'respond-' + data.uuid + '-' + id">
+                        <img loading="lazy" :src="getFace(Number(id)) as any">
+                        <span>{{ info.count }}</span>
+                    </div>
+                </TransitionGroup>
             </div>
-        </div> -->
+        </div>
         <code style="display: none">{{ data.raw_message }}</code>
     </div>
 </template>
@@ -436,6 +445,7 @@
             senderDoubleClick: (_user: Sender) => true,
             showMsgMenu: (_event: MenuEventData, _msg: Msg) => true,
             showUserMenu: (_event: MenuEventData, _user: Sender) => true,
+            emojiClick: (_id: string, _msg: Msg) => true,
         },
         data() {
             return {
@@ -1319,22 +1329,55 @@
     }
     .emoji-like-body div {
         background: var(--color-card-1);
+        display: flex;
+        height: 20px;
         border-radius: 7px;
         margin-right: 5px;
-        padding: 5px 15px;
+        padding: 5px 10px;
         margin-bottom: 5px;
+        transform-origin: left center;
+        transition: 0.3s;
     }
-    .emoji-like-body img {
-        width: 15px;
-        height: 15px;
+    .emoji-like-body div:hover {
+        background: var(--color-card-2);
     }
     .emoji-like-body span {
         color: var(--color-font-2);
-        margin-left: 10px;
         font-size: 0.8rem;
+        margin: auto;
+        margin-left: 10px;
+    }
+    .emoji-like-body div.me-send{
+        background-color: var(--color-main);
+    }
+    .emoji-like-body div.me-send:hover {
+        background: var(--color-font);
+    }
+    .emoji-like-body span {
+        color: var(--color-font-r);
     }
 
-    @media (min-width: 992px) {
+    .emoji-like-enter-active {
+        animation: emoji-like-enter 0.3s ease-in-out;
+    }
+    .emoji-like-leave-active {
+        animation: emoji-like-enter 0.3s ease-in-out reverse;
+    }
+    .emoji-like-move {
+        transition: transform 0.3s all;
+    }
+    @keyframes emoji-like-enter {
+        from {
+            opacity: 0;
+            transform: scaleX(0);
+        }
+        to {
+            opacity: 1;
+            transform: scaleX(1);
+        }
+    }
+
+    @container (min-width: 49.5rem) {
         .emoji-like.me {
             flex-direction: row-reverse;
         }

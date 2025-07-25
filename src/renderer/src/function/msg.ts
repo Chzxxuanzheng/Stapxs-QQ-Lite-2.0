@@ -43,7 +43,7 @@ import {
     loadJsonMap,
     sendStatEvent,
 } from '@renderer/function/utils/appUtil'
-import { reactive, markRaw, defineAsyncComponent, nextTick } from 'vue'
+import { reactive, markRaw, defineAsyncComponent } from 'vue'
 import { PopInfo, PopType, Logger, LogType } from './base'
 import { Connector, login } from './connect'
 import {
@@ -204,9 +204,11 @@ const noticeFunctions = {
         const msgId = msg.message_id
         const emojiList = msg.likes
         // 寻找消息
-        runtimeData.messageList.forEach((item, index) => {
+        runtimeData.messageList.forEach((item) => {
             if (item.message_id === msgId) {
-                runtimeData.messageList[index].emoji_like = emojiList
+                if (item instanceof Msg) {
+                    item.emojis = emojiList
+                }
             }
         })
     },
@@ -1165,15 +1167,10 @@ function saveMsg(msg: any, append = undefined as undefined | string) {
                     item.user_id == runtimeData.chatInfo.show.id
                 )
             })
-            if (user) {
-                if (runtimeData.chatInfo.show.type == 'group') {
-                    user.raw_msg =
-                        lastMsg.sender.nickname + ': ' + getMsgRawTxt(lastMsg)
-                } else {
-                    user.raw_msg = getMsgRawTxt(lastMsg)
-                }
-                user.time = getViewTime(Number(lastMsg.time))
-            }
+            if (!(lastMsg instanceof Msg)) return
+            if (!user) return
+            user.raw_msg = lastMsg.preMsg
+            user.time = lastMsg.time
         }
     }
 }

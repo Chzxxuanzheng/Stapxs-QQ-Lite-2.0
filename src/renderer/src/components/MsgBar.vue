@@ -37,6 +37,7 @@
                 @left-move="arg => $emit('leftMove', arg)"
                 @right-move="arg => $emit('rightMove', arg)"
                 @sender-double-click="arg => $emit('senderDoubleClick', arg)"
+                @emoji-click="(id, msg) => $emit('emojiClick', id, msg)"
                 />
             <!-- 其他通知消息 -->
             <NoticeBody v-else-if="msgIndex instanceof Notice"
@@ -93,6 +94,7 @@ export default defineComponent({
         leftMove: (_msg: Msg) => true,
         rightMove: (_msg: Msg) => true,
         senderDoubleClick: (_user: Sender) => true,
+        emojiClick: (_id: string, _msg: Msg) => true,
     },
     data() {
         return {

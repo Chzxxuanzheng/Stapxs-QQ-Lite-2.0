@@ -73,6 +73,7 @@
                 @imageLoaded="imgLoadedScroll"
                 @left-move="replyMsg"
                 @sender-double-click="(user)=>sendPoke(user.user_id)"
+                @emoji-click="changeRespond"
                 />
         </div>
         <!-- 滚动到底部悬浮标志 -->
@@ -348,7 +349,9 @@
                     :class="'ss-card respond' + (tags.menuDisplay.respond ? ' open' : '')">
                     <template v-for="(num, index) in respondIds" :key="'respond-' + num">
                         <img v-if="getFace(num) != ''" loading="lazy"
-                            :src="getFace(num) as any" @click="sendRespond(num)">
+                            :src="getFace(num) as any" @click="
+                            menuSelectedMsg ? 
+                            changeRespond(String(num), menuSelectedMsg): ''">
                         <font-awesome-icon v-if="index == 4" :icon="['fas', 'angle-up']" @click="tags.menuDisplay.respond = true" />
                     </template>
                 </div>
@@ -1172,20 +1175,34 @@
              * 发送消息回应
              * @param num
              */
-            sendRespond(num: number) {
-                const msg = this.menuSelectedMsg
-                if (msg !== null) {
-                    const msgId = msg.message_id
-                    Connector.send(
-                        runtimeData.jsonMap.send_respond.name,
-                        {
-                            message_id: msgId,
-                            emoji_id: String(num),
-                        },
-                        'SendRespondBack_' + msgId + '_' + num,
-                    )
-                }
+            async changeRespond(id: string, msg: Msg) {
                 this.closeMsgMenu()
+
+                const hasSend = this.menuSelectedMsg?.emojis[id]?.meSend ?? false
+
+                // lgr 贴表情不会根据是否已经有了做判断,而且我拿不到 emoji_id,不知道也没有已经贴上去了
+                // 所以采用这个逻辑,添加成功按贴表情成功处理,否则尝试移除表情
+                const param = { // OB是个神马玩意?得写两套参数...
+                    message_id: msg.message_id,
+                    emoji_id: id,
+                    group_id: runtimeData.chatInfo.show.id,
+                    code: id,
+                    is_add: !hasSend,
+                    set: !hasSend,
+                }
+                const re = await Connector.callApi('send_respond', param)
+                
+                if (!re && !hasSend) {
+                    // 可能已经发送了,改成撤回
+                    param.is_add = false
+                    param.set = false
+
+                    const re = await Connector.callApi('send_respond', param)
+                    if (!re) return
+                    msg.setEmoji(id, false)
+                }
+                if (!re) return
+                msg.setEmoji(id, true)
             },
 
             /**
