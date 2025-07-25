@@ -1265,3 +1265,12 @@ msgstr ""
 
 msgid "获取历史记录ing"
 msgstr ""
+
+msgid "获取历史记录失败"
+msgstr ""
+
+msgid "转发默认多选"
+msgstr ""
+
+msgid "需要用到这个选项的...应该是和我一样的搬石大王吧？"
+msgstr ""

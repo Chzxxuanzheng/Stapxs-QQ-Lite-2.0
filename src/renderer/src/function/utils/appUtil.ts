@@ -133,8 +133,7 @@ export function loadHistory(info: BaseChatInfoElem) {
     if (!loadHistoryMessage(info.id, info.type)) {
         new PopInfo().add(
             PopType.ERR,
-            app.config.globalProperties.$t('加载历史消息失败'),
-            false,
+            app.config.globalProperties.$t('获取历史记录失败'),
         )
     }
 }

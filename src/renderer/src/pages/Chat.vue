@@ -776,8 +776,7 @@
                     msgs = [SystemNotice.info(this.$t('获取历史记录失败'))]
                     new PopInfo().add(
                         PopType.ERR,
-                        app.config.globalProperties.$t('加载历史消息失败'),
-                        false,
+                        app.config.globalProperties.$t('获取历史记录失败'),
                     )
                 }else {
                     if (data.length === 0) {
