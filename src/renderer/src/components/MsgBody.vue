@@ -13,16 +13,15 @@
     <div :id="'chat-' + data.uuid"
         :class="{
             'message': true,
-            'me': isMe,
+            'me': needSpecialMe(),
             'selected': selected,
-            type,
         }"
         :data-raw="getMsgRawTxt(data)"
         :data-sender="data.sender.user_id"
         :data-time="data.time"
         ref="msgMain"
         @mouseleave="hiddenUserInfo">
-        <img v-show="!isMe || type == 'merge'"
+        <img v-show="!needSpecialMe()"
             name="avatar"
             :src="'https://q1.qlogo.cn/g?b=qq&s=0&nk=' + data.sender.user_id"
             @contextmenu.prevent="$emit('showUserMenu', {
@@ -31,31 +30,30 @@
                 target: $event.target as HTMLElement
             }, data.sender)"
             @dblclick="$emit('senderDoubleClick', data.sender)">
-        <div v-if="isMe && type != 'merge'"
+        <div v-if="needSpecialMe()"
             class="message-space" />
-        <div :class="isMe ? type == 'merge' ? 'message-body' : 'message-body me' : 'message-body'">
-            <template v-if="runtimeData.chatInfo.show.type == 'group' && !isMe">
+        <div :class="{
+            'message-body': true,
+            'me': needSpecialMe(),
+        }">
+            <template v-if="runtimeData.chatInfo.show.type == 'group' && !needSpecialMe()">
                 <span v-if="data.sender.role === Role.Bot" class="robot">{{ $t('机器人') }}</span>
                 <span v-else-if="data.sender.role === Role.Owner" class="owner">{{ $t('群主') }}</span>
                 <span v-else-if="data.sender.role === Role.Admin" class="admin">{{ $t('管理员') }}</span>
                 <span v-if="data.sender.title && data.sender.title != ''">{{ data.sender.title.replace(/[\u202A-\u202E\u2066-\u2069]/g, '') }}</span>
             </template>
-            <a v-if="data.sender.card || data.sender.nickname"
-                v-show="!isMe || type == 'merge'">
-                {{ data.sender.card ? data.sender.card : data.sender.nickname }}
-            </a>
-            <a v-else v-show="!isMe || type == 'merge'">
-                {{ isMe ? runtimeData.loginInfo.nickname : runtimeData.chatInfo.show.name }}
+            <a v-show="!needSpecialMe()">
+                {{ data.sender.name }}
             </a>
             <a v-if="selected" class="time">
                 {{ data.formatTime('year') }}
             </a>
             <div class="message-content">
-                <div v-if="data.icon" :class="{
+                <div v-if="data.icon && getConfig('showIcon')" :class="{
                     rotate: data.icon.rotate,
                     icon: true,
                     left: true,
-                    me: isMe,
+                    me: needSpecialMe(),
                 }">
                     <div @click="data.iconClick">
                         <font-awesome-icon
@@ -82,7 +80,7 @@
                     y: $event.clientY,
                     target: $event.target as HTMLElement
                 }, data)"
-                :class="{main: true, 'not-exist': !data.exist}">
+                :class="{main: true, 'not-exist': !data.exist && getConfig('dimNonExistentMsg')}">
                     <!-- 消息体 -->
                     <template v-if="data.message.length === 0">
                         <span class="msg-text" style="opacity: 0.5">{{ $t('空消息') }}</span>
@@ -121,7 +119,10 @@
                                     class="msg-face"
                                     :src="item.src"
                                     :title="item.text">
-                                <font-awesome-icon v-else :class="'msg-face-svg' + (isMe ? ' me' : '')" :icon="['fas', 'face-grin-wide']" />
+                                <font-awesome-icon v-else :class="{
+                                    'msg-face-svg': true,
+                                    'me': needSpecialMe(),
+                                }" :icon="['fas', 'face-grin-wide']" />
                             </template>
                             <div v-else-if="item instanceof AtSeg"
                                 :class="getAtClass(item.qq)">
@@ -129,7 +130,10 @@
                                     :data-group="data.session?.id"
                                     @mouseenter="showUserInfo">{{ getAtName(item) }}</a>
                             </div>
-                            <div v-else-if="item instanceof FileSeg" :class="'msg-file' + (isMe ? ' me' : '')">
+                            <div v-else-if="item instanceof FileSeg" :class="{
+                                'msg-file': true,
+                                'me': needSpecialMe(),
+                            }">
                                 <div>
                                     <div>
                                         <a>
@@ -216,7 +220,10 @@
                                 </div>
                             </template>
                             <div v-else-if="item instanceof ReplySeg"
-                                :class="isMe ? type == 'merge' ? 'msg-replay' : 'msg-replay me' : 'msg-replay'"
+                                :class="{
+                                    'msg-replay': true,
+                                    'me': needSpecialMe(),
+                                }"
                                 @click="scrollToMsg(item.id)">
                                 <font-awesome-icon :icon="['fas', 'reply']" />
                                 <a :class="getRepMsg(item.id) ? '' : 'msg-unknown'"
@@ -243,7 +250,10 @@
                     <div v-if="pageViewInfo !== undefined && Object.keys(pageViewInfo).length > 0"
                         :class="'msg-link-view ' + linkViewStyle">
                         <template v-if="pageViewInfo.type == undefined">
-                            <div :class="'bar' + (isMe ? ' me' : '')" />
+                            <div :class="{
+                                bar: true,
+                                me: needSpecialMe()
+                            }" />
                             <div>
                                 <img v-if="pageViewInfo.img !== undefined"
                                     :id="data.uuid + '-linkview-img'"
@@ -294,7 +304,7 @@
                             <div v-else-if="pageViewInfo.type == 'music163'" class="link-view-music163">
                                 <div>
                                     <img :src="pageViewInfo.data.cover">
-                                    <div :id="'music163-audio-' + data.uuid" :class="isMe ? 'me' : ''">
+                                    <div :id="'music163-audio-' + data.uuid" :class="{me: needSpecialMe()}">
                                         <a>{{ pageViewInfo.data.info.name }}
                                             <a v-if="pageViewInfo.data.info.free != null">{{ $t('（试听）') }}</a>
                                         </a>
@@ -319,11 +329,11 @@
                         </template>
                     </div>
                 </div>
-                <div v-if="data.icon" :class="{
+                <div v-if="data.icon && getConfig('showIcon')" :class="{
                     rotate: data.icon.rotate,
                     right: true,
                     icon: true,
-                    me: isMe,
+                    me: needSpecialMe(),
                 }">
                     <div @click="data.iconClick">
                         <font-awesome-icon
@@ -391,6 +401,12 @@
     import { Role, Sender } from '@renderer/function/model/user'
     import { wheelMask } from '@renderer/function/utils/input'
 
+    export interface MsgBodyConfig {
+        specialMe?: boolean,         // 是否特殊处理自己的消息
+        showIcon?: boolean,          // 是否显示消息图标
+        dimNonExistentMsg?: boolean, // 是否淡化不存在的消息
+    }
+
     export default defineComponent({
         name: 'MsgBody',
         components: { CardMessage },
@@ -399,14 +415,18 @@
                 type: [Msg, SelfMsg],
                 required: true,
             },
-            type: {
-                type: String,
-                required: false,
-            },
             selected: {
                 type: Boolean,
                 required: false,
             },
+            config: {
+                type: Object as () => MsgBodyConfig,
+                default: () => ({
+                    specialMe: true,
+                    showIcon: true,
+                    dimNonExistentMsg: true,
+                }),
+            }
         },
         emits: {
             scrollToMsg: (_id: string) => true,
@@ -480,7 +500,7 @@
              */
             getAtClass(who: number | string) {
                 let back = 'msg-at'
-                if (this.isMe && this.type != 'merge') {
+                if (this.needSpecialMe()) {
                     back += ' me'
                 }
                 if (runtimeData.loginInfo.uin == who || who == 'all') {
@@ -1065,6 +1085,21 @@
                 }
                 runtimeData.mergeMsgStack.push(data)
             },
+
+            //#region ==配置相关================================
+            getConfig(key: keyof MsgBodyConfig): boolean {
+                const defaultConfig: MsgBodyConfig = {
+                    specialMe: true,
+                    showIcon: true,
+                    dimNonExistentMsg: true,
+                }
+                if (this.config[key] != undefined) return this.config[key]
+                return defaultConfig[key] as boolean
+            },
+            needSpecialMe() {
+                return this.getConfig('specialMe') && this.isMe
+            },
+            //#endregion
 
             //#region ==互动相关================================
             // 长按和滑动分别处理,降低开发难度,增加代码可读性.反正分开写又不影响效果

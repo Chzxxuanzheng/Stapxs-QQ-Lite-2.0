@@ -28,6 +28,7 @@
                 :selected="isSelected(msgIndex)"
                 :data="msgIndex"
                 :type="type"
+                :config="config"
                 @click="msgClick($event, msgIndex)"
                 @scroll-to-msg="arg=>$emit('scrollToMsg', arg)"
                 @image-loaded="arg=>$emit('imageLoaded', arg)"
@@ -47,7 +48,7 @@
 </template>
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue'
-import MsgBody from './MsgBody.vue'
+import MsgBody, { MsgBodyConfig } from './MsgBody.vue'
 import NoticeBody from './NoticeBody.vue'
 
 import { isDeleteMsg, isShowTime } from '@renderer/function/utils/msgUtil';
@@ -57,6 +58,10 @@ import { Message } from '@renderer/function/model/message';
 import { Notice, SystemNotice } from '@renderer/function/model/notice';
 import { Sender } from '@renderer/function/model/user';
 import { MenuEventData } from '@renderer/function/elements/information';
+
+export interface Config extends MsgBodyConfig {
+    canInteraction?: boolean
+}
 
 export default defineComponent({
     components: { MsgBody, NoticeBody },
@@ -74,6 +79,15 @@ export default defineComponent({
         showUserMenu: {
             type: Function as PropType<undefined | ((eventData: MenuEventData, user: Sender) => (Promise<void> | void))>,
         },
+        config: {
+            type: Object as PropType<Config>,
+            default: () => ({
+                canInteraction: true,
+                showIcon: true,
+                showTime: true,
+                dimNonExistentMsg: true,
+            }),
+        }
     },
     emits: {
         msgClick: (_event: MouseEvent, _msg: Msg) => true,
@@ -96,6 +110,9 @@ export default defineComponent({
             SystemNotice,
             allowInteraction: true
         }
+    },
+    mounted() {
+        this.allowInteraction = this.config.canInteraction ?? true
     },
     methods: {
         //#region ====外部开放==============================================
