@@ -62,6 +62,26 @@ export class Sender {
             return this.user_id.toString()
         }
     }
+
+    canAdmin(other: Role): boolean {
+        if (this.role === Role.Owner) return true
+        if (this.role === Role.Admin) {
+            if (other === Role.Owner) return false
+            if (other === Role.Admin) return false
+            return true
+        }
+        return false
+    }
+
+    canBeAdmined(other: Role): boolean {
+        if (this.role === Role.Owner) return false
+        if (this.role === Role.Admin) {
+            if (other === Role.Owner) return true
+            return false
+        }
+        if (other === Role.User || other === Role.Bot) return false
+        return true
+    }
 }
 
 export enum Gender {

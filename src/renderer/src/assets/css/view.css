@@ -663,7 +663,7 @@ textarea:focus {
     backdrop-filter: blur(50px);
     transition: transform 0.1s;
     transform-origin: top;
-    transform: scaleY(0);
+    transform: scaleY(1);
     pointer-events: all;
     min-height: unset;
     min-width: 100px;
@@ -675,9 +675,18 @@ textarea:focus {
         transform 0.1s,
         margin-top 0.2s;
 }
-.msg-menu-body.show {
-    transform: scaleY(1);
+
+.chat-menu-enter-active,
+.chat-menu-leave-active {
+    transition: transform 0.2s;
 }
+.chat-menu-enter-active > div > div {
+    animation: show-chat-menu 0.2s ease-out;
+}
+.chat-menu-leave-active > div > div {
+    animation: show-chat-menu 0.25s ease-out reverse;
+}
+
 .menu div.item,
 .msg-menu-body > div {
     transition: background 0.3s;
@@ -1443,5 +1452,14 @@ textarea:focus {
     }
     100% {
         transform: translateX(calc(-100% + 2.35rem));
+    }
+}
+
+@keyframes show-chat-menu {
+    0% {
+        transform: scaleY(0);
+    }
+    100% {
+        transform: scaleY(1);
     }
 }

@@ -31,6 +31,7 @@ import {
 import {
     callBackend,
     delay,
+    getInch,
     getViewTime,
     randomNum,
 } from '@renderer/function/utils/systemUtil'
@@ -1595,6 +1596,7 @@ const baseRuntime = {
     messageList: [],
     popBoxList: [],
     mergeMsgStack: [],
+    inch: getInch()
 }
 
 export const runtimeData: RunTimeDataElem = reactive(baseRuntime)

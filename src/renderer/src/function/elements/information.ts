@@ -53,6 +53,7 @@ export interface RunTimeDataElem {
         sw?: boolean
         darkMode: boolean
     }
+    inch: number
     watch: {
         // PS: 一些给监听器捕捉用的数据
         heartbeatTime?: number
@@ -199,4 +200,10 @@ export interface MergeStackData{
     placeCache: number      // 位置缓存
     ready: boolean          // 就绪
     forwardMsg: any         // 原合并转发消息
+}
+
+export interface MenuEventData {
+    x: number
+    y: number
+    target: HTMLElement
 }

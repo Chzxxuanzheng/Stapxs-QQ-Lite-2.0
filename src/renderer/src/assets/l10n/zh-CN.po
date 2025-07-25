@@ -1259,3 +1259,6 @@ msgstr ""
 
 msgid "既然来了,那就别想走"
 msgstr ""
+
+msgid "正在发送"
+msgstr ""

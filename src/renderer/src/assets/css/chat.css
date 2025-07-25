@@ -1435,19 +1435,18 @@ input {
 
 .select-tag-enter-from,
 .select-tag-leave-to {
-    background: var(--color-card-1);
-    justify-content: space-evenly;
-    margin: 0 20px 10px 20px;
-    transition: all 0.3s;
-    align-items: center;
-    flex-direction: row;
-    border-radius: 7px;
-    overflow: hidden;
-    display: flex;
     height: 0;
+    margin: 0 20px 10px 20px;
+    padding: 0;
 }
-.select-tag-enter-to,
-.select-tag-leave-from {
+.search-tag-enter-to,
+.search-tag-leave-from {
+    margin: 0 20px 10px 20px;
+    margin-top: 20px;
+    padding: 15px 10px;
+    height: auto;
+}
+.select-tag {
     background: var(--color-card-1);
     justify-content: space-evenly;
     transition: all 0.3s;
@@ -1460,6 +1459,25 @@ input {
     margin-top: 20px;
     padding: 15px 10px;
     height: auto;
+}
+.select-tag-enter-active {
+  animation: select-tag-appear 0.3s;
+}
+.select-tag-leave-active {
+  animation: select-tag-appear 0.3s reverse;
+}
+@keyframes select-tag-appear {
+  from {
+    height: 0;
+    margin: 0 20px 10px 20px;
+    padding: 0;
+  }
+  to {
+    margin: 0 20px 10px 20px;
+    margin-top: 20px;
+    padding: 15px 10px;
+    height: auto;
+  }
 }
 .select-tag > div {
     flex-direction: column;

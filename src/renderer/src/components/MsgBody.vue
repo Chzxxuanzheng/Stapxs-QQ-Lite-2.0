@@ -10,7 +10,7 @@
  -->
 
 <template>
-    <div :id="'chat-' + data.message_id"
+    <div :id="'chat-' + data.uuid"
         :class="{
             'message': true,
             'me': isMe,
@@ -20,11 +20,17 @@
         :data-raw="getMsgRawTxt(data)"
         :data-sender="data.sender.user_id"
         :data-time="data.time"
+        ref="msgMain"
         @mouseleave="hiddenUserInfo">
         <img v-show="!isMe || type == 'merge'"
             name="avatar"
             :src="'https://q1.qlogo.cn/g?b=qq&s=0&nk=' + data.sender.user_id"
-            @dblclick="sendPoke">
+            @contextmenu.prevent="$emit('showUserMenu', {
+                x: $event.clientX,
+                y: $event.clientY,
+                target: $event.target as HTMLElement
+            }, data.sender)"
+            @dblclick="$emit('senderDoubleClick', data.sender)">
         <div v-if="isMe && type != 'merge'"
             class="message-space" />
         <div :class="isMe ? type == 'merge' ? 'message-body' : 'message-body me' : 'message-body'">
@@ -59,7 +65,24 @@
                             :icon="['fas', data.icon.icon]" />
                     </div>
                 </div>
-                <div :class="{main: true, 'not-exist': !data.exist}">
+                <div
+                @touchstart.stop="
+                msgLongTouchStart($event, 'msg');
+                msgMoveStart($event);"
+                @touchend.stop="
+                msgLongTouchEnd($event, 'msg');
+                msgMoveEnd($event);"
+                @touchmove.stop="
+                msgLongTouchEnd($event, 'msg');
+                msgKeepMove($event);"
+                @wheel.stop="
+                msgMoveWheel($event)"
+                @contextmenu.prevent="$emit('showMsgMenu', {
+                    x: $event.clientX,
+                    y: $event.clientY,
+                    target: $event.target as HTMLElement
+                }, data)"
+                :class="{main: true, 'not-exist': !data.exist}">
                     <!-- 消息体 -->
                     <template v-if="data.message.length === 0">
                         <span class="msg-text" style="opacity: 0.5">{{ $t('空消息') }}</span>
@@ -77,7 +100,7 @@
                                     class="msg-text" @click="textClick" v-html="item.praseMsg" />
                             </template>
                             <div v-else-if="item instanceof MdSeg" v-once
-                                :id="getMdHTML(item.content, 'msg-md-' + data.message_id)"
+                                :id="getMdHTML(item.content, 'msg-md-' + data.uuid)"
                                 class="msg-md" />
                             <img v-else-if="item instanceof ImgSeg && item.file == 'marketface'"
                                 :class=" imgStyle(data.message.length, index, item.asface) + ' msg-mface'"
@@ -115,7 +138,7 @@
                                         </a>
                                         <p>{{ item.name }}</p>
                                     </div>
-                                    <i>{{ fileSize }}</i>
+                                    <i>{{ item.formatSize }}</i>
                                 </div>
                                 <div>
                                     <font-awesome-icon
@@ -223,7 +246,7 @@
                             <div :class="'bar' + (isMe ? ' me' : '')" />
                             <div>
                                 <img v-if="pageViewInfo.img !== undefined"
-                                    :id="data.message_id + '-linkview-img'"
+                                    :id="data.uuid + '-linkview-img'"
                                     alt="预览图片"
                                     title="查看图片"
                                     :src="pageViewInfo.img"
@@ -271,7 +294,7 @@
                             <div v-else-if="pageViewInfo.type == 'music163'" class="link-view-music163">
                                 <div>
                                     <img :src="pageViewInfo.data.cover">
-                                    <div :id="'music163-audio-' + data.message_id" :class="isMe ? 'me' : ''">
+                                    <div :id="'music163-audio-' + data.uuid" :class="isMe ? 'me' : ''">
                                         <a>{{ pageViewInfo.data.info.name }}
                                             <a v-if="pageViewInfo.data.info.free != null">{{ $t('（试听）') }}</a>
                                         </a>
@@ -350,7 +373,7 @@
         getTrueLang,
         getViewTime } from '@renderer/function/utils/systemUtil'
     import { linkView } from '@renderer/function/utils/linkViewUtil'
-    import { MergeStackData } from '@renderer/function/elements/information'
+    import { MenuEventData, MergeStackData } from '@renderer/function/elements/information'
     import { 
         AtSeg,
         FaceSeg,
@@ -365,7 +388,8 @@
         XmlSeg
     } from '@renderer/function/model/seg'
     import {Msg, SelfMsg} from '@renderer/function/model/msg'
-    import { Role } from '@renderer/function/model/user'
+    import { Role, Sender } from '@renderer/function/model/user'
+    import { wheelMask } from '@renderer/function/utils/input'
 
     export default defineComponent({
         name: 'MsgBody',
@@ -382,9 +406,17 @@
             selected: {
                 type: Boolean,
                 required: false,
-            }
+            },
         },
-        emits: ['scrollToMsg', 'imageLoaded', 'sendPoke'],
+        emits: {
+            scrollToMsg: (_id: string) => true,
+            imageLoaded: (_height: number) => true,
+            leftMove: (_msg: Msg) => true,
+            rightMove: (_msg: Msg) => true,
+            senderDoubleClick: (_user: Sender) => true,
+            showMsgMenu: (_event: MenuEventData, _msg: Msg) => true,
+            showUserMenu: (_event: MenuEventData, _user: Sender) => true,
+        },
         data() {
             return {
                 md: markdownit({ breaks: true }),
@@ -400,8 +432,17 @@
                 getVideo: false,
                 senderInfo: null as any,
                 trueLang: getTrueLang(),
-				fileSize: '加载ing',
                 Role,
+                // 互动相关
+                msgMove: {
+                    move: 0,
+                    onScroll: 'none' as 'none' | 'touch' | 'wheel',
+                    touchLast: null as null | TouchEvent,
+                },
+                longTouch: {
+                    startPoint: null as null | { x: number, y: number },
+                    timeout: null as null | ReturnType<typeof setTimeout>,
+                },
                 AtSeg,
                 FaceSeg,
                 ForwardSeg,
@@ -471,10 +512,21 @@
 
             /**
              * 滚动到指定消息
-             * @param id 消息 id
+             * @param message_id 消息 id
              */
-            scrollToMsg(id: string) {
-                this.$emit('scrollToMsg', 'chat-' + id)
+            scrollToMsg(message_id: string) {
+                let uuid: string|undefined = undefined
+                for (const item of this.runtimeData.messageList) {
+                    if (item.message_id === message_id) {
+                        uuid = item.uuid
+                        break
+                    }
+                }
+                if (!uuid) {
+                    new PopInfo().add(PopType.INFO, this.$t('定位消息失败'))
+                    return
+                }
+                this.$emit('scrollToMsg', 'chat-' + uuid)
             },
 
             /**
@@ -693,7 +745,7 @@
              */
             linkViewPicFin() {
                 const img = document.getElementById(
-                    this.data.message_id + '-linkview-img',
+                    this.data.uuid + '-linkview-img',
                 ) as HTMLImageElement
                 if (img !== null) {
                     const w = img.naturalWidth
@@ -745,14 +797,12 @@
              */
             getRepMsg(message_id: string) {
                 const list = this.runtimeData.messageList.filter((item) => {
-                    return item.message_id == message_id
+                    return item.message_id === message_id
                 })
-                if (list.length === 1) {
-                    if (list[0].message.length > 0)
-                        return ( list[0].sender.nickname + ': ' + getMsgRawTxt(list[0]))
-                    else return this.$t('（获取回复消息失败）')
-                }
-                return null
+                if (list.length !== 1) return null
+                const msg = list[0]
+                if (!(msg instanceof Msg)) return null
+                return msg.preMsg
             },
 
             /**
@@ -809,11 +859,6 @@
                 return hasMarkdown
             },
 
-            sendPoke() {
-                // 调用上级组件的 poke 方法
-                this.$emit('sendPoke', this.data.sender.user_id)
-            },
-
             async showPock() {
                 // 如果是最后一条消息并且在最近发送
                 if (this.data.uuid != runtimeData.messageList.at(-1)?.uuid) return
@@ -829,7 +874,7 @@
                 if (['electron', 'tauri'].includes(runtimeData.tags.clientType)) {
                     windowInfo = await callBackend('Onebot', 'win:getWindowInfo', true)
                 }
-                const message = document.getElementById('chat-' + this.data.message_id)
+                const message = document.getElementById('chat-' + this.data.uuid)
                 let item = document.getElementById('app')
                 if (['electron', 'tauri'].includes(runtimeData.tags.clientType)) {
                     item = message?.getElementsByClassName('poke-hand')[0] as HTMLImageElement
@@ -881,7 +926,7 @@
             },
 
             audioLoaded() {
-                const mainBody = document.getElementById('music163-audio-' + this.data.message_id)
+                const mainBody = document.getElementById('music163-audio-' + this.data.uuid)
                 if(mainBody) {
                     const bar = mainBody.getElementsByTagName('input')[0]
                     const audio = mainBody.getElementsByTagName('audio')[0]
@@ -912,7 +957,7 @@
             },
 
             audioControll() {
-                const mainBody = document.getElementById('music163-audio-' + this.data.message_id)
+                const mainBody = document.getElementById('music163-audio-' + this.data.uuid)
                 if(mainBody) {
                     const audio = mainBody.getElementsByTagName('audio')[0]
                     if(audio) {
@@ -928,7 +973,7 @@
             },
 
             audioUpdate() {
-                const mainBody = document.getElementById('music163-audio-' + this.data.message_id)
+                const mainBody = document.getElementById('music163-audio-' + this.data.uuid)
                 if(mainBody) {
                     const bar = mainBody.getElementsByTagName('input')[0]
                     const audio = mainBody.getElementsByTagName('audio')[0]
@@ -966,7 +1011,7 @@
             },
 
             audioChange() {
-                const mainBody = document.getElementById('music163-audio-' + this.data.message_id)
+                const mainBody = document.getElementById('music163-audio-' + this.data.uuid)
                 if(mainBody) {
                     const bar = mainBody.getElementsByTagName('input')[0]
                     const audio = mainBody.getElementsByTagName('audio')[0]
@@ -1019,7 +1064,207 @@
                     data.imageList = imgList
                 }
                 runtimeData.mergeMsgStack.push(data)
-            }
+            },
+
+            //#region ==互动相关================================
+            // 长按和滑动分别处理,降低开发难度,增加代码可读性.反正分开写又不影响效果
+            /**
+             * 消息长按开始
+             * @param event 触摸事件
+             */
+            msgLongTouchStart(event: TouchEvent, source: 'msg' | 'user') {
+                const logger = new Logger()
+                logger.add(LogType.UI, '消息触屏点击事件开始 ……')
+                this.longTouch.startPoint = {
+                    x: event.targetTouches[0].pageX,
+                    y: event.targetTouches[0].pageY,
+                }
+                const startTouchData = {...event.targetTouches[0]}
+                const eventData: MenuEventData = {
+                    x: startTouchData.pageX,
+                    y: startTouchData.pageY,
+                    target: event.currentTarget as HTMLElement,
+                }
+                this.longTouch.timeout = setTimeout(() => {
+                    logger.add(LogType.UI, '消息触屏长按触发')
+                    switch (source) {
+                        case 'msg':
+                            this.$emit('showMsgMenu', eventData, this.data)
+                            break
+                        case 'user':
+                            this.$emit('showUserMenu', eventData, this.data.sender)
+                            break
+                        default:
+                            throw new Error('未知的长按类型: ' + source)
+                    }
+                }, 400)
+            },
+
+            /**
+             * 消息长按判定
+             * @param event 触摸事件
+             */
+            msgLongTouchMove(event: TouchEvent, _source: 'msg' | 'user') {
+                // 没有开始
+                if (!this.longTouch.timeout) return
+                const logger = new Logger()
+                // 开始点击的位置
+                const startX = this.longTouch.startPoint?.x ?? -1
+                const startY = this.longTouch.startPoint?.y ?? -1
+                if (startX > -1 && startY > -1) {
+                    // 计算移动差值
+                    const dx = Math.abs(startX - event.targetTouches[0].pageX)
+                    const dy = Math.abs(startY - event.targetTouches[0].pageY)
+                    // 如果 dy 大于 10px 则判定为用户在滚动页面，打断长按消息判定
+                    if (dy > 10 || dx > 5) {
+                        clearTimeout(this.longTouch.timeout)
+                        logger.add(LogType.UI, '消息触屏长按取消')
+                        this.longTouch.startPoint = null
+                        this.longTouch.timeout = null
+                        return
+                    }
+                }
+            },
+            /**
+             * 消息长按结束
+             * @param event 触摸事件
+             */
+            msgLongTouchEnd(_event: TouchEvent, _source: 'msg' | 'user') {
+                const logger = new Logger()
+                // 清除长按定时器
+                if (this.longTouch.timeout) {
+                    clearTimeout(this.longTouch.timeout)
+                    logger.add(LogType.UI, '消息触屏长按取消')
+                    this.longTouch.startPoint = null
+                    this.longTouch.timeout = null
+                }
+            },
+            // 滚轮滑动
+            msgMoveWheel(event: WheelEvent) {
+                const process = (event: WheelEvent) => {
+                    // 正在触屏,不处理
+                    if (this.msgMove.onScroll === 'touch') return false
+                    const x = event.deltaX
+                    const y = event.deltaY
+                    const absX = Math.abs(x)
+                    const absY = Math.abs(y)
+                    // 斜度过大
+                    if (absY !== 0 && absX / absY < 2) return false
+                    this.dispenseMove('wheel', -x / 3)
+                    return true
+                }
+                if (!process(event)) return
+                // 创建遮罩
+                // 由于在窗口移动中,窗口判定箱也在移动,当指针不再窗口外,事件就断了
+                // 所以要创建一个不会动的全局遮罩来处理
+                wheelMask(process,()=>{
+                    this.dispenseMove('wheel', 0, true)
+                })
+            },
+
+            // 触屏开始
+            msgMoveStart(event: TouchEvent) {
+                if (this.msgMove.onScroll === 'wheel') return
+                // 触屏开始时，记录触摸点
+                this.msgMove.touchLast = event
+            },
+
+            // 触屏滑动
+            msgKeepMove(event: TouchEvent) {
+                if (this.msgMove.onScroll === 'wheel') return
+                if (!this.msgMove.touchLast) return
+                const touch = event.changedTouches[0]
+                const lastTouch = this.msgMove.touchLast.changedTouches[0]
+                const deltaX = touch.clientX - lastTouch.clientX
+                const deltaY = touch.clientY - lastTouch.clientY
+                const absX = Math.abs(deltaX)
+                const absY = Math.abs(deltaY)
+                // 斜度过大
+                if (absY !== 0 && absX / absY < 2) return
+                // 触屏移动
+                this.msgMove.touchLast = event
+                this.dispenseMove('touch', deltaX)
+            },
+
+            // 触屏滑动结束
+            msgMoveEnd(event: TouchEvent) {
+                if (this.msgMove.onScroll === 'wheel') return
+                const touch = event.changedTouches[0]
+                const lastTouch = this.msgMove.touchLast?.changedTouches[0]
+                if (lastTouch) {
+                    const deltaX = touch.clientX - lastTouch.clientX
+                    const deltaY = touch.clientY - lastTouch.clientY
+                    const absX = Math.abs(deltaX)
+                    const absY = Math.abs(deltaY)
+                    // 斜度过大
+                    if (absY === 0 || absX / absY > 2) {
+                        this.dispenseMove('touch', deltaX)
+                    } 
+                }
+                this.dispenseMove('touch', 0, true)
+                this.msgMove.touchLast = null
+            },
+            /**
+             * 分发触屏/滚轮情况
+             */
+            dispenseMove(type: 'touch' | 'wheel', value: number, end: boolean = false) {
+                if (
+                    !end &&
+                    this.msgMove.onScroll === 'none'
+                ) this.startMove(type, value)
+                if (this.msgMove.onScroll === 'none') return
+                if (end) this.endMove()
+                else this.keepMove(value)
+            },
+            /**
+             * 开始窗口移动
+             */
+            startMove(type: 'touch' | 'wheel', value: number) {
+                new Logger().add(LogType.UI, '开始窗口移动: ' + type + '')
+                this.msgMove.onScroll = type
+                this.msgMove.move = value
+            },
+            /**
+             * 保持窗口移动
+             */
+            keepMove(value: number){
+                this.msgMove.move += value
+                const limit = runtimeData.inch * 0.75
+                if (this.msgMove.move < -limit) this.msgMove.move = -limit
+                else if (this.msgMove.move > runtimeData.inch * 0.75) this.msgMove.move = limit
+                const move = this.msgMove.move
+                const target = this.$refs.msgMain as HTMLDivElement
+                target.style.transform = 'translateX(' + move + 'px)'
+            },
+            /**
+             * 结束窗口移动
+             */
+            endMove() {
+                new Logger().add(LogType.UI, '结束窗口移动: ' + this.msgMove.onScroll)
+                // 保留自己要的数据
+                const move = this.msgMove.move
+                // 重置数据
+                this.msgMove.onScroll = 'none'
+                this.msgMove.move = 0
+
+                const target = this.$refs.msgMain as HTMLDivElement
+
+                target.style.transform = ''
+                target.style.transition = 'all 0.3'
+
+                // 移动距离大小判定
+                const inch = runtimeData.inch
+                // 如果移动距离大于0.5英尺,触发
+                if (move < -0.5 * inch){
+                    new Logger().add(LogType.UI, '左滑触发')
+                    this.$emit('leftMove', this.data)
+                }
+                else if (move > 0.5 * inch){
+                    new Logger().add(LogType.UI, '右滑触发')
+                    this.$emit('rightMove', this.data)
+                }
+            },
+            //#endregion
         },
     })
 </script>
