@@ -8,6 +8,7 @@
     <TransitionGroup
         :name="runtimeData.sysConfig.opt_fast_animation ? '' : 'msglist'"
         :class="{
+            'message-list': true,
             'disable-interaction': !allowInteraction || multiselectMode,
         }"
         tag="div">
@@ -27,7 +28,6 @@
                 :key="'msg-' + msgIndex.uuid"
                 :selected="isSelected(msgIndex)"
                 :data="msgIndex"
-                :type="type"
                 :config="config"
                 @click="msgClick($event, msgIndex)"
                 @scroll-to-msg="arg=>$emit('scrollToMsg', arg)"
@@ -69,9 +69,6 @@ export default defineComponent({
         msgs: {
             type: Array as () => Message[],
             required: true,
-        },
-        type: {
-            type: String,
         },
         showMsgMenu: {
             type: Function as PropType<undefined | ((eventData: MenuEventData, msg: Msg) => (Promise<void> | void))>,

@@ -661,7 +661,12 @@ div.rotate > div > svg {
     width: 100%;
 }
 
-@media (max-width: 992px) {
+.message-list {
+    container-type: inline-size;
+    container-name: message-layout;
+}
+
+@container (max-width: 49.5rem) {
     /* 消息体 */
     .message > img {
         display: unset !important;

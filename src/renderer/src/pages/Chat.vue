@@ -1183,13 +1183,12 @@
             },
             showForWard() {
                 const forwardPan = this.refs().forwardPan
-                if(this.multipleSelectList.length > 0) {
-                    const msgList = runtimeData.messageList.filter((item) => {
-                        return this.multipleSelectList.indexOf(item.message_id) >= 0
-                    })
-                    forwardPan.mergeForward(msgList)
+                if (!forwardPan) return
+                const msgBar = this.refs().msgBar
+                if(msgBar?.isMultiselectMode() && msgBar.getMultiselectListLength() > 0 ) {
+                    forwardPan.mergeForward(msgBar.getMultiselectList())
                 } else if (this.menuSelectedMsg) {
-                    forwardPan.forward([this.menuSelectedMsg])
+                    forwardPan.singleForward([this.menuSelectedMsg])
                 }
                 this.closeMsgMenu()
             },
@@ -1864,7 +1863,6 @@
                     this.$t('欸嘿，这个按钮只是用来占位置的'),
                 )
             },
-
             copyMsgs() {
                 const msgBar = this.refs().msgBar
                 if (!msgBar) return

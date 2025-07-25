@@ -318,14 +318,23 @@ export class VideoSeg extends Seg {
 @autoReactive
 export class ForwardSeg extends Seg {
     static readonly type = 'forward'
-    id: string
+    id?: string
     content?: Msg[]
-    constructor(data: { id: string, content?: any }) {
-        super()
-        this.id = data.id
-        if (data.content) {
-            // TODO 我没用过nc,不知道nc发过来的数据长啥样，怎么处理
-            this.content = data.content.map((item: any) => new Msg(item))
+    constructor(msgs?: Msg[])
+    constructor(data: { id: string, content?: any })
+    constructor(arg1?: Msg[] | { id: string, content?: any }) {
+        if (Array.isArray(arg1)) {
+            const msgs = arg1 as Msg[]
+            super()
+            this.content = msgs
+        } else {
+            super()
+            const data = arg1 as { id: string, content?: any }
+            this.id = data.id
+            if (data.content) {
+                // TODO: 我没用过nc,不知道nc发过来的数据长啥样，怎么处理
+                this.content = data.content.map((item: any) => new Msg(item))
+            }
         }
     }
 
@@ -345,6 +354,7 @@ export class ForwardSeg extends Seg {
     }
 
     serializeData() {
+        if (!this.id) throw new Error('ForwardSeg id is missing')
         return {
             id: this.id,
         }

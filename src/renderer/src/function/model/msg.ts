@@ -13,7 +13,7 @@ import { runtimeData } from '../msg';
 import app from '@renderer/main';
 import { BotMsgType } from '../elements/information';
 import { TimeoutSet } from './data';
-import { AtSeg, ImgSeg, Seg } from './seg';
+import { AtSeg, ForwardSeg, ImgSeg, Seg } from './seg';
 import { autoReactive } from './utils';
 import { Sender } from './user';
 import { Message } from './message';
@@ -21,6 +21,7 @@ import { Session } from './session';
 
 const logger = new Logger()
 type IconData = { icon: string, rotate: boolean, desc: string, color: string }
+
 /**
  * 聊天消息
  */
@@ -152,6 +153,17 @@ export class Msg extends Message {
         }
         return false
     }
+
+    toMergeForwardNode(){
+        return {
+            type: 'node',
+            data: {
+                user_id: String(this.sender.user_id),
+                nickname: this.sender.name,
+                content: this.serialize(),
+            }
+        }
+    }
 }
 
 /**
@@ -161,6 +173,7 @@ export class Msg extends Message {
 export class SelfMsg extends Msg {
     state: 'notSend' | 'sending' | 'sent' | 'failed' = 'notSend'
     private static lock: number = 0
+    declare session: Session
     static readonly sendIds: TimeoutSet<string> = new TimeoutSet()
     
     constructor(segs: Seg[], type: 'group' | 'user' | 'temp', id: string|number) {
@@ -173,6 +186,16 @@ export class SelfMsg extends Msg {
         super(segs, sender, session)
     }
 
+    createSendParam(): any {
+        const param: any = this.session.createSendParam()
+        param.message = this.serialize()
+        return param
+    }
+    getSendApi(): string {
+        if (!this.session) throw new Error('会话信息缺失')
+        return this.session.getSendApi()
+    }
+
     /**
      * 发送消息
      * @returns 是否发送成功
@@ -182,9 +205,8 @@ export class SelfMsg extends Msg {
         if (this.state === 'sent') throw new Error('该消息已经发送成功,不能发送')
         if (!this.session) throw new Error('会话信息缺失')
         //#region 拼装参数 =======================================================
-        const param: any = this.session.createSendParam()
-        param.message = this.serialize()
-        const api = this.session.getSendApi()
+        const param = this.createSendParam()
+        const api = this.getSendApi()
         //#endregion
 
         //#region 发送消息 =======================================================
@@ -309,3 +331,48 @@ export class SelfMsg extends Msg {
     }
 }
 
+/**
+ * 合并转发需要重写序列化函数
+ */
+export class SelfMergeMsg extends SelfMsg {
+    constructor(messages: Msg[], type: 'group' | 'user' | 'temp', id: string|number) {
+        const segs = [new ForwardSeg(messages)]
+        super(segs, type, id)
+    }
+
+    override serialize(): object[] | string {
+        // 没forward_id会抛异常,不抛代表有
+        try {
+            return super.serialize()
+        } catch (err) { /* empty */ }
+        if (runtimeData.tags.msgType == BotMsgType.CQCode) {
+            new PopInfo().add(PopType.ERR, app.config.globalProperties.$t('合并转发消息不支持CQCode格式'))
+            throw new Error('合并转发消息不支持CQCode格式')
+        }
+        const msgs = (this.message[0] as ForwardSeg).content
+        if (!msgs) throw new Error('合并转发消息内容缺失')
+
+        return msgs.map(msg => msg.toMergeForwardNode())
+    }
+
+    override generateRawMsg(): string {
+        const { $t } = app.config.globalProperties
+        return $t('合并转发消息')
+    }
+
+    override createSendParam(): any {
+        const seg = this.message[0] as ForwardSeg
+        if (seg.id) return super.createSendParam()
+
+        const param: any = this.session.createSendParam()
+        param.messages = this.serialize()
+        return param
+    }
+    override getSendApi(): string {
+        const seg = this.message[0] as ForwardSeg
+        if (seg.id) return super.createSendParam()
+
+        if (!this.session) throw new Error('会话信息缺失')
+        return this.session.getSendApi(true)
+    }
+}

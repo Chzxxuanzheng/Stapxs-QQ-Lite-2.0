@@ -41,8 +41,13 @@ export class Session {
         }
     }
 
-    getSendApi(): string {
-        if (this.type === 'temp') return 'send_temp_msg'
-        return 'send_msg'
+    getSendApi(merge: boolean = false): string {
+        if (!merge) {
+            if (this.type === 'temp') return 'send_temp_msg'
+            return 'send_msg'
+        }else {
+            if (this.type === 'group') return 'send_group_forward'
+            return 'send_private_forward'
+        }
     }
 }

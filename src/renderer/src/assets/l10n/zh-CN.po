@@ -1262,3 +1262,6 @@ msgstr ""
 
 msgid "正在发送"
 msgstr ""
+
+msgid "获取历史记录ing"
+msgstr ""

@@ -202,7 +202,7 @@
                                             :key="'raw-forward-' + indexItem">
                                             {{ i.sender.nickname }}:
                                             <span :key="'raw-forward-item-' + i.uuid">
-                                                {{ i.raw_message }}
+                                                {{ i.plaintext }}
                                             </span>
                                         </div>
                                         <div v-else>

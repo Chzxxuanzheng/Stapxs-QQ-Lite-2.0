@@ -6,7 +6,7 @@
                     <span>{{ $t('转发消息') }}</span>
                     <font-awesome-icon :icon="['fas', 'xmark']" @click="close" />
                 </header>
-                <input :placeholder="$t('搜索 ……')" @input="searchForward">
+                <input :placeholder="$t('搜索 ……')" @input="searchChat">
                 <div>
                     <div v-for="data in chatList"
                         :key=" 'forwardList-' + data.user_id ? data.user_id : data.group_id"
@@ -35,9 +35,10 @@
 <script lang="ts">
 import { UserFriendElem, UserGroupElem } from '@renderer/function/elements/information'
 import { runtimeData } from '@renderer/function/msg'
-import { getMsgRawTxt, getShowName, sendMsgRaw } from '@renderer/function/utils/msgUtil'
+import { getShowName } from '@renderer/function/utils/msgUtil'
 import { defineComponent, markRaw } from 'vue'
-import MsgBody from './MsgBody.vue'
+import { Msg, SelfMergeMsg, SelfMsg } from '@renderer/function/model/msg'
+import MsgBar from './MsgBar.vue'
 
 type Chat = UserFriendElem & UserGroupElem
 
@@ -74,7 +75,7 @@ export default defineComponent({
          * 逐条发送消息
          * @param msgs 消息列表
          */
-        forward(msgs: any[]){
+        singleForward(msgs: Msg[]){
             this.init()
             this.msgs = msgs
             this.type = 'single'
@@ -84,7 +85,7 @@ export default defineComponent({
          * 合并转发消息
          * @param msgs 消息列表
          */
-        mergeForward(msgs: any[]){
+        mergeForward(msgs: Msg[]){
             this.init()
             this.msgs = msgs
             this.type = 'merge'
@@ -95,22 +96,26 @@ export default defineComponent({
          */
         runForward(){
             this.close()
-            let previewMsg: any
+            let previewMsg: SelfMsg[]
             let title: string
-            let sendMsg: any[]
+            let sendMsg: SelfMsg[]
             if (this.type === 'single') {
                 title = this.$t('转发消息')
-                previewMsg = this.msgs[0]  // TODO支持多消息转发预览框
+                previewMsg = this.createSinglePreview(this.msgs)
                 sendMsg = this.createSingleSendMsgs(this.msgs)
             } else {
                 title = this.$t('合并转发消息')
                 previewMsg = this.createMergePreview(this.msgs)
-                sendMsg = [this.createMergeSendMsg(this.msgs)]
+                sendMsg = this.createMergeSendMsg(this.msgs)
             }
             const popInfo = {
                 title: title,
-                template: markRaw(MsgBody),
-                templateValue: markRaw({ data: previewMsg, type: 'forward' }),
+                template: markRaw(MsgBar),
+                templateValue: markRaw({ msgs: previewMsg, config: {
+                    canInteraction: false,
+                    showIcon: false,
+                    dimNonExistentMsg: false,
+                } }),
                 button: [
                     {
                         text: this.$t('取消'),
@@ -122,7 +127,7 @@ export default defineComponent({
                         text: this.$t('确定'),
                         master: true,
                         fun: () => {
-                            this.sendForward(sendMsg)
+                            this.sendMsg(sendMsg)
                             runtimeData.popBoxList.shift()
                         },
                     },
@@ -146,28 +151,14 @@ export default defineComponent({
          * 直接发送消息的函数
          * @param msgs 
          */
-        sendForward(msgs: any[]){
-            this.selected.forEach((chat: Chat)=>{
-                let targetId: number
-                let targetType: 'user' | 'group' | 'temp'
-                if (chat.group_id) {
-                    targetId = chat.group_id
-                    targetType = 'group'
-                } else {
-                    targetId = chat.user_id
-                    targetType = 'user'
+        async sendMsg(msgs: SelfMsg[]){
+            for (const msg of msgs) {
+                msg.send()
+                if (msg.session?.id === runtimeData.chatInfo.show.id) {
+                    runtimeData.messageList.push(msg)
                 }
-                msgs.forEach((msg: any)=>{
-                    const preMSg = sendMsgRaw(
-                        String(targetId),
-                        targetType,
-                        msg,
-                    )
-                    if (targetId === runtimeData.chatInfo.show.id) {
-                        runtimeData.messageList.push(preMSg)
-                    }
-                })
-            })
+                await new Promise(resolve => setTimeout(resolve, 300)) // 避免发的太快了,乱序...
+            }
         },
         close(){
             this.show = false
@@ -176,7 +167,7 @@ export default defineComponent({
          * 搜索转发列表
          * @param value 搜索内容
          */
-        searchForward(event: Event) {
+        searchChat(event: Event) {
             const value = (event.target as HTMLInputElement).value
             this.chatList = runtimeData.userList.filter(
                 (item: UserFriendElem & UserGroupElem) => {
@@ -192,63 +183,66 @@ export default defineComponent({
             )
         },
         /**
+         * 创建单条转发消息预览
+         * @param msgs 
+         */
+        createSinglePreview(msgs: Msg[]): SelfMsg[]{
+            // 构造 titleList
+            const out: SelfMsg[] = []
+            msgs.forEach((msg: Msg)=>{
+                const Msg = new SelfMsg(msg.message, 'group', 0)
+                out.push(Msg)
+            })
+            return out
+        },
+        /**
          * 创建合并转发消息预览
          * @param msg 
          */
-        createMergePreview(msgs: any[]): any{
+        createMergePreview(msgs: Msg[]): SelfMsg[]{
             // 构造 titleList
-            const jsonMsg = {
-                app: 'com.tencent.multimsg',
-                meta: {
-                    detail: {
-                        source: this.$t('合并转发消息'),
-                        news: [
-                            ...msgs.slice(0, 3).map((item) => {
-                                const name =
-                                    item.sender.card &&
-                                    item.sender.card != ''? item.sender.card: item.sender.nickname
-                                return {
-                                    text:
-                                        name +
-                                        ': ' +
-                                        getMsgRawTxt(item),
-                                }
-                            }),
-                        ],
-                        summary: this.$t('查看 {count} 条转发消息', { count: this.msgs.length }),
-                        resid: '',
-                    },
-                },
-            }
-            return {
-                message: [
-                    { type: 'json', data: JSON.stringify(jsonMsg), id: '' },
-                ],
-                sender: {
-                    user_id: runtimeData.loginInfo.uin,
-                    nickname: runtimeData.loginInfo.nickname,
-                }
-            }
+            const Msg = new SelfMergeMsg(msgs, 'group', 0)
+            return [Msg]
         },
         /**
          * 创建合并转发消息发送内容
          * @param msgs 
          */
-        createMergeSendMsg(msgs: any[]): any{
-            return msgs.map((item) => {
-                return {
-                    type: 'node',
-                    id: item.message_id,
-                    user_id: item.sender.user_id,
-                    nickname: item.sender.nickname,
-                    content: item.message,
+        createMergeSendMsg(msgs: Msg[]): SelfMsg[]{
+            const out: SelfMsg[] = []
+            this.selected.forEach((chat: Chat)=>{
+                let targetId: number
+                let targetType: 'user' | 'group' | 'temp'
+                if (chat.group_id) {
+                    targetId = chat.group_id
+                    targetType = 'group'
+                } else {
+                    targetId = chat.user_id
+                    targetType = 'user'
                 }
+                const Msg = new SelfMergeMsg(msgs, targetType, targetId)
+                out.push(Msg)
             })
+            return out
         },
-        createSingleSendMsgs(msgs: any[]): any[]{
-            return msgs.map((item) => {
-                return item.message
+        createSingleSendMsgs(msgs: Msg[]): SelfMsg[]{
+            const out: SelfMsg[] = []
+            this.selected.forEach((chat: Chat)=>{
+                let targetId: number
+                let targetType: 'user' | 'group' | 'temp'
+                if (chat.group_id) {
+                    targetId = chat.group_id
+                    targetType = 'group'
+                } else {
+                    targetId = chat.user_id
+                    targetType = 'user'
+                }
+                msgs.forEach((msg: Msg)=>{
+                    const Msg = new SelfMsg(msg.message, targetType, targetId)
+                    out.push(Msg)
+                })
             })
+            return out
         },
         clickChat(chat: Chat) {
             if(!this.multiselectMode){
