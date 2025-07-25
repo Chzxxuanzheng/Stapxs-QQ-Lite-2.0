@@ -190,7 +190,7 @@
                     </div>
                 </div>
                 <!-- 回复指示器 -->
-                <div :class="msgWhileReply ? 'replay-tag show' : 'replay-tag'">
+                <div :class="msgWhileReply ? 'reply-tag show' : 'reply-tag'">
                     <font-awesome-icon :icon="['fas', 'reply']" />
                     <span>{{
                         msgWhileReply?.preMsg

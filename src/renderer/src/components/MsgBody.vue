@@ -221,7 +221,7 @@
                             </template>
                             <div v-else-if="item instanceof ReplySeg"
                                 :class="{
-                                    'msg-replay': true,
+                                    'msg-reply': true,
                                     'me': needSpecialMe(),
                                 }"
                                 @click="scrollToMsg(item.id)">

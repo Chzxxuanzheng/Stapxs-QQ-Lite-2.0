@@ -282,7 +282,7 @@ div.rotate > div > svg {
     border-radius: 4px;
 }
 
-.msg-replay {
+.msg-reply {
     background: #00000017;
     margin-bottom: 10px;
     border-radius: 7px;
@@ -291,7 +291,7 @@ div.rotate > div > svg {
     height: 0.9rem;
     padding: 10px;
 }
-.msg-replay a {
+.msg-reply a {
     line-height: calc(0.9rem + 10px);
     margin-left: calc(1rem + 10px);
     word-break: break-all;
@@ -299,7 +299,7 @@ div.rotate > div > svg {
     margin-top: -5px;
     display: block;
 }
-.msg-replay svg {
+.msg-reply svg {
     margin-bottom: calc(-1rem - 5px);
     color: var(--color-font-1);
     margin-right: 5px;
@@ -307,7 +307,7 @@ div.rotate > div > svg {
     display: block;
     height: 1rem;
 }
-.msg-replay.me svg {
+.msg-reply.me svg {
     color: var(--color-font-1-r);
 }
 

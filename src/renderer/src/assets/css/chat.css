@@ -1508,7 +1508,7 @@ input {
     margin-top: 5px;
 }
 
-.replay-tag {
+.reply-tag {
     background: var(--color-card-1);
     margin: 0 20px -10px 20px;
     transition: all 0.3s;
@@ -1519,25 +1519,25 @@ input {
     display: flex;
     height: 0;
 }
-.replay-tag.show {
+.reply-tag.show {
     margin: 0 20px -10px 20px;
     margin-top: 20px;
     padding: 10px;
     height: auto;
 }
-.replay-tag svg {
+.reply-tag svg {
     color: var(--color-font-2);
     margin-right: 10px;
     height: 1rem;
 }
-.replay-tag > span {
+.reply-tag > span {
     max-width: calc(100% - 2rem);
     text-overflow: ellipsis;
     white-space: nowrap;
     overflow: hidden;
     flex: 1;
 }
-.replay-tag > div {
+.reply-tag > div {
     height: calc(1rem + 40px);
     justify-content: center;
     align-items: center;
@@ -1545,7 +1545,7 @@ input {
     display: flex;
     width: 2rem;
 }
-.replay-tag > div > svg {
+.reply-tag > div > svg {
     margin-right: 0 !important;
     color: var(--color-font-1);
 }
