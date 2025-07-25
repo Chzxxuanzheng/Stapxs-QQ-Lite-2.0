@@ -157,8 +157,12 @@
                 <Transition name="select-tag">
                     <div v-if="tags.isMultiselectMode" class="select-tag">
                         <div>
-                            <font-awesome-icon :icon="['fas', 'share']" @click="mergeForward" />
+                            <font-awesome-icon :icon="['fas', 'fa-share-from-square']" @click="mergeForward" />
                             <span>{{ $t('合并转发') }}</span>
+                        </div>
+                        <div>
+                            <font-awesome-icon :icon="['fas', 'fa-arrows-turn-right']" @click="singleForward" />
+                            <span>{{ $t('逐条转发') }}</span>
                         </div>
                         <div>
                             <font-awesome-icon :icon="['fas', 'scissors']" />
@@ -1991,6 +1995,21 @@
                 if (!forwardPan) return
 
                 forwardPan.mergeForward(msgList)
+
+                this.closeMultiselect()
+            },
+            /**
+             * 逐条转发
+             */
+            singleForward(){
+                const msgBar = this.refs().msgBar
+                if (!msgBar) return
+                const msgList = msgBar.getMultiselectList()
+                if (msgList.length === 0) return
+                const forwardPan = this.refs().forwardPan
+                if (!forwardPan) return
+
+                forwardPan.singleForward(msgList)
 
                 this.closeMultiselect()
             },
