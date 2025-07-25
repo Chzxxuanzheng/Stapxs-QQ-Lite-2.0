@@ -157,7 +157,7 @@
                 <Transition name="select-tag">
                     <div v-if="tags.isMultiselectMode" class="select-tag">
                         <div>
-                            <font-awesome-icon :icon="['fas', 'share']" @click="showForWard" />
+                            <font-awesome-icon :icon="['fas', 'share']" @click="mergeForward" />
                             <span>{{ $t('合并转发') }}</span>
                         </div>
                         <div>
@@ -663,15 +663,6 @@
             })
         },
         methods: {
-            jumpSearchMsg() {
-                this.closeSearch()
-                setTimeout(() => {
-                    if (!this.menuSelectedMsg) return
-                    this.scrollToMsg(`chat-${this.menuSelectedMsg.uuid}`)
-                    this.closeMsgMenu()
-                }, 100)
-            },
-
             /**
              * 消息区滚动
              * @param event 滚动事件
@@ -1148,15 +1139,6 @@
                 }
             },
 
-            menuReplyMsg(closeMenu = true) {
-                if (!this.menuSelectedMsg) return
-                this.replyMsg(this.menuSelectedMsg)
-                // 关闭消息菜单
-                if (closeMenu) {
-                    this.closeMsgMenu()
-                }
-            },
-
             /**
              * 回复消息
              */
@@ -1181,38 +1163,6 @@
             cancelReply() {
                 this.msgWhileReply = undefined
             },
-            showForWard() {
-                const forwardPan = this.refs().forwardPan
-                if (!forwardPan) return
-                const msgBar = this.refs().msgBar
-                if(msgBar?.isMultiselectMode() && msgBar.getMultiselectListLength() > 0 ) {
-                    forwardPan.mergeForward(msgBar.getMultiselectList())
-                } else if (this.menuSelectedMsg) {
-                    forwardPan.singleForward([this.menuSelectedMsg])
-                }
-                this.closeMsgMenu()
-            },
-            forwardSelf() {
-                if (this.menuSelectedMsg) {
-                    const preMsg = sendMsgRaw(
-                        this.chat.show.id,
-                        this.chat.show.type,
-                        this.menuSelectedMsg.message,
-                    )
-                    runtimeData.messageList.push(preMsg)
-                }
-                this.closeMsgMenu()
-            },
-
-            intoMultipleSelect() {
-                const msgBar = this.refs().msgBar
-                msgBar?.startMultiselect()
-                this.tags.isMultiselectMode = true
-                if (this.menuSelectedMsg) {
-                    msgBar?.forceAddToMultiselectList(this.menuSelectedMsg)
-                }
-                this.closeMsgMenu()
-            },
 
             /**
              * 发送消息回应
@@ -1232,85 +1182,6 @@
                     )
                 }
                 this.closeMsgMenu()
-            },
-
-            /**
-             * 复制选中的消息
-             */
-            copyMsg() {
-                const msg = this.menuSelectedMsg
-                if (msg !== null) {
-                    // 如果消息体没有简述消息的话 ……
-                    if (!msg.raw_message) {
-                        msg.raw_message = getMsgRawTxt(msg)
-                    }
-                    const popInfo = new PopInfo()
-                    app.config.globalProperties.$copyText(msg.raw_message).then(
-                        () => {
-                            popInfo.add(PopType.INFO, this.$t('复制成功'), true)
-                        },
-                        () => {
-                            popInfo.add(PopType.ERR, this.$t('复制失败'), true)
-                        },
-                    )
-                }
-                this.closeMsgMenu()
-            },
-
-            /**
-             * 复制缓存的选中的文本
-             */
-            copySelectMsg() {
-                if (this.selectCache != '') {
-                    const popInfo = new PopInfo()
-                    app.config.globalProperties
-                        .$copyText(this.selectCache)
-                        .then(
-                            () => {
-                                popInfo.add(
-                                    PopType.INFO,
-                                    this.$t('复制成功'),
-                                    true,
-                                )
-                            },
-                            () => {
-                                popInfo.add(
-                                    PopType.ERR,
-                                    this.$t('复制失败'),
-                                    true,
-                                )
-                            },
-                        )
-                }
-                this.closeMsgMenu()
-            },
-
-            /**
-             * 下载选中的图片
-             */
-            downloadImg() {
-                const url = this.tags.menuDisplay.downloadImg
-                if (url != false) {
-                    downloadFile(url as string, 'img.png', () => undefined, () => undefined)
-                }
-                this.closeMsgMenu()
-            },
-
-            /**
-             * 撤回消息
-             */
-            revokeMsg() {
-                const msg = this.menuSelectedMsg
-                if (msg !== null) {
-                    const msgId = msg.message_id
-                    Connector.callApi('revoke_msg', { message_id: msgId })
-                        .catch(err=>{
-                            new Logger().error(err, '撤回消息失败：')
-                            new PopInfo().add(PopType.ERR, this.$t('撤回失败'), true)
-                        })
-                    // 关闭消息菜单
-                    this.closeMsgMenu()
-                }
             },
 
             /**
@@ -1857,63 +1728,6 @@
                 }
             },
 
-            delMsgs() {
-                new PopInfo().add(
-                    PopType.INFO,
-                    this.$t('欸嘿，这个按钮只是用来占位置的'),
-                )
-            },
-            copyMsgs() {
-                const msgBar = this.refs().msgBar
-                if (!msgBar) return
-                const msgList = msgBar.getMultiselectList()
-                let msg = ''
-                let lastDate = ''
-                msgList.forEach((item: Msg) => {
-                    let time: Date | undefined
-                    // 去除 item.time 时间戳中的时间，只保留日期
-                    if (item.time) {
-                        time = new Date(getViewTime(item.time))
-                        const date =
-                            time.getFullYear() +
-                            '-' +
-                            (time.getMonth() + 1) +
-                            '-' +
-                            time.getDate()
-                        if (date != lastDate) {
-                            msg += '\n—— ' + date + ' ——\n'
-                            lastDate = date
-                        }
-                    }
-                    if (time) {
-                        msg += item.sender.nickname +
-                        ' ' +
-                        time.getHours() +
-                        ':' +
-                        time.getMinutes() +
-                        ':' +
-                        time.getSeconds() +
-                        '\n' +
-                        getMsgRawTxt(item) +
-                        '\n\n'
-                    }
-                    else msg += item.preMsg + '\n\n'
-
-                })
-                msg = msg.trim()
-                const popInfo = new PopInfo()
-                app.config.globalProperties.$copyText(msg).then(
-                    () => {
-                        popInfo.add(PopType.INFO, this.$t('复制成功'), true)
-                        msgBar.cancelMultiselect()
-                        this.tags.isMultiselectMode = false
-                    },
-                    () => {
-                        popInfo.add(PopType.ERR, this.$t('复制失败'), true)
-                    },
-                )
-            },
-
             /**
              * 获取显示群精华消息
              */
@@ -2043,6 +1857,214 @@
                 runtimeData.tags.openSideBar = !runtimeData.tags.openSideBar
             },
 
+            //#region == 消息菜单相关 ==================================================
+            /**
+             * +1
+             */
+            forwardSelf() {
+                if (!this.menuSelectedMsg) return
+                const preMsg = sendMsgRaw(
+                    this.chat.show.id,
+                    this.chat.show.type,
+                    this.menuSelectedMsg.message,
+                )
+                runtimeData.messageList.push(preMsg)
+                this.closeMsgMenu()
+            },
+            /**
+             * 回复
+             * @param closeMenu 是否关闭消息菜单
+             */
+            menuReplyMsg(closeMenu = true) {
+                if (!this.menuSelectedMsg) return
+                this.replyMsg(this.menuSelectedMsg)
+                // 关闭消息菜单
+                if (closeMenu) {
+                    this.closeMsgMenu()
+                }
+            },
+            /**
+             * 转发
+             */
+            showForWard() {
+                const forwardPan = this.refs().forwardPan
+                if (!forwardPan) return
+                if (!this.menuSelectedMsg) return
+
+                forwardPan.singleForward([this.menuSelectedMsg])
+                this.closeMsgMenu()
+            },
+            /**
+             * 多选
+             */
+            intoMultipleSelect() {
+                const msgBar = this.refs().msgBar
+                msgBar?.startMultiselect()
+                this.tags.isMultiselectMode = true
+                if (this.menuSelectedMsg) {
+                    msgBar?.forceAddToMultiselectList(this.menuSelectedMsg)
+                }
+                this.closeMsgMenu()
+            },
+            /**
+             * 复制选中的消息
+             */
+            copyMsg() {
+                const msg = this.menuSelectedMsg
+                if (!msg) return
+
+                const popInfo = new PopInfo()
+                app.config.globalProperties.$copyText(msg.raw_message).then(
+                    () => {
+                        popInfo.add(PopType.INFO, this.$t('复制成功'), true)
+                    },
+                    () => {
+                        popInfo.add(PopType.ERR, this.$t('复制失败'), true)
+                    },
+                )
+
+                this.closeMsgMenu()
+            },
+            /**
+             * 复制缓存的选中的文本
+             */
+            copySelectMsg() {
+                if (this.selectCache === '') return
+
+                const popInfo = new PopInfo()
+                app.config.globalProperties.$copyText(this.selectCache).then(
+                    () => {
+                        popInfo.add(PopType.INFO, this.$t('复制成功'), true)
+                    },
+                    () => {
+                        popInfo.add(PopType.ERR, this.$t('复制失败'), true)
+                    },
+                )
+
+                this.closeMsgMenu()
+            },
+            /**
+             * 下载选中的图片
+             */
+            downloadImg() {
+                const url = this.tags.menuDisplay.downloadImg
+                if (url != false) {
+                    downloadFile(url as string, 'img.png', () => undefined, () => undefined)
+                }
+                this.closeMsgMenu()
+            },
+            /**
+             * 撤回消息
+             */
+            revokeMsg() {
+                const msg = this.menuSelectedMsg
+                if (!msg) return
+                const msgId = msg.message_id
+                Connector.callApi('revoke_msg', { message_id: msgId })
+                    .catch(err=>{
+                        new Logger().error(err, '撤回消息失败：')
+                        new PopInfo().add(PopType.ERR, this.$t('撤回失败'), true)
+                    })
+                // 关闭消息菜单
+                this.closeMsgMenu()
+            },
+            jumpSearchMsg() {
+                this.closeSearch()
+                setTimeout(() => {
+                    if (!this.menuSelectedMsg) return
+                    this.scrollToMsg(`chat-${this.menuSelectedMsg.uuid}`)
+                    this.closeMsgMenu()
+                }, 100)
+            },
+            //#endregion
+
+            //#region == 多选菜单相关 ==================================================
+            /**
+             * 合并转发
+             */
+            mergeForward(){
+                const msgBar = this.refs().msgBar
+                if (!msgBar) return
+                const msgList = msgBar.getMultiselectList()
+                if (msgList.length === 0) return
+                const forwardPan = this.refs().forwardPan
+                if (!forwardPan) return
+
+                forwardPan.mergeForward(msgList)
+
+                this.closeMultiselect()
+            },
+            /**
+             * 删除消息
+             */
+            delMsgs() {
+                new PopInfo().add(
+                    PopType.INFO,
+                    this.$t('欸嘿，这个按钮只是用来占位置的'),
+                )
+            },
+            /**
+             * 复制消息
+             */
+            copyMsgs() {
+                const msgBar = this.refs().msgBar
+                if (!msgBar) return
+                const msgList = msgBar.getMultiselectList()
+                let msg = ''
+                let lastDate = ''
+                msgList.forEach((item: Msg) => {
+                    let time: Date | undefined
+                    // 去除 item.time 时间戳中的时间，只保留日期
+                    if (item.time) {
+                        time = new Date(getViewTime(item.time))
+                        const date =
+                            time.getFullYear() +
+                            '-' +
+                            (time.getMonth() + 1) +
+                            '-' +
+                            time.getDate()
+                        if (date != lastDate) {
+                            msg += '\n—— ' + date + ' ——\n'
+                            lastDate = date
+                        }
+                    }
+                    if (time) {
+                        msg += item.sender.nickname +
+                        ' ' +
+                        time.getHours() +
+                        ':' +
+                        time.getMinutes() +
+                        ':' +
+                        time.getSeconds() +
+                        '\n' +
+                        getMsgRawTxt(item) +
+                        '\n\n'
+                    }
+                    else msg += item.preMsg + '\n\n'
+
+                })
+                msg = msg.trim()
+                const popInfo = new PopInfo()
+                app.config.globalProperties.$copyText(msg).then(
+                    () => {
+                        popInfo.add(PopType.INFO, this.$t('复制成功'), true)
+                        
+                        this.closeMultiselect()
+                    },
+                    () => {
+                        popInfo.add(PopType.ERR, this.$t('复制失败'), true)
+                    },
+                )
+            },
+            closeMultiselect() {
+                const msgBar = this.refs().msgBar
+                if (!msgBar) return
+                msgBar.cancelMultiselect()
+                this.tags.isMultiselectMode = false
+            },
+            //#endregion
+
+            //#region == 窗口移动相关 ==================================================
             // 滚轮滑动 
             chatWheelEvent(event: WheelEvent) {
                 const process = (event: WheelEvent) => {
@@ -2195,6 +2217,7 @@
                     return this.exitWin()
                 }
             },
+            //#endregion
             /**
              * 得到焦点窗口
              */
