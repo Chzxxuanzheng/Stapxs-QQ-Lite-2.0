@@ -1274,3 +1274,15 @@ msgstr ""
 
 msgid "需要用到这个选项的...应该是和我一样的搬石大王吧？"
 msgstr ""
+
+msgid "逐条转发"
+msgstr ""
+
+msgid "暂不支持转发卡片消息"
+msgstr ""
+
+msgid "请选择要转发的消息"
+msgstr ""
+
+msgid "最多只能转发99条消息"
+msgstr ""

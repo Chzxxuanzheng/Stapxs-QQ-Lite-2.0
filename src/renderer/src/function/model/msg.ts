@@ -358,7 +358,7 @@ export class SelfMsg extends Msg {
             icon: 'exclamation-triangle',
             rotate: false,
             desc: app.config.globalProperties.$t('发送失败'),
-            color: '#999900bc',
+            color: 'var(--color-yellow)',
         }
         return super.icon
     }

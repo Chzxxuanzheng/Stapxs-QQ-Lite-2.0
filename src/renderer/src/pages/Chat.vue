@@ -102,7 +102,7 @@
                             <div>
                                 <font-awesome-icon :icon="['fas', 'message']" />
                                 <span>{{ $t('精华消息') }}</span>
-                                <font-awesome-icon :icon="['fas', 'xmark']" @click="details[2].open = !details[2].open" />
+                                <font-awesome-icon :icon="['fas', 'xmark-large']" @click="details[2].open = !details[2].open" />
                             </div>
                             <div
                                 class="jin-pan-body"
@@ -157,11 +157,23 @@
                 <!-- 多选指示器 -->
                 <Transition name="select-tag">
                     <div v-if="tags.isMultiselectMode" class="select-tag">
-                        <div>
+                        <div v-if="refs().msgBar!.multiCanForward()">
+                            <font-awesome-icon style="color: var(--color-red)" :icon="['fas', 'fa-xmark']" @click="
+                                new PopInfo().add(PopType.ERR, refs().msgBar!.multiCanForward());
+                            " />
+                            <span>{{ $t('合并转发') }}</span>
+                        </div>
+                        <div v-else>
                             <font-awesome-icon :icon="['fas', 'fa-share-from-square']" @click="mergeForward" />
                             <span>{{ $t('合并转发') }}</span>
                         </div>
-                        <div>
+                        <div v-if="refs().msgBar!.multiCanForward()">
+                            <font-awesome-icon style="color: var(--color-red)" :icon="['fas', 'fa-xmark']" @click="
+                                new PopInfo().add(PopType.ERR, refs().msgBar!.multiCanForward());
+                            " />
+                            <span>{{ $t('逐条转发') }}</span>
+                        </div>
+                        <div v-else>
                             <font-awesome-icon :icon="['fas', 'fa-arrows-turn-right']" @click="singleForward" />
                             <span>{{ $t('逐条转发') }}</span>
                         </div>
@@ -179,9 +191,9 @@
                         </div>
                         <div>
                             <span @click="
-                                refs().msgBar?.cancelMultiselect();
+                                refs().msgBar!.cancelMultiselect();
                                 tags.isMultiselectMode=false
-                            ">{{ refs().msgBar?.getMultiselectListLength() }}</span>
+                            ">{{ refs().msgBar!.getMultiselectListLength() }}</span>
                             <span>{{ $t('取消') }}</span>
                         </div>
                     </div>
@@ -620,6 +632,8 @@
                 ],
                 getMsgRawTxt,
                 SystemNotice,
+                PopType,
+                PopInfo,
             }
         },
         watch: {

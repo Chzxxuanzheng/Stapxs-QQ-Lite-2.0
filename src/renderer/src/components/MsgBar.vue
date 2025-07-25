@@ -59,6 +59,7 @@ import { Message } from '@renderer/function/model/message';
 import { Notice, SystemNotice } from '@renderer/function/model/notice';
 import { Sender } from '@renderer/function/model/user';
 import { MenuEventData } from '@renderer/function/elements/information';
+import app from '@renderer/main';
 
 export interface Config extends MsgBodyConfig {
     canInteraction?: boolean
@@ -100,6 +101,7 @@ export default defineComponent({
         return {
             multiselectMode: false,
             multipleSelectList: new Set as Set<Msg>,
+            multipleSelectListCardNum: 0,
 			isDeleteMsg,
 			isShowTime,
             runtimeData,
@@ -170,6 +172,7 @@ export default defineComponent({
         cancelMultiselect() {
             this.multiselectMode = false
             this.multipleSelectList.clear()
+            this.multipleSelectListCardNum = 0
         },
         /**
          * 是否处于多选模式
@@ -214,8 +217,25 @@ export default defineComponent({
             if (!this.multiselectMode) {
                 throw new Error('多选模式未开启，无法添加消息到多选列表。')
             }
-            if (!this.multipleSelectList.has(msg)) this.multipleSelectList.add(msg)
-            else this.multipleSelectList.delete(msg)
+            if (!this.multipleSelectList.has(msg)) {
+                this.multipleSelectList.add(msg)
+                if (msg.hasCard()) this.multipleSelectListCardNum ++
+            }
+            else {
+                this.multipleSelectList.delete(msg)
+                if (msg.hasCard()) this.multipleSelectListCardNum --
+            }
+        },
+        /**
+         * 判断能否转发,并给出理由,可以转发时给出空字符串
+         * @returns {string} 不可转发原因
+         */
+        multiCanForward(): string {
+            const { $t } = app.config.globalProperties
+            if (this.multipleSelectListCardNum > 0) return $t('暂不支持转发卡片消息')
+            if (this.multipleSelectList.size === 0) return $t('请选择要转发的消息')
+            if (this.multipleSelectList.size > 99) return $t('最多只能转发99条消息')
+            return ''
         },
         //#endregion
 
