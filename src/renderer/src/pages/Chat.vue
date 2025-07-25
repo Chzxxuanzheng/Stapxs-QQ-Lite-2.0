@@ -2205,6 +2205,8 @@
                     return this.exitWin()
                 }
                 // 末端速度法
+                // 防止误触
+                if (move < runtimeData.inch * 0.5) return
                 let endSpeedList = speedList.reverse().slice(0, 10)
                 let endSpeed = 0
                 for (const speed of endSpeedList) {
@@ -2212,7 +2214,7 @@
                 }
                 endSpeed /= endSpeedList.length
                 endSpeed /= runtimeData.inch
-                // 如果末端速度大于 0.5，则视为关闭
+                // 如果末端速度大于 5，则视为关闭
                 if (endSpeed > 5) {
                     return this.exitWin()
                 }
