@@ -13,7 +13,7 @@
         <div class="main">
             <span>{{ toHtml(item.folder_name ?? item.file_name) }}</span>
             <div>
-                <span>{{ toHtml(item.creater_name ?? item.uploader_name) }}</span>
+                <span>{{ toHtml(item.creater_name !== undefined ? item.creater_name : item.uploader_name) }}</span>
                 <span>{{
                     (item.create_time || item.upload_time) ? Intl.DateTimeFormat(trueLang, {
                         year: 'numeric',
@@ -105,7 +105,8 @@
              * 下载文件（获取文件下载地址并下载）
              */
             getFile(item: GroupFileElem) {
-                const name = runtimeData.jsonMap.file_download?.name
+                console.log('开始下载文件', item.file_id, item.file_name)
+                const name = runtimeData.jsonMap.get_group_file_url?.name
                 if(name) {
                     Connector.send(
                         name,

@@ -668,7 +668,7 @@ const msgFunctions = {
      * 下载文件（群文件）
      */
     downloadGroupFile: (_: string, msg: { [key: string]: any }, echoList: string[]) => {
-        const data = getMsgData('get_file_url', msg, msgPath.file_download)[0]
+        const data = getMsgData('get_file_url', msg, msgPath.get_group_file_url)[0]
         const url = data.file_url
 
         const fileId = echoList[1]

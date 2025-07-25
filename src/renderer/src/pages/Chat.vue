@@ -1330,6 +1330,7 @@
                     // 加载群文件列表
                     if (this.chat.show.type === 'group' && Object.keys(this.chat.info.group_files).length === 0) {
                         const name = runtimeData.jsonMap.group_files?.name
+                        console.log('加载群文件列表', name)
                         if(name) {
                             Connector.send(name, {
                                 group_id: this.chat.show.id

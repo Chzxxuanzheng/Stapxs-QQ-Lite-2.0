@@ -192,9 +192,13 @@ group_folder_files:
 # 获取文件下载信息
 get_file_url:
     name: get_file
-    source: $.data
-    list:
-        file_url: /url
+    file_url: $.data.url
+get_group_file_url:
+    name: get_file
+    file_url: $.data.url
+get_private_file_url:
+    name: get_file
+    file_url: $.data.url
 
 ## 群操作
 # 退出群聊
