@@ -102,7 +102,7 @@
                             <div>
                                 <font-awesome-icon :icon="['fas', 'message']" />
                                 <span>{{ $t('精华消息') }}</span>
-                                <font-awesome-icon :icon="['fas', 'xmark-large']" @click="details[2].open = !details[2].open" />
+                                <font-awesome-icon :icon="['fas', 'xmark']" @click="details[2].open = !details[2].open" />
                             </div>
                             <div
                                 class="jin-pan-body"
