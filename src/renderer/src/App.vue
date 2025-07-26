@@ -200,7 +200,7 @@
             @hide="viewerHide"
             @show="viewerShow">
             <template #default="scope">
-                <img v-for="info in scope.images" :key="'imgView-' + info.index" :src="info.img_url">
+                <img v-for="info in scope.images" :key="'imgView-' + info.id" :src="info.url">
             </template>
         </viewer>
         <div id="mobile-css" />
@@ -634,9 +634,10 @@ export default defineComponent({
                     group_files: {},
                     group_sub_files: {},
                     jin_info: {
-                        list: [] as { [key: string]: any }[],
+                        list: [] as { [key: string]: any} [],
                         pages: 0,
                     },
+                    me_infotimestamp: 0
                 },
             }
             runtimeData.mergeMsgStack.length = 0 // 清空合并转发缓存

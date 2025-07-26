@@ -509,7 +509,6 @@
     import { Connector } from '@renderer/function/connect'
     import { getMessageList, runtimeData } from '@renderer/function/msg'
     import {
-        MsgItemElem,
         GroupMemberInfoElem,
         ChatInfoElem,
         SQCodeElem,
@@ -615,9 +614,8 @@
                 selectCache: '',
                 atFindList: null as GroupMemberInfoElem[] | null,
                 getImgList: [] as {
-                    index: number
-                    message_id: string
-                    img_url: string
+                    url: string,
+                    id: string,
                 }[],
                 respondIds: [
                     4, 5, 8, 9, 10, 12, 14, 16, 21, 23, 24, 25, 26, 27, 28, 29,
@@ -1723,22 +1721,12 @@
                         let initMainList = false
                         if (this.getImgList.length == 0) initMainList = true
                         this.getImgList = []
-                        this.list.forEach((item: Message) => {
-                            if (!(item instanceof Msg)) return
-                            item.message.forEach((msg: MsgItemElem) => {
-                                if (
-                                    msg.type === 'image' &&
-                                    msg.file != 'marketface'
-                                ) {
-                                    const info = {
-                                        index: item.uuid,
-                                        message_id: item.message_id,
-                                        img_url: msg.url
-                                    }
-                                    this.getImgList.push(info)
-                                }
-                            })
-                        })
+                        for (const msg of this.list) {
+                            if (!(msg instanceof Msg)) continue
+                            // 处理图片消息
+                            const imgDatas = msg.imgList
+                            this.getImgList = this.getImgList.concat(imgDatas)
+                        }
                         const viewer = app.config.globalProperties.$viewer
                         if (!viewer.isShown || initMainList) {
                             runtimeData.chatInfo.info.image_list =

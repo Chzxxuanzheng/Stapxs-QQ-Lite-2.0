@@ -180,40 +180,17 @@
                     else if (newLength < oldLength) this.addMode = false
                 }
             )
-            // this.$watch(
-            //     () => this.nowData?.forwardMsg.message[0].content,
-            //     () => {
-            //         if(this.nowData === undefined || this.nowData.forwardMsg.message[0].content === undefined) return
-            //         const seg = this.nowData.forwardMsg.message[0]
-            //         this.nowData.ready = true
-            //         this.nowData.messageList = seg.content
-            //         // 提取合并转发中的消息图片列表
-            //         const imgList = [] as {
-            //             index: number
-            //             img_url: string
-            //         }[]
-            //         let index = 0
-            //         this.nowData.messageList.forEach((item) => {
-            //             item.message.forEach((msg) => {
-            //                 if (msg.type == 'image') {
-            //                     imgList.push({
-            //                         index: index,
-            //                         img_url: msg.url,
-            //                     })
-            //                     index++
-            //                 }
-            //             })
-            //         })
-            //         this.nowData.imageList = imgList
-            //     }
-            // )
-            // this.$watch(
-            //     () => this.nowData?.imageList,
-            //     () => {
-            //         if(runtimeData.mergeMsgStack.length === 0 || this.nowData?.imageList === undefined) return
-            //         runtimeData.mergeMessageImgList = this.nowData.imageList
-            //     }
-            // )
+            this.$watch(
+                () => this.nowData?.id,
+                () => {
+                    if (!this.nowData?.content) return
+                    let imgList: {id: string, url: string}[] = []
+                    for (const msg of this.nowData.content) {
+                        imgList = imgList.concat(msg.imgList)
+                    }
+                    runtimeData.mergeMessageImgList = imgList
+                }
+            )
         },
         methods: {
             /**

@@ -13,7 +13,7 @@ import { runtimeData } from '../msg';
 import app from '@renderer/main';
 import { BotMsgType } from '../elements/information';
 import { TimeoutSet } from './data';
-import { AtSeg, ForwardSeg, ImgSeg, Seg } from './seg';
+import { AtSeg, ForwardSeg, Seg } from './seg';
 import { autoReactive } from './utils';
 import { Sender } from './user';
 import { Message } from './message';
@@ -34,7 +34,7 @@ export class Msg extends Message {
     raw_message: string
     atme: boolean = false
     atall: boolean = false
-    imgList: string[] = []
+    imgList: {url: string, id: string}[] = []
     session?: Session | undefined;
     emojis: { [key: string]: {count: number, meSend: boolean} } = {}
     constructor(segs: Seg[], sender: Sender, session: Session)
@@ -74,8 +74,12 @@ export class Msg extends Message {
         }
         // TODO 文件图片支持
         this.message.forEach(seg => {
-            if (!(seg instanceof ImgSeg)) return
-            this.imgList.push(seg.url)
+            if ('getImgData' in seg && typeof seg.getImgData === 'function') {
+                const imgData = seg.getImgData()
+                if (imgData) {
+                    this.imgList.push(imgData)
+                }
+            }
         })
     }
 

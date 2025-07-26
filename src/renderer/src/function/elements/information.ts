@@ -97,7 +97,7 @@ export interface ChatInfoElem {
         group_sub_files: { [key: string]: any }
         group_notices?: { [key: string]: any }
         now_member_info?: { [key: string]: any }
-        image_list?: { index: number; message_id: string; img_url: string }[]
+        image_list?: { url: string, id: string }[]
         jin_info: {
             list: { [key: string]: any }[]
             is_end?: boolean

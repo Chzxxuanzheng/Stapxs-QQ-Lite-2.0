@@ -112,7 +112,7 @@
                                 :src="item.src"
                                 @load="imageLoaded"
                                 @error="imgLoadFail"
-                                @click="imgClick(data.message_id)">
+                                @click="imgClick(item.imgId)">
                             <template v-else-if="item instanceof FaceSeg">
                                 <img v-if="item.src"
                                     :alt="item.text"
@@ -399,7 +399,7 @@
         getTrueLang,
         getViewTime } from '@renderer/function/utils/systemUtil'
     import { linkView } from '@renderer/function/utils/linkViewUtil'
-    import { MenuEventData, MergeStackData } from '@renderer/function/elements/information'
+    import { MenuEventData } from '@renderer/function/elements/information'
     import { 
         AtSeg,
         FaceSeg,
@@ -591,16 +591,16 @@
 
             /**
              * 图片点击
-             * @param msgId 消息 ID
+             * @param id 消息 ID
              */
-            imgClick(msgId: string) {
+            imgClick(id: string) {
                 const images = runtimeData.mergeMessageImgList ?? runtimeData.chatInfo.info.image_list
                 if (images !== undefined) {
                     // 寻找实际的序号
                     let num = -1
                     for (let i = 0; i < images.length; i++) {
                         const item = images[i]
-                        if (item.message_id == msgId) {
+                        if (item.id == id) {
                             num = i
                             break
                         }

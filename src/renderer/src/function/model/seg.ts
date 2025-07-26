@@ -1,12 +1,13 @@
-import app from '@renderer/main';
-import { getSizeFromBytes, stdUrl } from '../utils/systemUtil';
-import { MsgBodyFuns } from './msg-body';
-import { createMsg, getFace } from '../utils/msgUtil';
-import { Connector } from '../connect';
-import { PopInfo, PopType } from '../base';
-import { downloadFile } from '../utils/appUtil';
-import { Msg } from './msg';
-import { autoReactive } from './utils';
+import app from '@renderer/main'
+import { getSizeFromBytes, stdUrl } from '../utils/systemUtil'
+import { MsgBodyFuns } from './msg-body'
+import { createMsg, getFace } from '../utils/msgUtil'
+import { Connector } from '../connect'
+import { PopInfo, PopType } from '../base'
+import { downloadFile } from '../utils/appUtil'
+import { Msg } from './msg'
+import { autoReactive } from './utils'
+import { v4 as uuid } from 'uuid'
 
 export const segType = {}
 type SegCon<T extends Seg> = { new(...args: any[]): T; type: string };
@@ -19,6 +20,9 @@ export abstract class Seg {
     declare static readonly type: string;
 
     abstract get plaintext(): string;
+
+    init?(): void | Promise<void>
+    getImgData?(): {url: string, id: string} | undefined
 
     get type(): string {
         return (this.constructor as typeof Seg).type;
@@ -116,6 +120,7 @@ export class ImgSeg extends Seg {
     url: string
     summary?: string
     asface: boolean
+    imgId: string = uuid()
     constructor(data: { file: string, url?: string, summary?: string, asface?: boolean }) {
         super()
         if (!data.file) throw new Error('图片文件缺失')
@@ -134,6 +139,13 @@ export class ImgSeg extends Seg {
     get src(): string {
         if (this.url.startsWith('base64:')) return 'data:image/png;base64,' + this.url.substring(9)
         return this.url
+    }
+
+    getImgData(): {url: string, id: string} {
+        return {
+            url: this.src,
+            id: this.imgId
+        }
     }
 
     serializeData(): any {
