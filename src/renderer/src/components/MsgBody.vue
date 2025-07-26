@@ -198,7 +198,14 @@
                                                 {{ $t('加载中') }}
                                             </div>
                                         </div>
-                                        <div v-for="(i, indexItem) in item.content.slice(0, 3)" v-else-if="item.content.length > 0"
+                                        <div v-else-if="!item.id">
+                                            <div class="loading" style="opacity: 0.9;">
+                                                <font-awesome-icon :icon="['fas', 'spinner']" />
+                                                {{ $t('发送中') }}
+                                            </div>
+                                        </div>
+                                        <div v-else-if="item.content.length > 0"
+                                            v-for="(i, indexItem) in item.content.slice(0, 3)"
                                             :key="'raw-forward-' + indexItem">
                                             {{ i.sender.nickname }}:
                                             <span :key="'raw-forward-item-' + i.uuid">
@@ -1062,38 +1069,11 @@
                 }
             },
             openMerge(seg: ForwardSeg){
-                const data: MergeStackData = {
-                    messageList: [],
-                    imageList: [],
-                    placeCache: 0,
-                    ready: false,
-                    forwardMsg: this.data
+                if (!seg.id) {
+                    new PopInfo().add(PopType.ERR, this.$t('请先等发送完成...'))
+                    return
                 }
-                if (seg.content !== undefined){
-                    data.ready = true
-                    data.messageList = seg.content
-                    // 提取合并转发中的消息图片列表
-                    const imgList = [] as {
-                        index: number
-                        message_id: string
-                        img_url: string
-                    }[]
-                    let index = 0
-                    data.messageList.forEach((item) => {
-                        item.message.forEach((msg) => {
-                            if (msg.type == 'image') {
-                                imgList.push({
-                                    index: index,
-                                    message_id: item.message_id,
-                                    img_url: msg.url,
-                                })
-                                index++
-                            }
-                        })
-                    })
-                    data.imageList = imgList
-                }
-                runtimeData.mergeMsgStack.push(data)
+                runtimeData.mergeMsgStack.push(seg)
             },
 
             //#region ==配置相关================================

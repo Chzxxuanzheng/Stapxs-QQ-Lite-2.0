@@ -416,8 +416,11 @@ input {
     flex-direction: row;
     position: absolute;
     display: flex;
+    top: 0;
+    left: 0;
     height: 100%;
     width: 100%;
+    z-index: 9;
 }
 .merge-pan.show {
     pointer-events: all;
@@ -425,7 +428,7 @@ input {
 .merge-pan > div:first-child {
     background: var(--color-card-2);
     transition: background 0.5s;
-    opacity: 0;
+    opacity: 0.7;
     flex: 1;
 }
 .merge-pan.show > div:first-child {
@@ -433,15 +436,11 @@ input {
 }
 .merge-pan > div:last-child {
     transition: width 0.4s;
-    overflow: hidden;
     min-width: unset;
+    width: 450px;
     padding: 0;
-    width: 0;
-}
-.merge-pan.show > div:last-child {
     flex-direction: column;
     display: flex;
-    width: 450px;
 }
 .merge-pan > div:last-child > div:first-child {
     align-items: center;
@@ -459,10 +458,11 @@ input {
     cursor: pointer;
     height: 1.5rem;
 }
-.merge-pan > div:last-child > div:last-child {
+.merge-pan > div:last-child > div:nth-child(2) {
     margin: 0 10px 10px 10px;
-    overflow-y: scroll;
     flex: 1;
+    overflow-y: scroll;
+    overflow-x: hidden;
 }
 .merge-pan .loading {
     transform: translateY(50%);
@@ -484,6 +484,93 @@ input {
 }
 .merge-pan .loading.show {
     display: flex;
+}
+
+.merge-pan-enter-active,
+.merge-pan-leave-active {
+    animation: none 0.3s;
+}
+.merge-pan-enter-active > div:first-child {
+    animation: merge-pan-bg-enter 0.3s ease-in-out;
+}
+.merge-pan-leave-active > div:first-child {
+    animation: merge-pan-bg-enter 0.3s ease-in-out reverse;
+}
+.merge-pan-enter-active > div:last-child {
+    animation: merge-pan-bar-enter 0.3s ease-in-out;
+}
+.merge-pan-leave-active > div:last-child {
+    animation: merge-pan-bar-leave 0.4s ease-in-out;
+}
+@keyframes merge-pan-bg-enter {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 0.7;
+    }
+}
+@keyframes merge-pan-bar-enter {
+    from {
+        width: 0;
+    }
+    to {
+        width: 450px;
+    }
+}
+@keyframes merge-pan-bar-leave {
+    from {
+    }
+    to {
+        width: 0;
+    }
+}
+
+.merge-node-add-enter-active {
+    animation: merge-node-right-move 0.15s reverse;
+}
+.merge-node-add-leave-active {
+    animation: merge-node-left-move 0.15s;
+}
+
+.merge-node-remove-enter-active {
+    animation: merge-node-left-move 0.15s reverse;
+}
+.merge-node-remove-leave-active {
+    animation: merge-node-right-move 0.15s;
+}
+
+@keyframes merge-node-left-move {
+    from {
+        transform: translateX(0px);
+    }
+    to {
+        transform: translateX(-400px);
+    }
+}
+
+@keyframes merge-node-right-move {
+    from {
+        transform: translateX(0px);
+    }
+    to {
+        transform: translateX(400px);
+    }
+}
+
+.merge-node-enter-active {
+    animation: merge-node-enter 0.3s ease-in-out;
+}
+.merge-node-leave-active {
+    animation: merge-node-enter 0.3s ease-in-out reverse;
+}
+@keyframes merge-node-enter {
+    from {
+        width: 0;
+    }
+    to {
+        width: 400px;
+    }
 }
 
 .mumber-info {

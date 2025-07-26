@@ -82,8 +82,8 @@ export default defineComponent({
             type: Object as PropType<Config>,
             default: () => ({
                 canInteraction: true,
+                specialMe: true,
                 showIcon: true,
-                showTime: true,
                 dimNonExistentMsg: true,
             }),
         }

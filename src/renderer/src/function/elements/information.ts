@@ -1,4 +1,5 @@
 import  type { Message } from '../model/message'
+import { ForwardSeg } from '../model/seg'
 
 export enum BotMsgType {
     CQCode,
@@ -62,7 +63,7 @@ export interface RunTimeDataElem {
         backTimes: number
     }
     messageList: Message[]
-    mergeMsgStack: MergeStackData[]
+    mergeMsgStack: ForwardSeg[]
     mergeMessageImgList?: any[] | undefined
     stickerCache?: any[]
     popBoxList: {
@@ -192,14 +193,6 @@ export interface SQCodeElem {
 export interface MsgItemElem {
     type: string
     [key: string]: any
-}
-
-export interface MergeStackData{
-    messageList: any[]      // 消息列表
-    imageList: any[]        // 图片列表
-    placeCache: number      // 位置缓存
-    ready: boolean          // 就绪
-    forwardMsg: any         // 原合并转发消息
 }
 
 export interface MenuEventData {
