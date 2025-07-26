@@ -832,45 +832,6 @@ const msgFunctions = {
     },
 
     /**
-     * 表情回应后处理
-     */
-    SendRespondBack: (
-        _: string,
-        __: { [key: string]: any },
-        echoList: string[],
-    ) => {
-        const msgId = echoList[1]
-        const id = Number(echoList[2])
-        // 从消息列表中找到这条消息
-        runtimeData.messageList.forEach((item, index) => {
-            if (item.message_id === msgId) {
-                if (runtimeData.messageList[index].emoji_like) {
-                    // 寻找有没有 emoji_id 相同的
-                    let hasAdd = false
-                    runtimeData.messageList[index].emoji_like.forEach(
-                        (item: { emoji_id: number; count: number }) => {
-                            if (item.emoji_id == id) {
-                                item.count++
-                                hasAdd = true
-                            }
-                        },
-                    )
-                    if (!hasAdd) {
-                        runtimeData.messageList[index].emoji_like.push({
-                            emoji_id: id,
-                            count: 1,
-                        })
-                    }
-                } else {
-                    runtimeData.messageList[index].emoji_like = [
-                        { emoji_id: id, count: 1 },
-                    ]
-                }
-            }
-        })
-    },
-
-    /**
      * 获取 cookie
      * @deprecated 暂时没用到他
      */
