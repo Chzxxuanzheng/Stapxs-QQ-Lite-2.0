@@ -57,10 +57,13 @@
                 required: true,
             }
         },
+		emits: {
+			'page-view': (_arg1: any, _arg2: any) => true,
+		},
         data() {
             return {
                 View: ViewFuns,
-                info: ViewFuns.getJSONType(this.item),
+                info: ViewFuns.getJSONType(this),
                 JsonSeg,
                 XmlSeg,
             }

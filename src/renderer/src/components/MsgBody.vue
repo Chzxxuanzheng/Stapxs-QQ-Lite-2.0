@@ -248,9 +248,10 @@
                     <template v-else>
                         <template v-for="(item, index) in data.message"
                             :key="data.uuid + '-m-' + index">
-                            <CardMessage v-if="item.type == 'xml' || item.type == 'json'"
+                            <CardMessage v-if="item instanceof JsonSeg || item instanceof XmlSeg"
                                 :id="data.uuid"
-                                :item="item as XmlSeg|JsonSeg" />
+                                :item="item"
+                                @page-view="loadLinkPreview" />
                         </template>
                     </template>
                     <!-- 链接预览框 -->
