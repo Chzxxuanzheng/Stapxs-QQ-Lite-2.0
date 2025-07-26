@@ -1104,14 +1104,16 @@
                     x: event.targetTouches[0].pageX,
                     y: event.targetTouches[0].pageY,
                 }
-                const startTouchData = {...event.targetTouches[0]}
+                console.log('消息触屏长按开始', this.longTouch.startPoint)
                 const eventData: MenuEventData = {
-                    x: startTouchData.pageX,
-                    y: startTouchData.pageY,
+                    x: this.longTouch.startPoint[0].pageX,
+                    y: this.longTouch.startPoint[0].pageY,
                     target: event.currentTarget as HTMLElement,
                 }
+                console.log('消息触屏长按开始', eventData)
                 this.longTouch.timeout = setTimeout(() => {
                     logger.add(LogType.UI, '消息触屏长按触发')
+                    console.log('消息触屏长按开始', eventData)
                     switch (source) {
                         case 'msg':
                             this.$emit('showMsgMenu', eventData, this.data)
