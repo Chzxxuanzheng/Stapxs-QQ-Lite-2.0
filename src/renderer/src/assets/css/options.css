@@ -596,6 +596,12 @@
     text-indent: 0;
 }
 
+.end-card > div > a {
+    color: var(--color-font-1);
+    font-size: 0.6rem;
+    margin-left: 10px;
+}
+
 .end-card > div > div > a {
     color: var(--color-font-1);
     font-size: 0.6rem;
