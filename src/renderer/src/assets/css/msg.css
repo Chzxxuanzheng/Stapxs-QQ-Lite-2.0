@@ -98,10 +98,12 @@ div.rotate > div > svg {
 }
 .message-body > span {
     margin-right: 3px;
-    font-size: 0.7rem;
+    font-size: 0.9rem;
+    height: 1rem;
+    display: inline-block;
     background: var(--color-main);
     color: var(--color-font-r);
-    border-radius: 10px;
+    border-radius: 0.5rem;
     padding: 1px 4px;
 }
 .message-body > span.owner {
