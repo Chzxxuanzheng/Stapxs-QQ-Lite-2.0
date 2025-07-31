@@ -132,23 +132,23 @@ body {
     width: 14px;
 }
 
-.mumber-info > div:first-child {
+.member-info > div:first-child {
     padding: 15px;
 }
-.mumber-info > div:first-child > div {
+.member-info > div:first-child > div {
     margin-left: 15px;
 }
-.mumber-info > div:first-child > div > div > a {
+.member-info > div:first-child > div > div > a {
     font-size: 0.8rem;
 }
-.mumber-info > div:first-child img {
+.member-info > div:first-child img {
     height: 35px;
     width: 35px;
 }
-.mumber-info > div:first-child > div > span {
+.member-info > div:first-child > div > span {
     font-size: 0.75rem;
 }
-.mumber-info > div:first-child > div > div > div > span {
+.member-info > div:first-child > div > div > div > span {
     font-size: 0.6rem;
 }
 

@@ -576,7 +576,7 @@ input {
     }
 }
 
-.mumber-info {
+.member-info {
     position: absolute;
     top: 0px;
     left: 0px;
@@ -585,14 +585,14 @@ input {
     z-index: 10;
     pointer-events: none;
 }
-.mumber-info span,
-.mumber-info a {
+.member-info span,
+.member-info a {
     color: var(--color-font);
 }
-.mumber-info > div {
+.member-info > div {
     pointer-events: none;
 }
-.mumber-info > div:first-child {
+.member-info > div:first-child {
     transform: translate(-20px, calc(-100% - 0.8rem));
     box-shadow: 0 0 5px var(--color-shader);
     background: rgba(var(--color-card-2-rgb), 0.5);
@@ -604,33 +604,33 @@ input {
     max-width: 55%;
     display: flex;
 }
-.mumber-info > div:first-child img {
+.member-info > div:first-child img {
     outline: 2px solid var(--color-main);
     border-radius: 7px;
     height: 60px;
     width: 60px;
 }
-.mumber-info > div:first-child > div {
+.member-info > div:first-child > div {
     margin-left: 20px;
     overflow: hidden;
     flex: 1;
 }
-.mumber-info > div:first-child > div > span {
+.member-info > div:first-child > div > span {
     color: var(--color-font-1);
     font-size: 0.9rem;
     white-space: nowrap;
 }
-.mumber-info > div:first-child > div > span[name='id'] {
+.member-info > div:first-child > div > span[name='id'] {
     font-size: 0.8rem;
     display: block;
     opacity: 0.5;
 }
-.mumber-info > div:first-child > div > div {
+.member-info > div:first-child > div > div {
     margin-bottom: 5px;
     flex-wrap: wrap;
     display: flex;
 }
-.mumber-info > div:first-child > div > div > a {
+.member-info > div:first-child > div > div > a {
     text-overflow: ellipsis;
     width: 100%;
     overflow: hidden;
@@ -640,10 +640,10 @@ input {
     font-size: 1rem;
     display: block;
 }
-.mumber-info > div:first-child > div > div > div {
+.member-info > div:first-child > div > div > div {
     margin-top: 4px;
 }
-.mumber-info > div:first-child > div > div > div > span {
+.member-info > div:first-child > div > div > div > span {
     background: var(--color-main);
     color: var(--color-font-r);
     padding: 2px 10px 2px 10px;
@@ -651,7 +651,7 @@ input {
     margin-left: 5px;
     font-size: 0.7rem;
 }
-.mumber-info > div:first-child > div > div > div > span:first-child {
+.member-info > div:first-child > div > div > div > span:first-child {
     margin-left: 0;
 }
 
@@ -1887,7 +1887,7 @@ input {
         height: calc(100% + 75px);
     }
     /* AT 信息悬浮面板 */
-    .mumber-info > div:first-child {
+    .member-info > div:first-child {
         max-width: 55%;
     }
     /* 合并转发消息面板 */

@@ -143,7 +143,7 @@
                 <div :name="$t('设置')">
                     <div style="padding: 0 20px">
                         <OptInfo :type="'group'" :chat="chat"
-                            @update_mumber_card="updateMemberCard" />
+                            @update_member_card="updateMemberCard" />
                     </div>
                 </div>
             </BcTab>
@@ -489,7 +489,7 @@
                     card: mem.card?.toString() ?? '',
                     title: mem.title?.toString() ?? '',
                 }
-                // this.mumberInfo.banMin = this.getBanTimeMin(mem.shut_up_timestamp)
+                // this.memberInfo.banMin = this.getBanTimeMin(mem.shut_up_timestamp)
 
             },
             clickMember(mem: Member) {

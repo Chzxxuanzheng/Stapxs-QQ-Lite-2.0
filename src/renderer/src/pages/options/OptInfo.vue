@@ -33,7 +33,7 @@
                 <input v-model="meCard" class="ss-input"
                     style="width: 150px" type="text" @change="
                         meCard !== chat.getMe().card?.toString() ?
-                            emit('update_mumber_card', chat.getMe(), meCard)
+                            emit('update_member_card', chat.getMe(), meCard)
                             : undefined
                     ">
             </div>
@@ -84,7 +84,7 @@ const { chat } = defineProps<{
     chat: GroupSession
 }>()
 const emit = defineEmits<{
-    update_mumber_card: [mem: Member, value: string]
+    update_member_card: [mem: Member, value: string]
 }>()
 
 const meCard: Ref<string> = ref(chat.getMe().card?.toString() ?? '')

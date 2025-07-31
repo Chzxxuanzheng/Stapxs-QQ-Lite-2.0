@@ -299,7 +299,7 @@
         <MergePan ref="mergePan" />
         <!-- At 信息悬浮窗 -->
         <Teleport to="body">
-            <div class="mumber-info">
+            <div class="member-info">
                 <div v-if="userInfoBar.user instanceof Member"
                     class="ss-card"
                     :style="getPopPost()">

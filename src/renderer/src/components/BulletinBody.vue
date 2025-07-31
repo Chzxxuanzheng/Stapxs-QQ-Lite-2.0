@@ -76,7 +76,7 @@
         mounted() {
             this.$nextTick(() => {
                 const tab1 = document.getElementById('info-pan-notices')
-                const tab2 = document.getElementById('info-pan-mumber')
+                const tab2 = document.getElementById('info-pan-member')
                 const pan = document.getElementById(
                     'bulletins-msg-' + this.index,
                 )
