@@ -2,61 +2,60 @@
  * @FileDescription: 联系人 / 消息列表项模板
  * @Author: Stapxs
  * @Date: 2022/08/14
+ *        2025/07/27
  * @Version: 1.0
+ *           2.0 - 将会话重构为类 和 setup式（Mr.Lee）
 -->
 
 <template>
-    <div :id="'user-' + (data.user_id ?? data.group_id)"
+    <div :id="'user-' + data.id"
         :class="'friend-body' + (select ? ' active' : menu ? ' onmenu' : '')"
-        :data-name="data.user_id ? data.nickname : data.group_name"
-        :data-nickname="data.user_id ? data.nickname : ''"
-        :data-type="data.user_id ? 'friend' : 'group'">
-        <div :class="data.new_msg === true ? 'new' : ''" />
-        <font-awesome-icon v-if="data.user_id == -10000" :icon="['fas', 'bell']" />
-        <font-awesome-icon v-else-if="data.user_id == -10001" :icon="['fas', 'user-group']" />
-        <img v-else loading="lazy" :title="getShowName(data.group_name || data.nickname, data.remark)"
-            :src="data.user_id ? 'https://q1.qlogo.cn/g?b=qq&s=0&nk=' + data.user_id :
-                'https://p.qlogo.cn/gh/' + data.group_id + '/' + data.group_id + '/0'">
+        :data-name="data.name"
+        :data-nickname="data instanceof UserSession ? data.name : ''"
+        :data-type="data.type">
+        <div :class="{'new': data.showNotice}" />
+        <font-awesome-icon v-if="data.id == -10000" :icon="['fas', 'bell']" />
+        <font-awesome-icon v-else-if="data.id == -10001" :icon="['fas', 'user-group']" />
+        <img v-else loading="lazy" :title="data.showName"
+            :src="data.getFace()">
         <div>
             <div>
-                <p>{{ getShowName(data.group_name || data.nickname, data.remark) }}</p>
+                <p>{{ data.showName }}</p>
                 <div style="flex: 1" />
-                <a class="time">{{
-                    data.time !== undefined && !Number.isNaN(data.time)
-                        ? Intl.DateTimeFormat(trueLang, {
-                            hour: 'numeric',
-                            minute: 'numeric',
-                        }).format(new Date(data.time)) : ''
+                <a v-if="data.preMessage?.time" class="time">{{
+                    data.preMessage?.time.format('hour')
                 }}</a>
             </div>
             <div>
-                <a v-if="data.highlight" class="highlight">
-                    {{ data.highlight }}
+                <a v-for="(item, index) in data.highlightInfo.slice(0, 2)" :key="index" class="highlight">
+                    [{{ item }}]
                 </a>
-                <a :class="from == 'friend' ? 'nick' : ''">{{
+                <!-- 不敢乱掉获取个性签名的api,先注释了 -->
+                <!-- <a :class="from == 'friend' ? 'nick' : ''">{{
                     from == 'friend' ? (data.longNick ?? '') : data.raw_msg
+                }}</a> -->
+                <a :class="from == 'friend' ? 'nick' : ''">{{
+                    from == 'friend' ? '' : data.preMessage?.preMsg ?? ''
                 }}</a>
                 <div v-if="from == 'message'" style="margin-left: 10px; display: flex">
-                    <font-awesome-icon v-if="data.always_top === true" :icon="['fas', 'thumbtack']" />
+                    <font-awesome-icon v-if="data.alwaysTop" :icon="['fas', 'thumbtack']" />
                 </div>
             </div>
         </div>
     </div>
 </template>
 
-<script lang="ts">
-    import { defineComponent } from 'vue'
-    import { getTrueLang } from '@renderer/function/utils/systemUtil'
-    import { getShowName } from '@renderer/function/utils/msgUtil'
-
-    export default defineComponent({
-        name: 'FriendBody',
-        props: ['data', 'select', 'menu', 'from'],
-        data() {
-            return {
-                getShowName: getShowName,
-                trueLang: getTrueLang(),
-            }
-        }
-    })
+<script setup lang="ts">
+import { Session, UserSession } from '@renderer/function/model/session'
+const {
+    data,
+    select=false,
+    menu=false,
+    from='message'
+} = defineProps<{
+    data: Session,
+    select?: boolean,
+    menu?: boolean,
+    from?: 'message' | 'friend'
+}>()
 </script>

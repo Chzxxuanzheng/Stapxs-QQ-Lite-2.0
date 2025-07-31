@@ -28,7 +28,6 @@ import {
     getPortableFileLang,
     getTrueLang,
 } from '@renderer/function/utils/systemUtil'
-import { updateBaseOnMsgList } from './utils/msgUtil'
 
 let cacheConfigs: { [key: string]: any }
 
@@ -70,7 +69,6 @@ export const optDefault: { [key: string]: any } = {
     open_ga_bot: true,
     dont_parse_delete: false,
     jump_forward: true,
-    show_revoke_msg: false,
     default_multiselect_forward: false,
     // Dev
     msg_type: 2,
@@ -114,7 +112,7 @@ function setMergeForwardWidth(value: boolean | null) {
 }
 
 function clearGroupAssist() {
-    updateBaseOnMsgList()
+    // TODO: 消息盒子相关函数
 }
 
 function updateFarstAnimation(value: boolean) {

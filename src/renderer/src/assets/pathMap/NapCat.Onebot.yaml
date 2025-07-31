@@ -13,16 +13,6 @@ login_info:
     bkn: ''
     nickname: $.data.nickname
 # 群、好友列表
-friend_list:
-    name: get_friends_with_category
-    source: $.data[*].buddyList[*]
-    list:
-        class_id: null
-        class_name: null
-        user_id: /user_id
-        nickname: /nickname
-        remark: /remark
-        longNick: /longNick
 group_list:
     name: get_group_list
     source: $.data[*]
@@ -31,6 +21,18 @@ group_list:
         group_name: /group_name
         member_count: /member_count
         admin_flag: null
+# 好友分组
+friend_category:
+    name: get_friends_with_category
+    source: $.data[*]
+    list:
+        class_id: /categoryId
+        class_name: /categoryName
+        # 不知道注释的对不对
+        # sort_id: /categorySortId
+        user_ids: $.buddyList[*].user_id
+        user_nicknames: $.buddyList[*].nickname
+        user_remark: $.buddyList[*].remark
 # 群/好友信息
 friend_info:
     name: get_stranger_info
@@ -48,15 +50,6 @@ friend_info:
         birthday_day: /birthday_day     # 生日日期
         age: /age                       # 年龄
         sex: /sex                       # 性别
-# 好友分组
-friend_category:
-    name: get_friends_with_category
-    source: $.data[*]
-    list:
-        class_id: /categoryId
-        class_name: /categoryName
-        sort_id: /categorySortId
-        users: $.buddyList[*].user_id
 # 消息列表
 message_list:
     name: get_group_msg_history
@@ -102,9 +95,10 @@ message_value:
     file:
         name: $.file
 # 设置消息已读
-set_message_read:
+set_group_message_read:
     name: mark_group_msg_as_read
-    private_name: mark_private_msg_as_read
+set_user_message_read:
+    name: mark_private_msg_as_read
 # 设置消息回应
 send_respond:
     name: set_msg_emoji_like
@@ -124,14 +118,13 @@ group_essence:
     name: get_essence_msg_list
     source: $.data[*]
     list:
-        sender_uin: /sender_id
+        sender_id: /sender_id
         sender_nick: /sender_nick
         sender_time: /operator_time
-        msg_content: /content
-        add_digest_uin: /operator_id
-        add_digest_nick: /operator_nick
-        add_digest_time: /operator_time
-    is_end: null
+        content: /content
+        operator_id: /operator_id
+        operator_nick: /operator_nick
+        operator_time: /operator_time
 # 获取群成员信息
 group_member_info:
     name: get_group_member_info
@@ -189,6 +182,22 @@ group_files:
 # 获取群文件夹内文件
 group_folder_files:
     name: get_group_files_by_folder
+    source: $.data.*[*]
+    list:
+        # 文件类型
+        file_id: /file_id                   # 文件 ID
+        file_name: /file_name               # 文件名
+        size: /size                         # 文件大小
+        download_times: /download_times     # 下载次数
+        dead_time: /dead_time               # 过期时间
+        upload_time: /modify_time           # 上传时间
+        uploader_name: /uploader_name       # 上传者
+        # 文件夹类型
+        folder_id: /folder_id               # 文件夹 ID
+        folder_name: /folder_name           # 文件夹名
+        count: /total_file_count            # 文件数量
+        create_time: /create_time           # 创建时间
+        creater_name: /creator_name         # 创建者
 # 获取文件下载信息
 get_file_url:
     name: get_file
@@ -199,20 +208,6 @@ get_group_file_url:
 get_private_file_url:
     name: get_file
     file_url: $.data.url
-
-## 群操作
-# 退出群聊
-leave_group:
-    name: set_group_leave
-# 设置群昵称（包括成员）
-set_group_nickname:
-    name: set_group_card
-# 设置群头衔（包括成员）
-set_group_title:
-    name: set_group_special_title
-# 禁言成员
-ban_mumber:
-    name: set_group_ban
 
 # 发送群合并转发
 # 不知道能不能用,nc的apifox有问题,data里有啥不知道
@@ -261,3 +256,10 @@ get_friend_msg_history:
         sender: /sender
         message: /message
         raw_message: /raw_message
+# 禁言列表
+ban_list:
+    name: get_group_shut_list
+    source: $.data[*]
+    list:
+        user_id: /uin
+        ban_time: /shutUpTime

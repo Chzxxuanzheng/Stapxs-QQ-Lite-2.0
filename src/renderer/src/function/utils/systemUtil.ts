@@ -357,12 +357,32 @@ export function getViewTime(time: number) {
     }
 }
 
+const second = 1000
+const minute = second * 60
+const hour = minute * 60
+const day = hour * 24
+const month = day * 30
+const year = day * 365
+
 /**
  * 获取时间的配置
  * @param date
  * @returns
  */
 export function getTimeConfig(date: Date) {
+    // 倒计时型
+    if (date.getTime() < 100 * 365 * 24 * 3600 * 1000) {
+        const base = {} as Intl.DateTimeFormatOptions
+        const time = date.getTime()
+        if (true && time < hour) base.second = 'numeric'
+        if (minute < time && time < day) base.minute = 'numeric'
+        if (hour < time && time < month) base.hour = 'numeric'
+        if (day < time && time < year) base.day = 'numeric'
+        if (month < time && true) base.month = 'short'
+        if (year < time && true) base.year = 'numeric'
+        return base
+    }
+    // 日期型
     const base = {
         hour: 'numeric',
         minute: 'numeric',
@@ -391,7 +411,7 @@ export function getTimeConfig(date: Date) {
 
 /**
  * 标准化url,处理通信协议,加http
- * @param url 
+ * @param url
  */
 export function stdUrl(url: string){
     if (!url.toLowerCase().startsWith('http')) return url

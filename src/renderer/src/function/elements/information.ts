@@ -1,5 +1,6 @@
 import  type { Message } from '../model/message'
 import { ForwardSeg } from '../model/seg'
+import { Session } from '../model/session'
 
 export enum BotMsgType {
     CQCode,
@@ -10,14 +11,13 @@ export interface RunTimeDataElem {
     sysConfig: { [key: string]: any }
     jsonMap?: any
     botInfo: { [key: string]: any }
-    loginInfo: { [key: string]: any }
-    userList: (UserFriendElem & UserGroupElem)[]
-    showList: (UserFriendElem & UserGroupElem)[]
+    loginInfo: {
+        uin: number,
+        nickname: string,
+    }
     groupAssistList: (UserFriendElem & UserGroupElem)[]
-    baseOnMsgList: Map<number, (UserFriendElem & UserGroupElem)>
     onMsgList: (UserFriendElem & UserGroupElem)[]
     systemNoticesList?: { [key: string]: any }
-    chatInfo: ChatInfoElem
     pageView: {
         chatView: any
         msgView: any
@@ -66,6 +66,8 @@ export interface RunTimeDataElem {
     mergeMsgStack: ForwardSeg[]
     mergeMessageImgList?: any[] | undefined
     stickerCache?: any[]
+    nowChat: undefined | Session
+    img_list: {url: string, id: string}[]
     popBoxList: {
         // 通用弹窗
         svg?: string // 弹窗图标
@@ -86,26 +88,6 @@ export interface RunTimeDataElem {
     }[],
 }
 
-export interface ChatInfoElem {
-    show: BaseChatInfoElem
-    info: {
-        group_info: { [key: string]: any }
-        user_info: { [key: string]: any }
-        me_info: { [key: string]: any }
-        group_members: GroupMemberInfoElem[]
-        group_files: { [key: string]: any }
-        group_sub_files: { [key: string]: any }
-        group_notices?: { [key: string]: any }
-        now_member_info?: { [key: string]: any }
-        image_list?: { url: string, id: string }[]
-        jin_info: {
-            list: { [key: string]: any }[]
-            is_end?: boolean
-            pages: number
-        },
-        me_infotimestamp: number,
-    }
-}
 
 export interface BaseChatInfoElem {
     type: 'group' | 'user' | 'temp'

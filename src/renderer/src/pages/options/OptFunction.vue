@@ -210,21 +210,6 @@
                 </label>
             </div>
             <div class="opt-item">
-                <div :class="checkDefault('show_revoke_msg')" />
-                <font-awesome-icon :icon="['fas', 'undo']" />
-                <div>
-                    <span>{{ $t('显示撤回消息') }}</span>
-                    <span>{{ $t('既然来了,那就别想走') }}</span>
-                </div>
-                <label class="ss-switch">
-                    <input v-model="runtimeData.sysConfig.show_revoke_msg"
-                        type="checkbox" name="show_revoke_msg" @change="save">
-                    <div>
-                        <div />
-                    </div>
-                </label>
-            </div>
-            <div class="opt-item">
                 <div :class="checkDefault('default_multiselect_forward')" />
                 <font-awesome-icon :icon="['fas', 'fa-list-check']" />
                 <div>

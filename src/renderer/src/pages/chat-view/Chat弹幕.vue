@@ -294,24 +294,13 @@
                             </clipPath>
                         </defs>
                     </svg>
-                    <span class="name">{{
-                        runtimeData.chatInfo.show.name
-                    }}</span>
+                    <span class="name">{{ chat.showName }}</span>
                     <div class="info">
                         <span class="time">
                             {{
-                                list[list.length - 1]
+                                chat.preMessage
                                     ? $t('上次消息 - {time}', {
-                                        time: Intl.DateTimeFormat(trueLang, {
-                                            hour: 'numeric',
-                                            minute: 'numeric',
-                                            second: 'numeric',
-                                        }).format(
-                                            new Date(
-                                                list[list.length - 1].time *
-                                                    1000,
-                                            ),
-                                        ),
+                                        time: chat.preMessage.time?.format(),
                                     })
                                     : $t('暂无消息')
                             }}
@@ -327,35 +316,30 @@
     import vueDanmaku from 'vue3-danmaku'
     import Option from '@renderer/function/option'
 
-    import { Connector } from '@renderer/function/connect'
     import { defineComponent } from 'vue'
     import { runtimeData } from '@renderer/function/msg'
-    import { getMsgRawTxt, sendMsgRaw } from '@renderer/function/utils/msgUtil'
+    import { sendMsgRaw } from '@renderer/function/utils/msgUtil'
     import { parseMsg } from '@renderer/function/sender'
     import {
-        ChatInfoElem,
         SQCodeElem,
     } from '@renderer/function/elements/information'
     import { PopInfo, PopType } from '@renderer/function/base'
     import { getTrueLang } from '@renderer/function/utils/systemUtil'
-    import { Message } from '@renderer/function/model/msg'
-import { Seg } from '@renderer/function/model/seg'
+    import { Msg } from '@renderer/function/model/msg'
+    import { Seg } from '@renderer/function/model/seg'
+    import { Session } from '@renderer/function/model/session'
+
+    export interface refs {
+        danmakuRef: InstanceType<typeof vueDanmaku>|undefined
+    }
 
     export default defineComponent({
         name: 'ChatDan',
         components: { vueDanmaku },
         props: {
             chat: {
-                type: Object as () => ChatInfoElem,
+                type: Object as () => Session,
                 required: true,
-            },
-            list: {
-                type: Array as () => Message[],
-                required: true,
-            },
-            mumberInfo: {
-                type: Object as () => {[key: string]: any},
-                default: () => ({}),
             },
         },
         data() {
@@ -366,7 +350,7 @@ import { Seg } from '@renderer/function/model/seg'
                 },
                 runtimeData: runtimeData,
                 trueLang: getTrueLang(),
-                danmus: [],
+                danmus: [] as {text: string, id: number}[],
                 imgCache: [] as string[],
                 sendCache: [] as Seg[],
                 msg: '',
@@ -382,7 +366,7 @@ import { Seg } from '@renderer/function/model/seg'
             })
             resizeObserver.observe(ele)
             // 监听消息列表，刷新到弹幕列表中
-            this.$watch(() => this.list.length, this.updateList)
+            this.$watch(() => this.chat.messageList.length, this.updateList)
         },
         methods: {
             openLeftBar() {
@@ -415,15 +399,10 @@ import { Seg } from '@renderer/function/model/seg'
                 if (event.keyCode === 13 && this.msg != '') {
                     const msg = parseMsg(
                         this.msg, this.sendCache, this.imgCache)
-                    if (this.chat.show.temp) {
-                        sendMsgRaw(
-                            this.chat.show.id + '/' + this.chat.show.temp,
-                            this.chat.show.type,
-                            msg,
-                        )
-                    } else {
-                        sendMsgRaw(this.chat.show.id, this.chat.show.type, msg)
-                    }
+                    sendMsgRaw(
+                        this.chat,
+                        msg,
+                    )
                     // 发送后处理
                     this.sendCache = []
                     this.imgCache = []
@@ -513,39 +492,17 @@ import { Seg } from '@renderer/function/model/seg'
             updateList() {
                 if (this.opt.loop) {
                     // 如果弹幕列表长度是 20，请求更多消息
-                    if (this.list.length == 20) {
-                        const type = runtimeData.chatInfo.show.type
-                        const id = runtimeData.chatInfo.show.id
-                        const firstMsgId = this.list[0].message_id ?? 0
-                        let name
-                        const fullPage =
-                            runtimeData.jsonMap.message_list?.pagerType ==
-                            'full'
-                        if (
-                            runtimeData.jsonMap.message_list &&
-                            type != 'group'
-                        ) {
-                            name = runtimeData.jsonMap.message_list.private_name
-                        } else {
-                            name = runtimeData.jsonMap.message_list.name
-                        }
-                        Connector.send(
-                            name ?? 'get_chat_history',
-                            {
-                                group_id: type == 'group' ? id : undefined,
-                                user_id: type != 'group' ? id : undefined,
-                                message_id: firstMsgId,
-                                count: fullPage? runtimeData.messageList.length + 10: 10,
-                            },
-                            'getChatHistory',
-                        )
+                    if (this.chat.messageList.length == 20) {
+                        this.chat.loadHistory()
                     }
-                    const list = this.list.map((data: any) => {
-                        return {
-                            text: getMsgRawTxt(data),
-                            id: data.sender.user_id,
-                        }
-                    })
+                    const list: {text: string, id: number}[] = []
+                    for (const msg of this.chat.messageList) {
+                        if (!(msg instanceof Msg)) continue
+                        list.push({
+                            text: msg.plaintext,
+                            id: msg.sender.user_id,
+                        })
+                    }
                     // list 只需要最新的 30 条消息，多余的从前删除
                     if (list.length > 30) {
                         list.splice(0, list.length - 30)
@@ -553,13 +510,19 @@ import { Seg } from '@renderer/function/model/seg'
                     // 倒序, 保证最新的消息最现出来
                     this.danmus = list.reverse()
                 } else {
+                    const newMsg = this.chat.messageList.at(-1)
+                    if (!(newMsg instanceof Msg)) return
                     // 只添加最后一条
-                    (this.$refs.danmakuRef as any)?.push({
-                        text: getMsgRawTxt(this.list[this.list.length - 1]),
-                        id: this.list[this.list.length - 1].sender.user_id,
+                    this.refs().danmakuRef?.push({
+                        text: newMsg.plaintext ?? '',
+                        id: newMsg.sender.user_id,
                     })
                 }
             },
+
+            refs(): refs {
+                return this.$refs as unknown as refs
+            }
         },
     })
 </script>

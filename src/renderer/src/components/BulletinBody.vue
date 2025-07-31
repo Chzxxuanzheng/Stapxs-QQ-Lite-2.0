@@ -12,32 +12,33 @@
             <font-awesome-icon :icon="['fas', 'bookmark']" />
             <span>{{ $t('公告') }}</span>
             <div style="flex: 1" />
-            <span>{{ Intl.DateTimeFormat(trueLang, {
-                month: 'short',
-                day: 'numeric',
-                hour: 'numeric',
-                minute: 'numeric',
-            }).format(data.time) }}</span>
+            <span>{{ data.time.format() }}</span>
         </header>
         <div :id="'bulletins-msg-' + index"
-            :class="'body' + (!showAll ? '' : ' all')">
+            :class="{
+                body: true,
+                all: showAll,
+            }">
             <span
                 style="margin-right: auto;margin-bottom: auto;"
                 @click="textClick"
-                v-html="parseText(data.content[0])" />
-            <img v-if="data.img_id != ''"
-                :src="`https://p.qlogo.cn/gdynamic/${data.img_id}/0/`"
-                :class="'img' + (!showAll ? '' : ' all')">
+                v-html="parseText(data.content)" />
+            <img v-if="data.getImg()"
+                :src="data.getImg()"
+                :class="{
+                    img: true,
+                    all: showAll,
+                }">
         </div>
         <span v-show="needShow && !showAll">{{ $t('点击展开') }}</span>
         <div class="info">
-            <img :src="'https://q1.qlogo.cn/g?b=qq&s=0&nk=' + data.sender">
-            <a>{{ getSenderName() }}</a>
+            <img :src="data.getSenderFace()">
+            <a>{{ data.getSenderName() }}</a>
             <div />
-            <span v-if="data.is_read">{{
+            <span v-if="data.read !== undefined">{{
                 $t('{readNum} 人已读 | {isRead}', {
-                    isRead: data.is_read ? $t('已读') : $t('未读'),
-                    readNum: data.read_num,
+                    isRead: data.read ? $t('已读') : $t('未读'),
+                    readNum: data.readNum,
                 })
             }}</span>
         </div>
@@ -50,10 +51,20 @@
     import { runtimeData } from '@renderer/function/msg'
     import { openLink } from '@renderer/function/utils/appUtil'
     import { getTrueLang } from '@renderer/function/utils/systemUtil'
+    import { Ann } from '@renderer/function/model/ann'
 
     export default defineComponent({
         name: 'BulletinBody',
-        props: ['data', 'index'],
+        props: {
+            data: {
+                type: Object as () => Ann,
+                required: true,
+            },
+            index: {
+                type: Number,
+                required: true,
+            },
+        },
         data() {
             return {
                 trueLang: getTrueLang(),
@@ -100,15 +111,6 @@
                     openLink(link)
                 }
             },
-            getSenderName() {
-                const user = this.runtimeData.chatInfo.info.group_members.find(
-                    (item) => Number(item.user_id) === Number(this.data.sender),
-                )
-                if (user) return user.nickname
-                return this.$t('已退群( {userId} )', {
-                    userId: Number(this.data.sender),
-                })
-            }
         },
     })
 </script>

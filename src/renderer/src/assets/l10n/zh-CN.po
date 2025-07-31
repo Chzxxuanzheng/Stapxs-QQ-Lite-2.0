@@ -996,13 +996,16 @@ msgstr ""
 msgid "别划了别划了被看见了啦"
 msgstr ""
 
-msgid "[有人@你]"
-msgstr "[有人{'@'}你]"
+msgid "@你"
+msgstr "{'@'}你"
 
-msgid "[@全体]"
-msgstr "[{'@'}全体]"
+msgid "@全体"
+msgstr "{'@'}全体"
 
-msgid "[特別关心]"
+msgid "特別关心"
+msgstr ""
+
+msgid "公告"
 msgstr ""
 
 msgid "离线文件"
@@ -1285,4 +1288,31 @@ msgid "请选择要转发的消息"
 msgstr ""
 
 msgid "最多只能转发99条消息"
+msgstr ""
+
+msgid "确认修改昵称？"
+msgstr ""
+
+msgid "确认"
+msgstr ""
+
+msgid "等级"
+msgstr ""
+
+msgid "注册时间"
+msgstr ""
+
+msgid "获取群文件失败"
+msgstr ""
+
+msgid "未知大小"
+msgstr ""
+
+msgid "禁言了"
+msgstr ""
+
+msgid "发送失败"
+msgstr ""
+
+msgid "正在确认操作……"
 msgstr ""

@@ -1,12 +1,12 @@
 <template>
     <Transition name="merge-pan">
-        <Teleport to="body" v-if="runtimeData.mergeMsgStack.length > 0 " >
+        <Teleport v-if="runtimeData.mergeMsgStack.length > 0 " to="body">
             <div
+                class="merge-pan"
                 @wheel="chatWheelEvent"
                 @touchstart="chatMoveStartEvent"
                 @touchmove="chatMoveEvent"
-                @touchend="chatMoveEndEvent"
-                class="merge-pan">
+                @touchend="chatMoveEndEvent">
                 <div @click="closeMergeMsg" />
                 <div ref="mergePan" class="ss-card">
                     <div>
@@ -14,33 +14,32 @@
                         <span>{{ $t('合并消息') }}</span>
                         <font-awesome-icon :icon="['fas', runtimeData.mergeMsgStack.length > 1 ? 'angle-left' : 'xmark']" @click="exitMergeMsg" />
                     </div>
-                    <div ref="mergeBar"> 
+                    <div ref="mergeBar">
                         <Transition
                             :name="addMode ? 'merge-node-add' : 'merge-node-remove'"
                             mode="out-in"
                             @leave="if(addMode){saveScrollPosition();}"
                             @enter="if(!addMode){restoreScrollPosition();}">
                             <div v-if="nowData === undefined && runtimeData.mergeMsgStack.length === 0"
-                            class="merge-node">
+                                class="merge-node">
                                 <!-- 无内容 -->
                             </div>
                             <div v-else-if="!nowData?.content" :class=" 'loading show'"
-                            class="merge-node">
+                                class="merge-node">
                                 <font-awesome-icon :icon="['fas', 'spinner']" />
                                 <span>{{ $t('加载中') }}</span>
                             </div>
-                            
+
                             <KeepAlive v-else>
                                 <MsgBar
                                     ref="msgBar"
-                                    :msgs="nowData.content"
                                     :key="'merge-' + nowData.id"
+                                    :msgs="nowData.content as Message[]"
                                     :show-msg-menu="showMsgMenu"
                                     :config="{
                                         specialMe: false,
                                     }"
-                                    class="merge-node"
-                                    />
+                                    class="merge-node" />
                             </KeepAlive>
                         </Transition>
                     </div>
@@ -114,9 +113,9 @@
     import MsgBar from './MsgBar.vue'
     import Menu from './Menu.vue'
 
-    import { defineComponent, Teleport, nextTick } from 'vue'
+    import { defineComponent, nextTick } from 'vue'
     import { runtimeData } from '@renderer/function/msg'
-    import { getMsgRawTxt, isDeleteMsg, isShowTime } from '@renderer/function/utils/msgUtil'
+    import { isDeleteMsg, isShowTime } from '@renderer/function/utils/msgUtil'
     import { wheelMask } from '@renderer/function/utils/input'
     import { Msg } from '@renderer/function/model/msg'
     import ForwardPan from './ForwardPan.vue'
@@ -125,6 +124,7 @@
     import app from '@renderer/main'
     import { downloadFile } from '@renderer/function/utils/appUtil'
     import { getViewTime } from '@renderer/function/utils/systemUtil'
+    import { Message } from '@renderer/function/model/message'
 
     type ComponentRefs = {
         msgBar: InstanceType<typeof MsgBar>
@@ -162,6 +162,7 @@
                 isMultiselectMode: false,
                 PopInfo,
                 PopType,
+                Message,
             }
         },
         mounted() {
@@ -232,7 +233,7 @@
             },
 
             //#region == 窗口移动相关 ==================================================
-            // 滚轮滑动 
+            // 滚轮滑动
             chatWheelEvent(event: WheelEvent) {
                 const process = (event: WheelEvent) => {
                     // 正在触屏,不处理
@@ -292,7 +293,7 @@
                     // 斜度过大
                     if (absY === 0 || absX / absY > 2) {
                         this.dispenseMove('touch', deltaX)
-                    } 
+                    }
                 }
                 this.dispenseMove('touch', 0, true)
                 this.chatMove.touchLast = null
@@ -360,7 +361,7 @@
                 // 末端速度法
                 // 防止误触
                 if (move < runtimeData.inch * 0.5) {
-                    let endSpeedList = speedList.reverse().slice(0, 10)
+                    const endSpeedList = speedList.reverse().slice(0, 10)
                     let endSpeed = 0
                     for (const speed of endSpeedList) {
                         endSpeed += speed
@@ -409,7 +410,7 @@
                 }
 
                 const promise = menu.showMenu(data.x, data.y) as Promise<void>
-                
+
                 return promise
             },
             /**
@@ -429,7 +430,7 @@
                 if (!forwardPan) return
                 if (!this.menuDisplay.selectMsg) return
 
-                forwardPan.singleForward([this.menuDisplay.selectMsg])
+                forwardPan.singleForward([this.menuDisplay.selectMsg as Msg])
                 this.closeMsgMenu()
             },
             /**
@@ -440,7 +441,7 @@
                 msgBar?.startMultiselect()
                 this.isMultiselectMode = true
                 if (this.menuDisplay.selectMsg) {
-                    msgBar?.forceAddToMultiselectList(this.menuDisplay.selectMsg)
+                    msgBar?.forceAddToMultiselectList(this.menuDisplay.selectMsg as Msg)
                 }
                 this.closeMsgMenu()
             },
@@ -474,7 +475,7 @@
                 this.closeMsgMenu()
             },
             //#endregion
-        
+
             //#region == 多选栏相关 ====================================================
             /**
              * 合并转发
@@ -528,7 +529,7 @@
                     let time: Date | undefined
                     // 去除 item.time 时间戳中的时间，只保留日期
                     if (item.time) {
-                        time = new Date(getViewTime(item.time))
+                        time = new Date(getViewTime(item.time.time))
                         const date =
                             time.getFullYear() +
                             '-' +
@@ -549,7 +550,7 @@
                         ':' +
                         time.getSeconds() +
                         '\n' +
-                        getMsgRawTxt(item) +
+                        item.plaintext +
                         '\n\n'
                     }
                     else msg += item.preMsg + '\n\n'
@@ -560,7 +561,7 @@
                 app.config.globalProperties.$copyText(msg).then(
                     () => {
                         popInfo.add(PopType.INFO, this.$t('复制成功'), true)
-                        
+
                         this.closeMultiselect()
                     },
                     () => {

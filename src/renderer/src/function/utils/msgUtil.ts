@@ -2,19 +2,16 @@ import jp from 'jsonpath'
 import anime from 'animejs'
 import option from '@renderer/function/option'
 
-import { Logger, PopInfo, PopType } from '@renderer/function/base'
+import { Logger } from '@renderer/function/base'
 import { runtimeData } from '@renderer/function/msg'
-import { Connector } from '@renderer/function/connect'
-import {
-    BotMsgType,
-    UserFriendElem,
-    UserGroupElem,
-} from '../elements/information'
+import { BotMsgType } from '../elements/information'
 import { sendStatEvent } from './appUtil'
 import { callBackend } from './systemUtil'
 import { Msg, SelfMsg } from '../model/msg'
 import { Message } from '../model/message'
-import { AtSeg, Seg } from '../model/seg'
+import { Seg } from '../model/seg'
+import { Session, UserSession } from '../model/session'
+import { IUser } from '../model/user'
 
 const logger = new Logger()
 
@@ -102,7 +99,7 @@ export function getMsgData(
     return back
 }
 function replaceJPValue(jpStr: string) {
-    return jpStr.replaceAll('<uin>', runtimeData.loginInfo.uin)
+    return jpStr.replaceAll('<uin>', String(runtimeData.loginInfo.uin))
 }
 
 /**
@@ -242,8 +239,8 @@ export function parseMsgList(
 
 /**
  * 将收到的消息转为Msg对象
- * @param data 
- * @returns 
+ * @param data
+ * @returns
  */
 export function createMsg(data: any): Msg|undefined {
     const msgPath = runtimeData.jsonMap
@@ -260,52 +257,6 @@ export function createMsg(data: any): Msg|undefined {
         msgPath.message_value,
     )
     return list[0]
-}
-
-/**
- * 将消息对象处理为扁平字符串
- * @param message 待处理的消息对象
- * @returns 字符串
- */
-export function getMsgRawTxt(data: Msg): string {
-    const fromId = data.session?.id
-    let back = ''
-    for (const seg of data.message){
-        try{
-            // @消息要根据目标环境拿东西，seg拿不到目标环境, 单独抽出来处理
-            if (seg instanceof AtSeg) {
-                if (!seg.text) {
-                    // 群内才可以 at，如果 at 消息中没有 text 字段
-                    // 尝试去群成员列表中找到对应的昵称，群成员列表只在当前打开的群才有
-                    if (
-                        runtimeData.chatInfo.show.id == fromId &&
-                        runtimeData.chatInfo.info.group_members
-                    ) {
-                        const user =
-                            runtimeData.chatInfo.info.group_members.find(
-                                (item) => String(item.user_id) === seg.qq,
-                            )
-                        if (user) {
-                            back +=
-                                '@' +
-                                (user.card && user.card != '' ? user.card : user.nickname)
-                        }
-                    }
-                }else{
-                    back += '@' + seg.text
-                }
-            }else {
-                if (seg.plaintext === undefined) throw new Error('Seg plaintext is undefined')
-                back += seg.plaintext
-            }
-        } catch (error) {
-            logger.error(
-                error as Error,
-                '解析消息短格式错误：' + JSON.stringify(seg),
-            )
-        }
-    }
-    return back.replace('\r\n', '\n').replace('\n', ' ')
 }
 
 /**
@@ -397,99 +348,46 @@ export function parseCQ(data: any) {
 
 /**
 * 发送消息
-* @param id 发送对象的 id
-* @param type 发送对象的类型
+* @param session 目标会话
 * @param msg 消息体
 */
 export function sendMsgRaw(
-    id: number|string,
-    type: 'group' | 'user' | 'temp',
+    session: Session,
     msg: Seg[],
 ): SelfMsg {
     // 预览消息 =======================================================
     const preMsg = new SelfMsg(
         msg,
-        type,
-        String(id)
+        session,
     )
-    // if (runtimeData.jsonMap.name === 'Lagrange.OneBot'){
-    //     // TODO 合并转发与自定义node转发
-    //     // lgrSendMsg(id, msg, type)
-    //     sendStatEvent('sendMsg', { type: type })
-    //     return
-    // }
-    sendStatEvent('sendMsg', { type: type })
+    // 发消息事件
+    sendStatEvent('sendMsg', { type: session.type })
+    // 添加进会话
+    session.addMessage(preMsg)
+    // 发送消息
     preMsg.send()
     return preMsg
 }
 
-export function updateLastestHistory(item: UserFriendElem & UserGroupElem) {
-    // 发起获取历史消息请求
-    const type = item.user_id ? 'user' : 'group'
-    const id = item.user_id ? item.user_id : item.group_id
-    let name
-    if (runtimeData.jsonMap.message_list && type != 'group') {
-        name = runtimeData.jsonMap.message_list.private_name
-    } else {
-        name = runtimeData.jsonMap.message_list.name
-    }
-    Connector.send(
-        name ?? 'get_chat_history',
-        {
-            message_type: runtimeData.jsonMap.message_list.message_type[type],
-            group_id: id,
-            user_id: id,
-            message_seq: 0,
-            message_id: 0,
-            count: 1,
-        },
-        'getChatHistoryOnMsg_' + id,
-    )
-}
-
 /**
- * 刷新消息列表排序
+ * 排序已激活的会话
  */
-export function updateBaseOnMsgList() {
-    const allList = [...runtimeData.baseOnMsgList.values()]
-    // 先更具 item.always_top 是不是 true 拆为两个数组
-    const topList = allList.filter((item) => item.always_top)
-    const normalList = allList.filter((item) => !item.always_top)
-    // 将两个数组按照 item.time 降序排序
-    // item.time 不存在或者相同时按照 item.py_start 降序排序
-
-    const sortFun = (
-        a: UserFriendElem & UserGroupElem,
-        b: UserFriendElem & UserGroupElem,
-    ) => {
-        if (a.time == b.time || a.time == undefined || b.time == undefined) {
-            if (a.py_start == undefined || b.py_start == undefined) {
-                return 0
-            }
-            return b.py_start.charCodeAt(0) - a.py_start.charCodeAt(0)
+export function sortActivateSession(): Session[] {
+    const activeSessions = [...Session.activeSessions]
+    activeSessions.sort((a, b) => {
+        // 置顶最优先
+        if (a.alwaysTop && !b.alwaysTop) return -1
+        if (!a.alwaysTop && b.alwaysTop) return 1
+        // 按照时间戳降序
+        if (a.preMessage?.time && !b.preMessage?.time) return -1
+        if (!a.preMessage?.time && b.preMessage?.time) return 1
+        if (a.preMessage?.time && b.preMessage?.time) {
+            return b.preMessage.time.time - a.preMessage.time.time
         }
-        return b.time - a.time
-    }
-    topList.sort(sortFun)
-    normalList.sort(sortFun)
-
-    let onMsgList = [] as any[]
-    let groupAssistList = [] as any[]
-    if(runtimeData.sysConfig.bubble_sort_user) {
-        // 将 normalList 进行拆分
-        onMsgList = topList.concat(normalList.filter((item) => {
-            return item.group_id && canGroupNotice(item.group_id) ||
-                item.user_id || item.new_msg || item.highlight
-        }))
-        groupAssistList = normalList.filter((item) => {
-            return item.group_id && !canGroupNotice(item.group_id)
-        })
-    } else {
-        onMsgList = topList.concat(normalList)
-    }
-
-    runtimeData.onMsgList = onMsgList
-    runtimeData.groupAssistList = groupAssistList
+        // 按照名称首字母排序
+        return a.showNamePy.localeCompare(b.showNamePy)
+    })
+    return activeSessions
 }
 
 /**
@@ -567,20 +465,6 @@ export function sendMsgAppendInfo(msg: any) {
 }
 
 /**
- *
- * @param base group_name 或者 nickname
- * @param remark remark
- * @returns 显示的名称
- */
-export function getShowName(base: string, remark: string) {
-    if (!remark || remark == '' || remark == base) {
-        return base.replace(/[\u202A-\u202E\u2066-\u2069]/g, '')
-    } else {
-        return (remark + '（' + base + '）').replace(/[\u202A-\u202E\u2066-\u2069]/g, '')
-    }
-}
-
-/**
  * 判断是否需要显示时间戳（上下超过五分钟的消息）
  * @param timePrv 上条消息的时间戳（13 位）
  * @param timeNow 当前消息的时间戳（13 位）
@@ -609,60 +493,32 @@ export function isDeleteMsg(msg: Message): boolean {
 }
 
 /**
- * lgr专用发送消息，懒得写了，不做通用适配，胡乱应付下吧
- * @param msg 消息内容
+ * 切换会话
+ * @param session 会话对象
  */
-function lgrSendMsg(id: string, msg: any, type: string, cb: string){
-    if (msg[0].type === 'node') {
-        const sendMsgs = [] as any[]
-        msg.forEach((item) => {
-            const msg = {
-                type: item.type,
-                data: {
-                    user_id: item.data.user_id.toString(),
-                    nickname: item.data.nickname,
-                    content: item.data.content.map((item)=>{
-                        const copy = {...item}
-                        delete copy.type
-                        return {
-                            type: item.type,
-                            data: {...copy}
-                        }
-                    }),
-                },
-            }
-            sendMsgs.push(msg)
-        })
-        if (type === 'group') {
-            Connector.send(
-                'send_group_forward_msg',
-                { group_id: id, messages: sendMsgs },
-                cb,
-            )
-        }else if (type === 'user') {
-            Connector.send(
-                'send_private_forward_msg',
-                { user_id: id, messages: sendMsgs },
-                cb,
-            )
-        }else {
-            new PopInfo().add(PopType.ERR, 'lgr不支持匿名聊天')
-        }
-    }else {
-        if (type === 'group'){
-            Connector.send(
-                'send_group_msg',
-                { group_id: id, message: msg },
-                cb,
-            )
-        }else if (type === 'user'){
-            Connector.send(
-                'send_private_msg',
-                { user_id: id, message: msg },
-                cb,
-            )
-        }else{
-            new PopInfo().add(PopType.ERR, 'lgr不支持匿名聊天')
-        }
-    }
+export function changeSession(session: Session) {
+    if (runtimeData.nowChat === session) return
+    if (!session.isActive) session.activate()
+    runtimeData.nowChat = session
+
+    // 清理通知
+    callBackend(undefined, 'sys:closeAllNotice', false, session.id)
+}
+
+/**
+ * 关闭当前会话
+ */
+export function closeSession() {
+    runtimeData.nowChat = undefined
+}
+
+/**
+ * 判断是否是特别关心
+ * @param user 用户/用户id
+ */
+export function isImportant(user: IUser | number): boolean {
+    if (typeof user !== 'number') user = user.user_id
+    const userSession = UserSession.getSessionById(user)
+    if (!userSession) return false
+    return userSession.sessionClass.id === 9999
 }

@@ -127,10 +127,10 @@
                     </div>
                 </div>
                 <div v-if="tags.page == 'Messages'" id="messageTab">
-                    <Messages :chat="runtimeData.chatInfo" @user-click="changeChat" @load-history="loadHistory" />
+                    <Messages @user-click="changeChat" />
                 </div>
                 <div v-if="tags.page == 'Friends'">
-                    <Friends :list="runtimeData.userList" @load-history="loadHistory" @user-click="changeChat" />
+                    <Friends @user-click="changeChat" />
                 </div>
                 <div class="opt-main-tab" style="opacity: 0">
                     <Options :show="tags.page == 'Options'" :class="tags.page == 'Options' ? 'active' : ''"
@@ -138,14 +138,12 @@
                 </div>
             </div>
         </div>
-        <component :is="runtimeData.pageView.chatView" v-if="
-            loginInfo.status &&
-                runtimeData.chatInfo &&
-                runtimeData.chatInfo.show.id != 0"
+        <component
+            :is="runtimeData.pageView.chatView"
+            v-if="loginInfo.status && runtimeData.nowChat"
             v-show="tags.showChat"
-            ref="chat" :mumber-info="runtimeData.chatInfo.info.now_member_info == undefined ?
-                {} : runtimeData.chatInfo.info.now_member_info"
-            :list="runtimeData.messageList" :chat="runtimeData.chatInfo"
+            ref="chat"
+            :chat="runtimeData.nowChat"
             @user-click="changeChat" />
         <TransitionGroup class="app-msg" name="appmsg" tag="div">
             <div v-for="msg in appMsgs" :key="'appmsg-' + msg.id">
@@ -195,7 +193,7 @@
         </Transition>
         <viewer v-show="runtimeData.tags.viewer.show" ref="viewer" class="viewer"
             :options="viewerOpt"
-            :images="runtimeData.mergeMessageImgList ?? runtimeData.chatInfo.info.image_list"
+            :images="runtimeData.mergeMessageImgList ?? runtimeData.img_list"
             @inited="viewerInited"
             @hide="viewerHide"
             @show="viewerShow">
@@ -218,9 +216,8 @@ import { defineComponent, defineAsyncComponent } from 'vue'
 import { Connector, login as loginInfo } from '@renderer/function/connect'
 import { Logger, popList, PopInfo, LogType, PopType } from '@renderer/function/base'
 import { runtimeData } from '@renderer/function/msg'
-import { BaseChatInfoElem } from '@renderer/function/elements/information'
 import { Notify } from './function/notify'
-import { updateBaseOnMsgList } from './function/utils/msgUtil'
+import { changeSession } from './function/utils/msgUtil'
 import { getDeviceType, callBackend } from './function/utils/systemUtil'
 import { uptime } from '@renderer/main'
 
@@ -228,6 +225,7 @@ import Options from '@renderer/pages/Options.vue'
 import Friends from '@renderer/pages/Friends.vue'
 import Messages from '@renderer/pages/Messages.vue'
 import Chat from '@renderer/pages/Chat.vue'
+import { Session } from './function/model/session'
 
 export default defineComponent({
     name: 'App',
@@ -247,7 +245,6 @@ export default defineComponent({
             get: Option.get,
             popInfo: new PopInfo(),
             appMsgs: popList,
-            loadHistory: App.loadHistory,
             loginInfo: loginInfo,
             runtimeData: runtimeData,
             tags: {
@@ -460,23 +457,20 @@ export default defineComponent({
                 document.getElementById('connect_btn')?.classList.add('afd')
             }
             // 其他状态监听
-            this.$watch(() => runtimeData.baseOnMsgList, () => {
+            this.$watch(() => Session.activeSessions.size, () => {
                 // macOS：刷新 Touch Bar 列表
                 if (runtimeData.tags.clientType == 'electron') {
                     const list = [] as
                         { id: number, name: string, image?: string }[]
-                    runtimeData.baseOnMsgList.forEach((item) => {
+                    for (const session of Session.activeSessions.values()) {
                         list.push({
-                            id: item.user_id ? item.user_id : item.group_id,
-                            name: item.group_name ? item.group_name : item.remark === item.nickname ? item.nickname : item.remark + '（' + item.nickname + '）',
-                            image: item.user_id ? 'https://q1.qlogo.cn/g?b=qq&s=0&nk=' + item.user_id : 'https://p.qlogo.cn/gh/' + item.group_id + '/' + item.group_id + '/0'
+                            id: session.id,
+                            name: session.showName,
+                            image: session.getFace()
                         })
-                    })
+                    }
                     callBackend(undefined, 'sys:flushOnMessage', false, list)
                 }
-
-                // 刷新列表
-                updateBaseOnMsgList()
             }, { deep: true })
             // 更新标题
             const titleList = [
@@ -622,50 +616,8 @@ export default defineComponent({
          * 切换聊天对象状态
          * @param data 切换信息
          */
-        changeChat(data: BaseChatInfoElem) {
-            // 设置聊天信息
-            this.runtimeData.chatInfo = {
-                show: data,
-                info: {
-                    group_info: {},
-                    user_info: {},
-                    me_info: {},
-                    group_members: [],
-                    group_files: {},
-                    group_sub_files: {},
-                    jin_info: {
-                        list: [] as { [key: string]: any} [],
-                        pages: 0,
-                    },
-                    me_infotimestamp: 0
-                },
-            }
-            runtimeData.mergeMsgStack.length = 0 // 清空合并转发缓存
-            runtimeData.tags.canLoadHistory = true // 重置终止加载标志
-            runtimeData.messageList = [] as any // 清空消息列表
-            // 初始化群消息
-            (this.$refs.chat as any)?.loadHistory(true)
-            if (data.type == 'group') {
-                // 获取自己在群内的资料
-                Connector.send(
-                    'get_group_member_info',
-                    {
-                        group_id: data.id,
-                        user_id: this.runtimeData.loginInfo.uin,
-                    },
-                    'getUserInfoInGroup',
-                )
-                // 获取群成员列表
-                // PS：部分功能不返回用户名需要进来查找所以提前获取
-                Connector.send(
-                    'get_group_member_list',
-                    { group_id: data.id, no_cache: true },
-                    'getGroupMemberList',
-                )
-            }
-
-            // 清理通知
-            callBackend(undefined, 'sys:closeAllNotice', false, data.id)
+        changeChat(data: Session) {
+            changeSession(data)
         },
 
         /**

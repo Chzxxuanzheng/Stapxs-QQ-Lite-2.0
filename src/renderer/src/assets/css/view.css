@@ -624,7 +624,10 @@ textarea:focus {
     flex: 1;
 }
 .friend-body > div > div a.highlight {
-    color: #f20000dd;
+    color: var(--color-red);
+    flex: none;
+    width: auto;
+    overflow: visible;
 }
 /* .friend-body > div > div a.nick {
 } */

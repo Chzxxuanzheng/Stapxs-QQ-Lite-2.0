@@ -7,10 +7,8 @@
  */
 
 import { v4 as uuid } from 'uuid';
-import { getViewTime } from '../utils/systemUtil'; 
 import { Session } from './session';
-import app from '@renderer/main';
-import { formatTime } from './utils';
+import { Time } from './data';
 
 export abstract class Message {
     /**
@@ -21,24 +19,13 @@ export abstract class Message {
     readonly uuid: string = uuid()
     sub_type?: string
     abstract session?: Session
-    time?: number
+    time?: Time
     message_id?: string
     constructor(data: object) {
-        if (data['time']) this.time = getViewTime(data['time'])
+        if (data['time']) this.time = new Time(data['time'])
         if (data['message_id']) this.message_id = String(data['message_id'])
         if (data['sub_type']) this.sub_type = data['sub_type']
     }
 
-    formatTime(config: 'year'
-        | 'month'
-        | 'week'
-        | 'day'
-        | 'hour'
-        | 'minute'
-        | 'second'
-        | 'auto' = 'auto'): string {
-        const { $t } = app.config.globalProperties
-        if (!this.time) return $t('时间丢失了...')
-        return formatTime(this.time, config)
-    }
+    abstract get preMsg(): string
 }

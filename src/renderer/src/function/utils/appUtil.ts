@@ -13,17 +13,17 @@ import { KeyboardInfo } from '@capacitor/keyboard'
 import { LogType, Logger, PopInfo, PopType } from '@renderer/function/base'
 import { Connector, login } from '@renderer/function/connect'
 import { runtimeData } from '@renderer/function/msg'
-import { BaseChatInfoElem } from '@renderer/function/elements/information'
 import {
     hslToRgb,
     callBackend,
     rgbToHsl,
     addBackendListener
 } from '@renderer/function/utils/systemUtil'
-import { toRaw, nextTick } from 'vue'
-import { sendMsgRaw } from './msgUtil'
+import { toRaw } from 'vue'
+import { changeSession, sendMsgRaw } from './msgUtil'
 import { parseMsg } from '../sender'
 import { Notify } from '../notify'
+import { GroupSession, UserSession } from '../model/session'
 
 const popInfo = new PopInfo()
 const logger = new Logger()
@@ -125,78 +125,116 @@ export function openLink(url: string, external = false) {
 }
 
 /**
- * 加载历史消息
- * @param info 聊天基本信息
- */
-export function loadHistory(info: BaseChatInfoElem) {
-    runtimeData.messageList = []
-    if (!loadHistoryMessage(info.id, info.type)) {
-        new PopInfo().add(
-            PopType.ERR,
-            app.config.globalProperties.$t('获取历史记录失败'),
-        )
-    }
-}
-export function loadHistoryMessage(
-    id: number,
-    type: string,
-    count = 20,
-    echo = 'getChatHistoryFist',
-) {
-    let name: string
-    const fullPage = runtimeData.jsonMap.message_list?.pagerType == 'full'
-    if (runtimeData.jsonMap.message_list && type != 'group') {
-        name = runtimeData.jsonMap.message_list.private_name
-    } else {
-        name = runtimeData.jsonMap.message_list.name
-    }
-
-    Connector.send(
-        name ?? 'get_chat_history',
-        {
-            group_id: type == 'group' ? id : undefined,
-            user_id: type != 'group' ? id : undefined,
-            message_id: 0,
-            count: fullPage ? runtimeData.messageList.length + count : count,
-        },
-        echo,
-    )
-    return true
-}
-
-/**
  * 重新加载用户列表
+ * @param useCache 是否使用缓存
  */
-export function reloadUsers() {
+export async function reloadUsers(useCache: boolean = true) {
     // 加载用户列表
-    if (login.status) {
-        runtimeData.userList = []
-        let friendName = 'get_friend_list'
-        let groupName = 'get_group_list'
-        if (runtimeData.jsonMap.user_list?.name) {
-            friendName = runtimeData.jsonMap.user_list.name.split('|')[0]
-            groupName = runtimeData.jsonMap.user_list.name.split('|')[1]
-        } else if (
-            runtimeData.jsonMap.friend_list?.name &&
-            runtimeData.jsonMap.group_list?.name
-        ) {
-            friendName = runtimeData.jsonMap.friend_list.name
-            groupName = runtimeData.jsonMap.group_list.name
-        }
-        Connector.send(friendName, {}, 'getFriendList')
-        Connector.send(groupName, {}, 'getGroupList')
-    }
-}
+    if (!login.status) return
 
-/**
-* 获取 Cookie
-*/
-export function reloadCookies(domain = 'qun.qq.com') {
-    Connector.send(
-        'get_cookies',
-        { domain: domain },
-        'getCookies_' + domain,
-    )
+    // 保存当前会话信息
+    const nowChatId = runtimeData.nowChat?.id
+
+    // 清除旧数据
+    Session.clear()
+
+    const task: Promise<void>[] = []
+    const friendData: any[] = []
+    const groupData: any[] = []
+    // 加载群组列表
+    task.push((async()=>{
+        const data = await Connector.callApi('group_list', {no_cache: !useCache})
+        for (const item of data) {
+            groupData.push({
+                group_id: item.group_id,
+                group_name: item.group_name,
+                member_count: item.member_count,
+            })
+        }
+    })())
+    // 加载好友列表
+    task.push((async()=>{
+        let data = await Connector.callApi('friend_list', {no_cache: !useCache})
+        if (data !== undefined) {
+            for (const item of data) {
+                friendData.push({
+                    user_id: item.user_id,
+                    nickname: item.nickname,
+                    remark: item.remark,
+                    class_id: item.class_id[0],
+                    class_name: item.class_name[0],
+                })
+            }
+            return
+        }
+        // 好麻烦啊，写适配器必须提上日程
+        data = await Connector.callApi('friend_category', {})
+        for (const classItem of data) {
+            const class_id = classItem.categoryId
+            const class_name = classItem.categoryName
+            for (let i=0; i < classItem.user_ids.length; i++) {
+                friendData.push({
+                    user_id: classItem.user_ids[i],
+                    nickname: classItem.user_nicknames[i],
+                    remark: classItem.user_remark[i],
+                    class_id: class_id,
+                    class_name: class_name,
+                })
+            }
+        }
+    })())
+    await Promise.all(task)
+    for (const item of groupData) {
+        if (!GroupSession.getSessionById(item.group_id)) {
+            new GroupSession(item.group_id, item.group_name, item.member_count)
+        }
+    }
+    for (const item of friendData) {
+        if (!UserSession.getSessionById(item.user_id)) {
+            new UserSession(
+                item.user_id,
+                item.nickname,
+                item.class_id,
+                item.class_name,
+                item.remark,
+            )
+        }
+    }
+
+    // 更新菜单
+    updateMenu({
+        parent: 'account',
+        id: 'userList',
+        action: 'label',
+        value: app.config.globalProperties.$t('用户列表（{count}）', {
+            count: Session.sessionList.length,
+        }),
+    })
+
+    // 设置置顶列表
+    const topList = runtimeData.sysConfig.top_info as {
+        [key: string]: number[]
+    } | null
+    if (!topList) return
+    const topSessions = topList[runtimeData.loginInfo.uin]
+    if (!topSessions) return
+    for (const id of topSessions) {
+        const session = Session.getSessionById(id)
+        if (!session) {
+            logger.debug('未找到置顶会话：' + id)
+            continue
+        }
+        logger.debug('设置置顶会话：' + id)
+        session.setAlwaysTop(true, false)
+        session.activate()
+    }
+
+    // 更新当前会话
+    if (nowChatId) {
+        const session = Session.getSessionById(nowChatId)
+        if (!session?.isActive) await session?.activate()
+        runtimeData.nowChat = session
+    }
 }
 
 /**
@@ -205,38 +243,23 @@ export function reloadCookies(domain = 'qun.qq.com') {
  * @param msgId
  */
 export function jumpToChat(userId: string, msgId: string) {
-    if (runtimeData.chatInfo.show.id != Number(userId)) {
-        const body = document.getElementById('user-' + userId)
-        if (body === null) {
-            // 从缓存列表里寻找这个 ID
-            for (let i = 0; i < runtimeData.userList.length; i++) {
-                const item = runtimeData.userList[i]
-                const id =
-                    item.user_id !== undefined ? item.user_id : item.group_id
-                if (String(id) === userId) {
-                    // 把它插入到显示列表的第一个
-                    runtimeData.showList?.unshift(item)
-                    nextTick(() => {
-                        const bodyNext = document.getElementById(
-                            'user-' + userId,
-                        )
-                        if (bodyNext !== null) {
-                            // 添加一个消息跳转标记
-                            bodyNext.dataset.jump = msgId
-                            // 然后点一下它触发聊天框切换
-                            bodyNext.click()
-                        }
-                    })
-                    break
-                }
-            }
-        } else {
-            body.click()
-        }
-    } else {
-        // 当前聊天已经打开，是没有焦点触发的消息通知；直接滚动到消息。
-        scrollToMsg(msgId, true)
+    const session = Session.getSessionById(Number(userId))
+    if (!session) return
+    if (!session.isActive) return // 未激活哪里来的消息?
+    const msg = session.messageList.filter(msg => msg.message_id === msgId)[0]
+    if (!msg) return // 没有找到对应的消息
+
+    // 当前聊天已经打开，是没有焦点触发的消息通知；直接滚动到消息。
+    if (runtimeData.nowChat === session) {
+        scrollToMsg(`chat-${msg.uuid}`, true)
+        return
     }
+
+    changeSession(session)
+    // 跳转到对应消息
+    setTimeout(()=>{
+        scrollToMsg(`chat-${msg.uuid}`, true)
+    }, 500)
 }
 
 /**
@@ -366,7 +389,7 @@ export function createMenu() {
         menuTitles.login = $t('连接')
         menuTitles.logout = $t('登出')
         menuTitles.userList = $t('用户列表（{count}）', {
-            count: runtimeData.userList.length,
+            count: Session.sessionList.length,
         })
         menuTitles.flushUser = $t('刷新列表…')
 
@@ -404,16 +427,12 @@ export function createIpc() {
     })
     addBackendListener(undefined, 'bot:quickReply', (event, data) => {
         const info = data ?? event.payload
-        const preMsg = sendMsgRaw(info.id, info.type,
+        const session = Session.getSessionById(info.id)
+        if (!session) return
+        sendMsgRaw(session,
             parseMsg(info.content, [], [], String(info.msg)))
-        runtimeData.messageList.push(preMsg)
         // 去消息列表内寻找，去除新消息标记
-        const item = runtimeData.baseOnMsgList.get(info.id)
-        if(item) {
-            item.new_msg = false
-            item.highlight = undefined
-            runtimeData.baseOnMsgList.set(Number(info.id), item)
-        }
+        session.setRead()
     })
     // 应用功能
     addBackendListener(undefined, 'app:about', () => {
@@ -520,19 +539,14 @@ export async function loadMobile() {
                         notification.extra.msgId)
                 } else if(info.actionId == 'REPLY_ACTION') {
                     // 快速回复
-                    const preMsg = sendMsgRaw(
-                        notification.extra.userId,
-                        notification.extra.chatType,
+                    const session = Session.getSessionById(notification.extra.userId)
+                    if (!session) return
+                    sendMsgRaw(
+                        session,
                         parseMsg(info.inputValue ?? '', [], [], String(notification.extra.msgId)),
                     )
-                    runtimeData.messageList.push(preMsg)
                     // 去消息列表内寻找，去除新消息标记
-                    const item = runtimeData.baseOnMsgList.get(Number(notification.extra.userId))
-                    if(item) {
-                        item.new_msg = false
-                        item.highlight = undefined
-                        runtimeData.baseOnMsgList.set(Number(notification.extra.userId), item)
-                    }
+                    session.setRead()
                 }
             })
         }
@@ -610,6 +624,7 @@ export async function loadMobile() {
 import horizontalCss from '@renderer/assets/css/append/mobile/append_mobile_horizontal.css?raw'
 import verticalCss from '@renderer/assets/css/append/mobile/append_mobile_vertical.css?raw'
 import { ActionType, LocalNotificationSchema } from '@capacitor/local-notifications'
+import { Session } from '../model/session'
 // import windowsCss from '@renderer/assets/css/append/mobile/append_windows.css?raw'
 /**
 * 装载补充样式

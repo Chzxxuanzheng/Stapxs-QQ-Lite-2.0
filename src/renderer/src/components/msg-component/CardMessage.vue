@@ -58,6 +58,7 @@
             }
         },
 		emits: {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
 			'page-view': (_arg1: any, _arg2: any) => true,
 		},
         data() {

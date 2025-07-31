@@ -6,29 +6,28 @@
 -->
 
 <template>
-    <div v-if="tags.openChatInfo"
-        class="chat-info-pan">
+    <div class="chat-info-pan">
         <div class="ss-card chat-info">
             <header>
-                <span v-if="chat.show.type === 'group'">{{ $t('群资料') }}</span>
-                <span v-if="chat.show.type === 'user'">{{ $t('好友') }}</span>
+                <span v-if="chat.type === 'group'">{{ $t('群资料') }}</span>
+                <span v-if="chat.type === 'user'">{{ $t('好友') }}</span>
                 <font-awesome-icon :icon="['fas', 'xmark']" @click="closeChatInfoPan" />
             </header>
-            <div :class="'chat-info-base ' + chat.show.type">
+            <div :class="'chat-info-base ' + chat.type">
                 <div>
-                    <img :src="chat.show.avatar">
+                    <img :src="chat.getFace()">
                     <div>
-                        <a>{{ chat.show.name }}</a>
-                        <span>{{ chat.show.id }}</span>
+                        <a>{{ chat.showName }}</a>
+                        <span>{{ chat.id }}</span>
                     </div>
                     <div style="display: flex;align-items: center;justify-content: center;cursor: pointer;"
-                        @click="copyText(chat.show.id)">
+                        @click="copyText(chat.id)">
                         <font-awesome-icon :icon="['fas', 'copy']" />
                     </div>
                 </div>
-                <div v-if="chat.show.type === 'group'"
-                    v-show="Object.keys(chat.info.group_info).length > 0">
-                    <header>
+                <div v-if="chat.type === 'group'"
+                    v-show="false">
+                    <!-- <header>
                         <span>{{ $t('介绍') }}</span>
                     </header>
                     <span v-html=" chat.info.group_info.gIntro === undefined || chat.info.group_info.gIntro === '' ?
@@ -37,49 +36,48 @@
                         <div v-for="item in chat.info.group_info.tags" :key="item.md">
                             {{ item.tag }}
                         </div>
-                    </div>
+                    </div> -->
                 </div>
-                <div v-else-if="chat.show.type === 'user'">
-                    <header v-if="chat.info.user_info.qid">
+                <div v-else-if="chat instanceof UserSession && userInfo">
+                    <header>
                         <span>QID</span>
                     </header>
-                    <span v-if="chat.info.user_info.qid">{{ chat.info.user_info.qid }}</span>
+                    <span>{{ userInfo.qid }}</span>
                     <header>
                         <span>{{ $t('等级') }}</span>
                     </header>
-                    <span>{{ chat.info.user_info.qqLevel }}</span>
-                    <header v-if="chat.info.user_info.regTime">
+                    <span>{{ userInfo.level }}</span>
+                    <header v-if="userInfo.regTime">
                         <span>{{ $t('注册时间') }}</span>
                     </header>
-                    <span v-if="chat.info.user_info.regTime">{{ Intl.DateTimeFormat(trueLang, { year: 'numeric' })
-                        .format(new Date(chat.info.user_info.regTime * 1000)) }}</span>
+                    <span>{{ userInfo.regTime.format('year', 'year') }}</span>
                     <header>
                         <span>{{ $t('签名') }}</span>
                     </header>
-                    <span>{{ chat.info.user_info.longNick ? chat.info.user_info.longNick : $t("这个人很懒什么都没有写～") }}</span>
+                    <span>{{ userInfo.longNick ? userInfo.longNick : $t("这个人很懒什么都没有写～") }}</span>
                     <header>
                         <span>{{ $t('其他信息') }}</span>
                     </header>
                     <div class="outher">
-                        <span v-if="chat.info.user_info.birthday_year">{{ $t('生日') }}:
+                        <span v-if="userInfo.birthday_year">{{ $t('生日') }}:
                             <span>
                                 {{ Intl.DateTimeFormat(trueLang, {
                                     year: 'numeric',
                                     month: 'short',
                                     day: 'numeric',
                                 }).format(new Date(
-                                    `${chat.info.user_info.birthday_year}-${
-                                        chat.info.user_info.birthday_month}-${
-                                        chat.info.user_info.birthday_day}`,
+                                    `${userInfo.birthday_year}-${
+                                        userInfo.birthday_month}-${
+                                        userInfo.birthday_day}`,
                                 )) }}
                             </span>
                         </span>
-                        <span>{{ $t('地区') }}:
+                        <span v-if="userInfo.country">{{ $t('地区') }}:
                             <span>
                                 {{
-                                    `${chat.info.user_info.country}-${
-                                        chat.info.user_info.province}-${
-                                        chat.info.user_info.city}`
+                                    `${userInfo.country}-
+                                    ${userInfo.province}-
+                                    ${userInfo.city}`
                                 }}
                             </span>
                         </span>
@@ -94,68 +92,73 @@
                     </template> -->
                 </div>
             </div>
-            <BcTab v-if="chat.show.type === 'group'"
+            <BcTab v-if="chat instanceof GroupSession"
                 class="chat-info-tab">
                 <div :name="$t('成员')">
                     <div class="chat-info-tab-member">
                         <div class="search-view">
-                            <input :placeholder="$t('搜索 ……')" @input="searchList">
+                            <input :placeholder="$t('搜索 ……')" @input="search">
                         </div>
-                        <div v-for="item in number_cache.length > 0 ? number_cache : chat.info.group_members"
-                            :key="'chatinfomlist-' + item.user_id" class="edit">
+                        <div v-for="member in searchList.length > 0 ? searchList : chat.memberList"
+                            :key="'chatinfomlist-' + member.user_id" class="edit">
                             <img alt="nk" loading="lazy"
-                                :src="`https://q1.qlogo.cn/g?b=qq&s=0&nk=${item.user_id}`">
+                                :src="member.getFace()">
                             <div>
-                                <a @click="startChat(item)">{{
-                                    item.card ? item.card : item.nickname
-                                }}</a>
-                                <font-awesome-icon v-if="item.role === 'owner'" :icon="['fas', 'crown']" />
-                                <font-awesome-icon v-if="item.role === 'admin'" :icon="['fas', 'star']" />
+                                <a @click="startChat(member as Member)">{{ member.name }}</a>
+                                <font-awesome-icon v-if="member.role === 'owner'" :icon="['fas', 'crown']" />
+                                <font-awesome-icon v-if="member.role === 'admin'" :icon="['fas', 'star']" />
                             </div>
                             <!-- 在手机端戳 id 就能触发 -->
-                            <span @click="moreConfig(item)">{{ item.user_id }}</span>
-                            <font-awesome-icon v-if="canEditMember(item.role)" :icon="['fas', 'wrench']" @click="moreConfig(item)" />
-                            <font-awesome-icon v-else :icon="['fas', 'copy']" @click="moreConfig(item.user_id)" />
+                            <span @click="clickMember(member as Member)">{{ member.user_id }}</span>
+                            <font-awesome-icon v-if="canEditMember(member.role)" :icon="['fas', 'wrench']" @click="clickMember(member as Member)" />
+                            <font-awesome-icon v-else :icon="['fas', 'copy']" @click="clickMember(member as Member)" />
                         </div>
                     </div>
                 </div>
                 <div :name="$t('公告')">
                     <div class="bulletins">
+                        <!-- {{ anns }} -->
                         <BulletinBody
-                            v-for="(item, index) in chat.info.group_notices ?? []"
+                            v-for="(item, index) in anns"
                             :key="'bulletins-' + index"
-                            :data="item"
+                            :data="item as Ann"
                             :index="index" />
                     </div>
                 </div>
                 <div :name="$t('文件')">
                     <div
                         class="group-files">
-                        <div v-for="item in chat.info.group_files"
-                            :key="'file-' + (item.folder_id ?? item.file_id)">
-                            <FileBody :chat="chat" :item="item" />
+                        <template v-if="fileInfo">
+                            <div v-for="item in fileInfo"
+                                :key="'file-' + item.id">
+                                <FileBody :item="item" />
+                            </div>
+                        </template>
+                        <div v-else class="loading" style="opacity: 0.9;">
+                            <font-awesome-icon :icon="['fas', 'spinner']" />
+                            {{ $t('加载中') }}
                         </div>
                     </div>
                 </div>
                 <div :name="$t('设置')">
                     <div style="padding: 0 20px">
                         <OptInfo :type="'group'" :chat="chat"
-                            @update_mumber_card="updateMumberCard" />
+                            @update_mumber_card="updateMemberCard" />
                     </div>
                 </div>
             </BcTab>
-            <div :class="'ss-card user-config' + (Object.keys(showUserConfig).length > 0 ? ' show' : '')">
+            <div v-if="showUserConfig && chat instanceof GroupSession" class="ss-card user-config show">
                 <div>
-                    <img alt="nk" :src="`https://q1.qlogo.cn/g?b=qq&s=0&nk=${showUserConfig.user_id}`">
+                    <img alt="nk" :src="showUserConfig.getFace()">
                     <div>
-                        <a>{{ showUserConfig.card != '' ? showUserConfig.card : showUserConfig.nickname }}</a>
+                        <a>{{ showUserConfig.name }}</a>
                         <span>{{ showUserConfig.user_id }}</span>
                     </div>
                     <font-awesome-icon
                         style="margin-right: 20px;"
                         :icon="['fas', 'copy']"
                         @click="copyText(showUserConfig.user_id)" />
-                    <font-awesome-icon :icon="['fas', 'angle-down']" @click="showUserConfig = {}" />
+                    <font-awesome-icon :icon="['fas', 'angle-down']" @click="showUserConfig = null" />
                 </div>
                 <div>
                     <header>{{ $t('成员信息') }}</header>
@@ -171,9 +174,9 @@
                             style="width: 50%"
                             class="ss-input"
                             type="text"
-                            @change="updateMumberCard($event, showUserConfig)">
+                            @change="updateMemberCard(showUserConfig as Member, showUserConfigRaw.card)">
                     </div>
-                    <div v-if="chat.info.me_info.role === 'owner'" class="opt-item">
+                    <div v-if="chat.getMe().role === 'owner'" class="opt-item">
                         <font-awesome-icon :icon="['fas', 'clipboard-list']" />
                         <div>
                             <span>{{ $t('成员头衔') }}</span>
@@ -185,9 +188,9 @@
                             style="width: 50%"
                             class="ss-input"
                             type="text"
-                            @change="updateMumberTitle($event, showUserConfig)">
+                            @change="updateMemberTitle($event, showUserConfig as Member)">
                     </div>
-                    <template v-if="showUserConfig.role === 'member'">
+                    <template v-if="canEditMember(showUserConfig.role)">
                         <header>{{ $t('操作') }}</header>
                         <div class="opt-item">
                             <font-awesome-icon :icon="['fas', 'clipboard-list']" />
@@ -197,15 +200,15 @@
                                     $t('要让小猫咪不许说话几分钟呢？')
                                 }}</span>
                             </div>
-                            <input v-model="mumberInfo.banMin"
+                            <input v-model="memberInfo.banMin"
                                 style="width: 50%"
                                 class="ss-input"
                                 type="text"
                                 @input="checkNumber"
-                                @change="banMumber($event, showUserConfig)">
+                                @change="banMumber($event, showUserConfig as Member)">
                         </div>
                         <button class="ss-button"
-                            @click="removeUser(showUserConfig.nickname, chat.show.id, showUserConfig.user_id)">
+                            @click="removeUser(showUserConfig as Member, chat.id)">
                             {{ $t('移出群聊') }}
                         </button>
                     </template>
@@ -225,53 +228,78 @@
 
     import { Connector } from '@renderer/function/connect'
     import { PopInfo, PopType } from '@renderer/function/base'
-    import { defineComponent, toRaw } from 'vue'
-    import { getTrueLang } from '@renderer/function/utils/systemUtil'
+    import { defineComponent, ShallowRef, shallowRef } from 'vue'
+    import { delay, getTrueLang } from '@renderer/function/utils/systemUtil'
     import { runtimeData } from '@renderer/function/msg'
-    import {
-        UserFriendElem,
-        UserGroupElem,
-    } from '@renderer/function/elements/information'
+    import { GroupSession, Session, UserSession } from '@renderer/function/model/session'
+    import { Member, Role, User } from '@renderer/function/model/user'
+    import { Ann } from '@renderer/function/model/ann'
+    import { changeSession } from '@renderer/function/utils/msgUtil'
+    import { GroupFile, GroupFileFolder } from '@renderer/function/model/file'
 
     export default defineComponent({
         name: 'ViewInfo',
         components: { BulletinBody, FileBody, OptInfo, BcTab },
-        props: ['tags', 'chat'],
+        props: {
+            chat: {
+                type: Object as () => Session,
+                required: true,
+            }
+        },
         emits: ['close'],
         data() {
+            let userInfo: User | undefined
+            if (this.chat instanceof UserSession)
+                userInfo = this.chat.useUserInfo()
+            let anns: ShallowRef<Ann[]>
+            if (this.chat instanceof GroupSession)
+                anns = this.chat.useAnn()
+            else
+                anns = shallowRef([])
+            let fileInfo: ShallowRef<(GroupFileFolder | GroupFile)[] | undefined>
+            if (this.chat instanceof GroupSession)
+                fileInfo = this.chat.useFile()
+            else
+                fileInfo = shallowRef(undefined)
             return {
                 runtimeData: runtimeData,
                 trueLang: getTrueLang(),
                 isTop: false,
-                number_cache: [] as any[],
-                showUserConfig: {} as any,
-                showUserConfigRaw: {} as any,
-                mumberInfo: {
+                searchList: [] as Member[],
+                showUserConfig: null as Member | null,
+                showUserConfigRaw: {
+                    card: '',
+                    title: '',
+                },
+                memberInfo: {
                     banMin: 0,
-                }
+                },
+                GroupSession,
+                UserSession,
+                userInfo,
+                anns,
+                fileInfo,
             }
         },
         methods: {
             /**
              * 移出群聊
              */
-            removeUser(nickname: string, group_id: number, user_id: number) {
+            removeUser(mem: Member, group_id: number) {
                 const popInfo = {
                     title: this.$t('提醒'),
-                    html: `<span>${this.$t('真的要将 {user} 移出群聊吗', { user: nickname })}</span>`,
+                    html: `<span>${this.$t('真的要将 {user} 移出群聊吗', { user: mem.name })}</span>`,
                     button: [
                         {
                             text: app.config.globalProperties.$t('确定'),
-                            fun: () => {
-                                Connector.send(
-                                    'set_group_kick',
-                                    {
-                                        group_id: group_id,
-                                        user_id: user_id,
-                                    },
-                                    'setGroupKick',
-                                )
+                            fun: async() => {
+                                await Connector.callApi('group_kick',{
+                                    group_id: group_id,
+                                    user_id: mem.user_id,
+                                    reject_add_request: false,
+                                })
                                 runtimeData.popBoxList.shift()
+                                await this.checkSetMemInfoResult()
                             },
                         },
                         {
@@ -298,7 +326,7 @@
                 )
             },
 
-            banMumber(event: Event, info: any) {
+            banMumber(event: Event, mem: Member) {
                 const value = (event.target as HTMLInputElement).value
                 if (value !== '') {
                     const num = parseInt(value)
@@ -309,23 +337,20 @@
                             button: [
                                 {
                                     text: this.$t('确认'),
-                                    fun: () => {
-                                        const name = runtimeData.jsonMap.ban_mumber?.name
-                                        if (name)
-                                            Connector.send(name, {
-                                                group_id: runtimeData.chatInfo.show.id,
-                                                user_id: info.user_id,
-                                                duration: num * 60,
-                                            }, 'banMumber')
+                                    fun: async () => {
                                         runtimeData.popBoxList.shift()
                                         this.closeChatInfoPan()
+                                        await Connector.callApi('ban_member', {
+                                            group_id: this.chat.id,
+                                            user_id: mem.user_id,
+                                            duration: num * 60,
+                                        })
                                     },
                                 },
                                 {
                                     text: this.$t('取消'),
                                     master: true,
                                     fun: () => {
-                                        this.showUserConfigRaw = JSON.parse(JSON.stringify(info))
                                         runtimeData.popBoxList.shift()
                                     },
                                 },
@@ -336,67 +361,62 @@
                 }
             },
 
-            updateMumberCard(event: Event, info: any) {
-                const value = (event.target as HTMLInputElement).value
-                if (this.showUserConfig.card !== value) {
-                    const popInfo = {
-                        title: this.$t('操作'),
-                        html: `<span>${this.$t('确认修改昵称？')}</span>`,
-                        button: [
-                            {
-                                text: this.$t('确认'),
-                                fun: () => {
-                                    const name = runtimeData.jsonMap.set_group_nickname?.name
-                                        if(name)
-                                        Connector.send(name, {
-                                            group_id: runtimeData.chatInfo.show.id,
-                                            user_id: info.user_id,
-                                            card: value,
-                                        }, 'updateGroupMemberInfo')
-                                    runtimeData.popBoxList.shift()
-                                    this.closeChatInfoPan()
-                                },
+            updateMemberCard(mem: Member, newValue: string) {
+                const popInfo = {
+                    title: this.$t('操作'),
+                    html: `<span>${this.$t('确认修改昵称？')}</span>`,
+                    button: [
+                        {
+                            text: this.$t('确认'),
+                            fun: async () => {
+                                runtimeData.popBoxList.shift()
+                                this.closeChatInfoPan()
+                                await Connector.callApi('set_group_nickname', {
+                                    group_id: this.chat.id,
+                                    user_id: mem.user_id,
+                                    card: newValue,
+                                })
+                                await this.checkSetMemInfoResult()
                             },
-                            {
-                                text: this.$t('取消'),
-                                master: true,
-                                fun: () => {
-                                    this.showUserConfigRaw = JSON.parse(JSON.stringify(info))
-                                    runtimeData.popBoxList.shift()
-                                },
+                        },
+                        {
+                            text: this.$t('取消'),
+                            master: true,
+                            fun: () => {
+                                this.showUserConfigRaw.card = mem.card?.toString() ?? ''
+                                runtimeData.popBoxList.shift()
                             },
-                        ],
-                    }
-                    runtimeData.popBoxList.push(popInfo)
+                        },
+                    ],
                 }
+                runtimeData.popBoxList.push(popInfo)
             },
 
-            updateMumberTitle(event: Event, info: any) {
+            updateMemberTitle(event: Event, mem: Member) {
                 const value = (event.target as HTMLInputElement).value
-                if (this.showUserConfig.card !== value) {
+                if (mem.title?.toString() !== value) {
                     const popInfo = {
                         title: this.$t('操作'),
                         html: `<span>${this.$t('确认修改头衔？')}</span>`,
                         button: [
                             {
                                 text: this.$t('确认'),
-                                fun: () => {
-                                    const name = runtimeData.jsonMap.set_group_title?.name
-                                        if(name)
-                                        Connector.send(name, {
-                                            group_id: runtimeData.chatInfo.show.id,
-                                            user_id: info.user_id,
-                                            special_title: value,
-                                        }, 'updateGroupMemberInfo')
+                                fun: async () => {
                                     runtimeData.popBoxList.shift()
                                     this.closeChatInfoPan()
+                                    await Connector.callApi('set_group_title', {
+                                        group_id: this.chat.id,
+                                        user_id: mem.user_id,
+                                        special_title: value,
+                                    })
+                                    await this.checkSetMemInfoResult()
                                 },
                             },
                             {
                                 text: this.$t('取消'),
                                 master: true,
                                 fun: () => {
-                                    this.showUserConfigRaw = JSON.parse(JSON.stringify(info))
+                                    this.showUserConfigRaw.title = mem.title?.toString() ?? ''
                                     runtimeData.popBoxList.shift()
                                 },
                             },
@@ -436,96 +456,76 @@
              * 关闭面板
              */
             closeChatInfoPan() {
-                this.showUserConfig = {}
+                this.showUserConfig = null
                 this.$emit('close', null)
             },
 
             /**
              * 发起聊天
              */
-            startChat(info: any) {
+            startChat(mem: Member) {
                 // 如果是自己的话就忽略
-                if (info.user_id != runtimeData.loginInfo.uin) {
+                if (mem.user_id == runtimeData.loginInfo.uin) return
 
-                    // 检查这个人是不是好友
-                    let chat = runtimeData.userList.find(
-                        (item: UserFriendElem & UserGroupElem) => {
-                            return item.user_id == info.user_id
-                        },
-                    )
-                    if (!chat) {
-                        // 创建一个临时聊天
-                        const user = {
-                            user_id: info.user_id,
-                            // 因为临时消息没有返回昵称
-                            nickname:
-                                app.config.globalProperties.$t('临时会话'),
-                            remark: info.user_id,
-                            group_id: info.group_id,
-                            group_name: '',
-                        } as UserFriendElem & UserGroupElem
-                        chat = user
-                    }
-                    runtimeData.baseOnMsgList.set(Number(info.user_id), chat)
-                    // 切换到这个聊天
-                    this.$nextTick(() => {
-                        if (chat) {
-                            const item = document.getElementById(
-                                'user-' + chat.user_id,
-                            )
-                            if (item) {
-                                item.click()
-                            }
-                        }
-                    })
+                // 检查这个人是不是好友
+                let session: Session | undefined = mem?.user
+
+                // 没了创建一个临时聊天
+                if (!session)
+                    session = Session.getSession('temp', mem.user_id, this.chat.id)
+
+                // 激活会话
+                if (!session.activate) session.activate()
+                // 切换到这个聊天
+                this.$nextTick(() => {
+                    changeSession(session)
+                })
+            },
+
+            openMoreConfig(mem: Member) {
+                this.showUserConfig = mem
+                // 初始化一些内容
+                this.showUserConfigRaw = {
+                    card: mem.card?.toString() ?? '',
+                    title: mem.title?.toString() ?? '',
                 }
-            },
+                // this.mumberInfo.banMin = this.getBanTimeMin(mem.shut_up_timestamp)
 
-            openMoreConfig(id: number) {
-                const info = this.chat.info.group_members.find(
-                    (item) => item.user_id === id,
-                )
-                if(info) this.moreConfig(info)
             },
-            moreConfig(info: any) {
-                if(this.canEditMember(info.role)) {
-                    this.showUserConfig = info
-                    this.showUserConfigRaw = JSON.parse(JSON.stringify(info))
-                    // 初始化一些内容
-                    this.mumberInfo.banMin = this.getBanTimeMin(info.shut_up_timestamp)
+            clickMember(mem: Member) {
+                if(this.canEditMember(mem.role)) {
+                    this.openMoreConfig(mem)
                 } else {
-                    this.copyText(info.user_id)
+                    this.copyText(mem.user_id)
                 }
             },
 
-            searchList(event: Event) {
+            search(event: Event) {
                 const value = (event.target as HTMLInputElement).value
                 if (value !== '') {
-                    this.number_cache = toRaw(this.chat.info.group_members)
-                    this.number_cache = this.number_cache.filter((item) => {
-                        const name =
-                            item.card.toLowerCase() +
-                            '(' +
-                            item.nickname.toLowerCase() +
-                            ')'
-                        const id = item.user_id
-                        return (
-                            name.indexOf(value.toLowerCase()) != -1 ||
-                            id.toString() === value
-                        )
-                    })
+                    this.searchList = (this.chat as GroupSession).memberList.filter(
+                        (mem: Member) => mem.match(value),
+                    )
                 } else {
-                    this.number_cache = [] as any[]
+                    this.searchList = [] as any[]
                 }
             },
 
             canEditMember(role: string) {
-                return (
-                    this.chat.info.me_info.role === 'owner' ||
-                    (this.chat.info.me_info.role === 'admin'
-                     && role !== 'owner') // 管理员不能编辑群主
-                )
-            }
+                const me = (this.chat as GroupSession).getMe()
+                return me?.canAdmin(role as Role)
+            },
+
+            async checkSetMemInfoResult() {
+                const popInfo = {
+                    title: this.$t('操作'),
+                    html: `<span>${this.$t('正在确认操作……')}</span>`
+                }
+                runtimeData.popBoxList.push(popInfo)
+                await delay(1000)
+                await (this.chat as GroupSession).reloadUserList(false)
+                runtimeData.popBoxList.shift()
+            },
         },
     })
 </script>

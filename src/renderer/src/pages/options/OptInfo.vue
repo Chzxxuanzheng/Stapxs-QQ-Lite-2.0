@@ -3,6 +3,7 @@
  - @Author: Stapxs
  - @Date: 2023/2/7
  - @Version: 1.0 - 初始版本
+ -           2.0 - 重构为setup
 -->
 
 <template>
@@ -11,16 +12,16 @@
         style="padding: 0">
         <!-- 公用设置 -->
         <!-- 群设置 -->
-        <template v-if="type == 'group'">
-            <div v-if="runtimeData.chatInfo.info.me_info.role == 'owner' ||
-                     runtimeData.chatInfo.info.me_info.role == 'admin'"
+        <template v-if="chat instanceof GroupSession">
+            <div v-if="chat.getMe().role == 'owner' ||
+                     chat.getMe().role == 'admin'"
                 class="opt-item">
                 <font-awesome-icon :icon="['fas', 'pen']" />
                 <div>
                     <span>{{ $t('群聊名称') }}</span>
                     <span>{{ $t('“你们真是害人不浅呐你们这个群”') }}</span>
                 </div>
-                <input v-model="runtimeData.chatInfo.show.name" class="ss-input"
+                <input v-model="nowChatName" class="ss-input"
                     style="width: 150px" type="text" @keyup="setGroupName">
             </div>
             <div class="opt-item">
@@ -29,8 +30,12 @@
                     <span>{{ $t('我的群昵称') }}</span>
                     <span>{{ $t('￡爺↘僞ηι慹著彡') }}</span>
                 </div>
-                <input v-model="runtimeData.chatInfo.info.me_info.card" class="ss-input"
-                    style="width: 150px" type="text" @change="setGroupCard">
+                <input v-model="meCard" class="ss-input"
+                    style="width: 150px" type="text" @change="
+                        meCard !== chat.getMe().card?.toString() ?
+                            emit('update_mumber_card', chat.getMe(), meCard)
+                            : undefined
+                    ">
             </div>
             <div class="opt-item">
                 <font-awesome-icon :icon="['fas', 'bell']" />
@@ -39,7 +44,7 @@
                     <span>{{ $t('快来水群快来水群！') }}</span>
                 </div>
                 <label class="ss-switch">
-                    <input v-model="canGroupNotice" type="checkbox"
+                    <input :value="chat.notice" type="checkbox"
                         name="opt_dark" @change="setGroupNotice">
                     <div>
                         <div />
@@ -56,98 +61,113 @@
     </div>
 </template>
 
-<script lang="ts">
-    import { defineComponent } from 'vue'
-    import { runtimeData } from '@renderer/function/msg'
-    import { Connector } from '@renderer/function/connect'
-    import { changeGroupNotice, reloadUsers } from '@renderer/function/utils/appUtil'
-    import { canGroupNotice } from '@renderer/function/utils/msgUtil'
+<script setup lang="ts">
+import { runtimeData } from '@renderer/function/msg'
+import { Connector } from '@renderer/function/connect'
+import { reloadUsers } from '@renderer/function/utils/appUtil'
+import { GroupSession } from '@renderer/function/model/session'
+import { Member } from '@renderer/function/model/user'
+import { delay } from '@renderer/function/utils/systemUtil'
+import app from '@renderer/main'
 
-    export default defineComponent({
-        name: 'ViewOptInfo',
-        props: ['type', 'chat'],
-        emits: ['update_mumber_card'],
-        data() {
-            return {
-                canGroupNotice: canGroupNotice,
-                runtimeData: runtimeData,
-            }
-        },
-        methods: {
-            /**
-            * 设置群消息通知
-            * @param event 输入事件
-            */
-            setGroupNotice(event: Event) {
-                const status = (event.target as HTMLInputElement).checked
-                changeGroupNotice(this.chat.show.id, status)
+import {
+    ref,
+    watch,
+    defineProps,
+    defineEmits,
+    Ref,
+} from 'vue'
+
+//#region == 声明变量 ================================================================
+const { $t } = app.config.globalProperties
+const { chat } = defineProps<{
+    chat: GroupSession
+}>()
+const emit = defineEmits<{
+    update_mumber_card: [mem: Member, value: string]
+}>()
+
+const meCard: Ref<string> = ref(chat.getMe().card?.toString() ?? '')
+const nowChatName: Ref<string> = ref(chat.showName ?? '')
+//#endregion
+
+//#region == 变量更新 ================================================================
+watch(() => chat.showName, (newName) => {
+    nowChatName.value = newName ?? ''
+})
+watch(() => chat.getMe().card, (newCard) => {
+    meCard.value = newCard?.toString() ?? ''
+})
+//#endregion
+
+//#region == 方法函数 ================================================================
+/**
+* 设置群消息通知
+* @param event 输入事件
+*/
+function setGroupNotice(event: Event) {
+    const status = (event.target as HTMLInputElement).checked
+    if (!(chat instanceof GroupSession)) return
+    chat.setNotice(status)
+}
+
+/**
+ * 设置群名
+ * @param event 按键事件
+ */
+async function setGroupName(event: KeyboardEvent) {
+    if (!chat) return
+    if (event.key === 'Enter') {
+        await Connector.callApi('set_group_name', {
+            group_id: chat.id,
+            group_name: nowChatName.value,
+        })
+
+        await checkSetChatInfoResult()
+    }
+}
+
+/**
+ * 退出群聊
+ */
+function leaveGroup() {
+    const popInfo = {
+        html: '<span>' + $t('确定要退出群聊吗？') + '</span>',
+        button: [
+            {
+                text: $t('确定'),
+                fun: async () => {
+                    runtimeData.popBoxList.shift()
+                    await Connector.callApi('leave_group', {
+                        group_id: runtimeData.nowChat?.id,
+                    })
+
+                    await checkSetChatInfoResult()
+                },
             },
-
-            /**
-             * 设置群名片
-             * @param event 按键事件
-             */
-            setGroupCard(event: Event) {
-                this.$emit('update_mumber_card', event, runtimeData.chatInfo.info.me_info)
+            {
+                text: $t('取消'),
+                master: true,
+                fun: () => {
+                    runtimeData.popBoxList.shift()
+                },
             },
+        ],
+    }
+    runtimeData.popBoxList.push(popInfo)
+}
 
-            /**
-             * 设置群名
-             * @param event 按键事件
-             */
-            setGroupName(event: KeyboardEvent) {
-                if (
-                    event.key === 'Enter' &&
-                    runtimeData.chatInfo.show.name != ''
-                ) {
-                    Connector.send(
-                        'set_group_name',
-                        {
-                            group_id: this.chat.show.id,
-                            group_name: runtimeData.chatInfo.show.name,
-                        },
-                        'setGroupName',
-                    )
-                }
-            },
-
-            /**
-             * 退出群聊
-             */
-            leaveGroup() {
-                const popInfo = {
-                    html: '<span>' + this.$t('确定要退出群聊吗？') + '</span>',
-                    button: [
-                        {
-                            text: this.$t('确定'),
-                            fun: () => {
-                                if (runtimeData.jsonMap.leave_group?.name) {
-                                    Connector.send(runtimeData.jsonMap.leave_group?.name,
-                                        { group_id: this.chat.show.id },
-                                        'leaveGroup')
-                                }
-                                // 从消息列表中删除该群聊
-                                runtimeData.baseOnMsgList.delete(this.chat.show.id)
-                                // 关闭群聊窗口
-                                runtimeData.chatInfo.show.id = 0
-                                // 刷新好友/群列表
-                                reloadUsers()
-                                runtimeData.popBoxList.shift()
-                            },
-                        },
-                        {
-                            text: this.$t('取消'),
-                            master: true,
-                            fun: () => {
-                                runtimeData.popBoxList.shift()
-                            },
-                        },
-                    ],
-                }
-                runtimeData.popBoxList.push(popInfo)
-            }
-        }
-    })
+async function checkSetChatInfoResult() {
+    const popInfo = {
+        title: $t('操作'),
+        html: `<span>${$t('正在确认操作……')}</span>`
+    }
+    runtimeData.popBoxList.push(popInfo)
+    await delay(1000)
+    await reloadUsers(false)
+    runtimeData.popBoxList.shift()
+}
+//#endregion
 </script>
 
 <style scoped>

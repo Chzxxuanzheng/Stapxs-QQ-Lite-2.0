@@ -11,14 +11,15 @@
 <template>
     <Teleport to="body">
         <Transition :name="name">
-            <div v-if="show" :class="{
-                'menu': true,
-                'with-bar': ['linux', 'win32'].includes(runtimeData.tags.platform ?? '')
-            }"
-            ref="space"
-            @click="spaceClick"
-            >
-                <div class="content" ref="content"><slot /></div>
+            <div v-if="show" ref="space"
+                :class="{
+                    'menu': true,
+                    'with-bar': ['linux', 'win32'].includes(runtimeData.tags.platform ?? '')
+                }"
+                @click="spaceClick">
+                <div ref="content" class="content">
+                    <slot />
+                </div>
             </div>
         </Transition>
     </Teleport>
@@ -28,10 +29,12 @@ import { runtimeData } from '@renderer/function/msg';
 import { defineComponent, nextTick } from 'vue';
 
 export default defineComponent({
+    name: 'Menu',
     props: {
         name: {
             type: String,
-            default: 'default-menu'
+            default: 'default-menu',
+            required: false,
         },
     },
     data() {

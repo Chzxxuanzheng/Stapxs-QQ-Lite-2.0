@@ -4,9 +4,11 @@
  * @Date:
  *      2022/08/14
  *      2022/12/12
+ *      2025/07/27
  * @Version:
  *      1.0 - 初始版本
  *      1.5 - 重构为 ts 版本，代码格式优化
+ *      2.0 - 将会话重构为类+setup式API（Mr.Lee）
 -->
 
 <template>
@@ -16,7 +18,7 @@
                 <div class="base">
                     <span>{{ $t('联系人') }}</span>
                     <div style="flex: 1" />
-                    <font-awesome-icon :icon="['fas', 'rotate-right']" @click="reloadUser" />
+                    <font-awesome-icon :icon="['fas', 'rotate-right']" @click="reloadUsers(false)" />
                 </div>
                 <div
                     id="friend-small-search"
@@ -27,7 +29,7 @@
                             :placeholder="$t('搜索 ……')" @input="search">
                         <font-awesome-icon :icon="['fas', 'magnifying-glass']" />
                     </label>
-                    <div class="reload" @click="reloadUser">
+                    <div class="reload" @click="reloadUsers(false)">
                         <font-awesome-icon :icon="['fas', 'rotate-right']" />
                     </div>
                     <div @click="openLeftBar">
@@ -41,84 +43,41 @@
                 </label>
             </div>
             <div :class="runtimeData.tags.openSideBar ? 'open' : ''">
-                <template v-if="runtimeData.showList.length <= 0">
-                    <template v-if="runtimeData.tags.classes.length > 0">
-                        <template v-for="info in runtimeData.tags.classes"
-                            :key="'class-' + info.class_id">
-                            <div :class=" 'list exp-body' +
-                                (classStatus[info.class_id] == true ? ' open' : '')">
-                                <header :title="info.class_name"
-                                    :class="'exp-header' +
-                                        (runtimeData.tags.openSideBar ? ' open' : '')"
-                                    @click="classClick(info.class_id)">
-                                    <div />
-                                    <span>{{ info.class_name }}</span>
-                                    <a>{{
-                                        info.user_count ??
-                                            runtimeData.userList.filter((get) => {
-                                                return get.class_id == info.class_id
-                                            }).length
-                                    }}</a>
-                                </header>
-                                <div :id="'class-' + info.class_id">
-                                    <FriendBody v-for="item in runtimeData.userList.filter(
-                                                    (get) => {
-                                                        return ( get.class_id == info.class_id )
-                                                    },
-                                                )"
-                                        :key=" 'fb-' + (item.user_id ? item.user_id : item.group_id) "
-                                        :data="item" from="friend"
-                                        @click="userClick(item, $event)" />
-                                </div>
-                            </div>
-                        </template>
-                        <div :class="'list exp-body' + (classStatus['-1'] == true ? ' open' : '')">
-                            <header :title="$t('群组')"
+                <template v-if="!isSearch">
+                    <template v-for="class_ in SessionClass.getClasses()"
+                        :key="'class-' + class_.id">
+                        <div class="list exp-body" :class="{'open': class_.open}">
+                            <header :title="class_.name"
                                 :class="'exp-header' +
-                                    (runtimeData.tags.openSideBar ? ' open' : '') "
-                                @click="classClick('-1')">
+                                    (runtimeData.tags.openSideBar ? ' open' : '')"
+                                @click="class_.open = !class_.open">
                                 <div />
-                                <span>{{ $t('群组') }}</span>
-                                <a>{{
-                                    runtimeData.userList.filter((get) => {
-                                        return get.class_id == undefined
-                                    }).length
-                                }}</a>
+                                <span>{{ class_.name }}</span>
+                                <a>{{ class_.content.length }}</a>
                             </header>
-                            <div>
-                                <FriendBody v-for="item in runtimeData.userList.filter(
-                                                (get) => {
-                                                    return get.class_id == undefined
-                                                },
-                                            )"
-                                    :key="'fb-' + (item.user_id ? item.user_id : item.group_id)"
-                                    :data="item"
-                                    from="friend"
-                                    @click="userClick(item, $event)" />
+                            <div :id="'class-' + class_.id">
+                                <FriendBody v-for="item in class_.content"
+                                    :key=" 'fb-' + item.id "
+                                    :data="item" from="friend"
+                                    @click="userClick(item as Session)" />
                             </div>
                         </div>
-                    </template>
-                    <template v-else>
-                        <FriendBody v-for="item in runtimeData.userList"
-                            :key="'fb-' + (item.user_id ? item.user_id : item.group_id)"
-                            :data="item"
-                            from="friend"
-                            @click="userClick(item, $event)" />
                     </template>
                 </template>
                 <!-- 搜索用的 -->
                 <div v-else class="list">
                     <div>
-                        <FriendBody v-for="item in runtimeData.showList"
-                            :key="'fb-' + (item.user_id ? item.user_id : item.group_id)"
-                            :data="item" from="friend"
-                            @click="userClick(item, $event)" />
+                        <FriendBody v-for="item in searchList"
+                            :key="'fb-' + item.id"
+                            :data="item as Session"
+                            from="friend"
+                            @click="userClick(item as Session)" />
                     </div>
                 </div>
             </div>
         </div>
         <div :class="'friend-list-space' + (runtimeData.tags.openSideBar ? ' open' : '')">
-            <div v-if="!loginInfo.status || runtimeData.chatInfo.show.id == 0" class="ss-card">
+            <div v-if="!loginInfo.status || !runtimeData.nowChat" class="ss-card">
                 <font-awesome-icon :icon="['fas', 'inbox']" />
                 <span>{{ $t('选择联系人开始聊天') }}</span>
             </div>
@@ -131,163 +90,103 @@
     </div>
 </template>
 
-<script lang="ts">
-    import FriendBody from '@renderer/components/FriendBody.vue'
+<script setup lang="ts">
+import FriendBody from '@renderer/components/FriendBody.vue'
 
-    import { defineComponent } from 'vue'
-    import {
-        BaseChatInfoElem,
-        UserFriendElem,
-    } from '@renderer/function/elements/information'
-    import { UserGroupElem } from '@renderer/function/elements/information'
-
-    import { runtimeData } from '@renderer/function/msg'
-    import { reloadUsers } from '@renderer/function/utils/appUtil'
-    import { login as loginInfo } from '@renderer/function/connect'
+import {
+    defineEmits,
+    onMounted,
+    shallowRef,
+    type ShallowRef,
+} from 'vue'
+import { runtimeData } from '@renderer/function/msg'
+import { reloadUsers } from '@renderer/function/utils/appUtil'
+import { login as loginInfo } from '@renderer/function/connect'
 import { callBackend } from '@renderer/function/utils/systemUtil'
+import { SessionClass, Session } from '@renderer/function/model/session'
 
-    export default defineComponent({
-        name: 'ViewFriends',
-        components: { FriendBody },
-        props: ['list'],
-        emits: ['userClick', 'loadHistory'],
-        data() {
-            return {
-                runtimeData: runtimeData,
-                loading: false,
-                isSearch: false,
-                searchInfo: '',
-                classStatus: {} as { [key: string]: boolean },
-                loginInfo: loginInfo,
+const emit = defineEmits<{
+    userClick: [session: Session],
+}>()
+
+const isSearch: ShallowRef<boolean> = shallowRef(false)
+const searchList: ShallowRef<Session[]> = shallowRef([])
+const searchInfo: ShallowRef<string> = shallowRef('')
+onMounted(() => {
+    // 判断 friend-small-search 是否 display none
+    const smallSearch = document.getElementById('friend-small-search')
+    if(smallSearch) {
+        const style = window.getComputedStyle(smallSearch)
+        let name = 'friend-search'
+        if(style.display != 'none') {
+            name = 'friend-search-small'
+        }
+        // 将焦点移动到搜索框
+        if(['electron', 'tauri'].includes(runtimeData.tags.clientType)) {
+            const search = document.getElementById(name)
+            if(search) {
+                search.focus()
             }
-        },
-        mounted() {
-            // 判断 friend-small-search 是否 display none
-            const smallSearch = document.getElementById('friend-small-search')
-            if(smallSearch) {
-                const style = window.getComputedStyle(smallSearch)
-                let name = 'friend-search'
-                if(style.display != 'none') {
-                    name = 'friend-search-small'
-                }
-                // 将焦点移动到搜索框
-                if(['electron', 'tauri'].includes(runtimeData.tags.clientType)) {
-                    const search = document.getElementById(name)
-                    if(search) {
-                        search.focus()
-                    }
-                }
-            }
-        },
-        methods: {
-            /**
-             * 联系人被点击事件
-             * @param data 联系人信息
-             * @param event 点击事件
-             */
-            userClick(data: UserFriendElem & UserGroupElem, event: Event) {
-                const sender = event.currentTarget as HTMLDivElement
-                if (this.runtimeData.tags.openSideBar) {
-                    this.openLeftBar()
-                }
-                this.isSearch = false
-                this.searchInfo = ''
-                this.runtimeData.showList = [] as any[]
+        }
+    }
+})
 
-                const back = {
-                    type: data.user_id ? 'user' : 'group',
-                    id: data.user_id ? data.user_id : data.group_id,
-                    name: this.getShowName(data),
-                    avatar: data.user_id? 'https://q1.qlogo.cn/g?b=qq&s=0&nk=' + data.user_id: 'https://p.qlogo.cn/gh/' +
-                          data.group_id + '/' + data.group_id + '/0',
-                    jump: sender.dataset.jump,
-                } as BaseChatInfoElem
-                // 更新聊天框
-                this.$emit('userClick', back)
-                runtimeData.baseOnMsgList.set(back.id, data)
-                // 切换标签卡
-                const barMsg = document.getElementById('bar-msg')
-                if (barMsg !== null) {
-                    barMsg.click()
-                }
-            },
+/**
+ * 联系人被点击事件
+ * @param session 联系人信息
+ * @param event 点击事件
+ */
+function userClick(session: Session) {
+    if (runtimeData.tags.openSideBar) {
+        openLeftBar()
+    }
+    // 重置搜索信息
+    isSearch.value = false
+    searchList.value = []
+    searchInfo.value = ''
+    // 更新聊天框
+    emit('userClick', session)
+    // 切换标签卡
+    const barMsg = document.getElementById('bar-msg')
+    if (barMsg !== null) {
+        barMsg.click()
+    }
+}
 
-            /**
-             * 列表搜索
-             * @param event 输入事件
-             */
-            search(event: Event) {
-                const value = (event.target as HTMLInputElement).value
-                if (value !== '') {
-                    this.isSearch = true
-                    this.runtimeData.showList = this.list.filter(
-                        (item: UserFriendElem & UserGroupElem) => {
-                            const name = (
-                                item.user_id? item.nickname + item.remark: item.group_name
-                            ).toLowerCase()
-                            const py = item.py_name ? item.py_name : ''
-                            const id = item.user_id? item.user_id: item.group_id
-                            return (
-                                id.toString() === value ||
-                                py.indexOf(value.toLowerCase()) != -1 ||
-                                name.indexOf(value.toLowerCase()) != -1
-                            )
-                        },
-                    )
-                } else {
-                    this.isSearch = false
-                    this.runtimeData.showList = [] as any[]
+/**
+ * 列表搜索
+ * @param event 输入事件
+ */
+function search(event: Event) {
+    const value = (event.target as HTMLInputElement).value
+    if (value !== '') {
+        isSearch.value = true
+        searchList.value = Session.sessionList.filter(
+            session => session.match(value)
+        )
+    } else {
+        isSearch.value = false
+        searchList.value = []
+    }
+    // macOS: 刷新 TouchBar
+    if(['electron', 'tauri'].includes(runtimeData.tags.clientType)) {
+        // list 只需要 id 和 name
+        callBackend(undefined, 'sys:flushFriendSearch', false,
+            searchList.value.map((item) => {
+                return {
+                    id: item.id,
+                    name: item.showName,
                 }
-                // macOS: 刷新 TouchBar
-                if(['electron', 'tauri'].includes(runtimeData.tags.clientType)) {
-                    // list 只需要 id 和 name
-                    callBackend(undefined, 'sys:flushFriendSearch', false,
-                        this.runtimeData.showList.map((item) => {
-                            return {
-                                id: item.user_id ? item.user_id : item.group_id,
-                                name: this.getShowName(item)
-                            }
-                        }))
-                }
-            },
+            }))
+    }
+}
 
-            /**
-             * 重新加载联系人列表
-             */
-            reloadUser() {
-                reloadUsers()
-            },
-
-            /**
-             * 切换侧边栏状态
-             */
-            openLeftBar() {
-                runtimeData.tags.openSideBar = !runtimeData.tags.openSideBar
-            },
-
-            classClick(id: string) {
-                if (this.classStatus[id]) {
-                    this.classStatus[id] = !this.classStatus[id]
-                } else {
-                    this.classStatus[id] = true
-                }
-            },
-
-            getShowName(data: UserFriendElem & UserGroupElem) {
-                const group = data.group_name
-                const remark = data.remark
-                const nickname = data.nickname
-                if (group) return group
-                else {
-                    if (!remark || remark == nickname) {
-                        return nickname
-                    } else {
-                        return remark + '（' + nickname + '）'
-                    }
-                }
-            },
-        },
-    })
+/**
+ * 切换侧边栏状态
+ */
+function openLeftBar() {
+    runtimeData.tags.openSideBar = !runtimeData.tags.openSideBar
+}
 </script>
 
 <style scoped>

@@ -11,19 +11,19 @@
 
 <template>
     <div :id="'chat-' + data.uuid"
+        ref="msgMain"
         :class="{
             'message': true,
             'me': needSpecialMe(),
             'selected': selected,
         }"
-        :data-raw="getMsgRawTxt(data)"
+        :data-raw="data.plaintext"
         :data-sender="data.sender.user_id"
         :data-time="data.time"
-        ref="msgMain"
         @mouseleave="hiddenUserInfo">
         <img v-show="!needSpecialMe()"
             name="avatar"
-            :src="'https://q1.qlogo.cn/g?b=qq&s=0&nk=' + data.sender.user_id"
+            :src="data.sender.getFace()"
             @contextmenu.prevent="$emit('showUserMenu', {
                 x: $event.clientX,
                 y: $event.clientY,
@@ -36,17 +36,19 @@
             'message-body': true,
             'me': needSpecialMe(),
         }">
-            <template v-if="runtimeData.chatInfo.show.type == 'group' && !needSpecialMe()">
+            <!-- 一帮头衔之类的 -->
+            <template v-if="data.sender instanceof Member && !needSpecialMe()">
                 <span v-if="data.sender.role === Role.Bot" class="robot">{{ $t('机器人') }}</span>
                 <span v-else-if="data.sender.role === Role.Owner" class="owner">{{ $t('群主') }}</span>
                 <span v-else-if="data.sender.role === Role.Admin" class="admin">{{ $t('管理员') }}</span>
-                <span v-if="data.sender.title && data.sender.title != ''">{{ data.sender.title.replace(/[\u202A-\u202E\u2066-\u2069]/g, '') }}</span>
+                <span v-if="data.sender.title">{{ data.sender.title.replace(/[\u202A-\u202E\u2066-\u2069]/g, '') }}</span>
+                <span v-if="data.sender.level" class="level">{{ 'Lv.' + data.sender.level }}</span>
             </template>
             <a v-show="!needSpecialMe()">
                 {{ data.sender.name }}
             </a>
             <a v-if="selected" class="time">
-                {{ data.formatTime('year') }}
+                {{ data.time?.format('year') }}
             </a>
             <div class="message-content">
                 <div v-if="data.icon && getConfig('showIcon')" :class="{
@@ -64,23 +66,23 @@
                     </div>
                 </div>
                 <div
-                @touchstart.stop="
-                msgLongTouchStart($event, 'msg');
-                msgMoveStart($event);"
-                @touchend.stop="
-                msgLongTouchEnd($event, 'msg');
-                msgMoveEnd($event);"
-                @touchmove.stop="
-                msgLongTouchEnd($event, 'msg');
-                msgKeepMove($event);"
-                @wheel.stop="
-                msgMoveWheel($event)"
-                @contextmenu.prevent="$emit('showMsgMenu', {
-                    x: $event.clientX,
-                    y: $event.clientY,
-                    target: $event.target as HTMLElement
-                }, data)"
-                :class="{main: true, 'not-exist': !data.exist && getConfig('dimNonExistentMsg')}">
+                    :class="{main: true, 'not-exist': !data.exist && getConfig('dimNonExistentMsg')}"
+                    @touchstart.stop="
+                        msgLongTouchStart($event, 'msg');
+                        msgMoveStart($event);"
+                    @touchend.stop="
+                        msgLongTouchEnd($event, 'msg');
+                        msgMoveEnd($event);"
+                    @touchmove.stop="
+                        msgLongTouchEnd($event, 'msg');
+                        msgKeepMove($event);"
+                    @wheel.stop="
+                        msgMoveWheel($event)"
+                    @contextmenu.prevent="$emit('showMsgMenu', {
+                        x: $event.clientX,
+                        y: $event.clientY,
+                        target: $event.target as HTMLElement
+                    }, data)">
                     <!-- 消息体 -->
                     <template v-if="data.message.length === 0">
                         <span class="msg-text" style="opacity: 0.5">{{ $t('空消息') }}</span>
@@ -128,7 +130,7 @@
                                 :class="getAtClass(item.qq)">
                                 <a :data-id="item.qq"
                                     :data-group="data.session?.id"
-                                    @mouseenter="showUserInfo">{{ getAtName(item) }}</a>
+                                    @mouseenter="showUserInfo(Number(item.qq), $event)">{{ getAtName(item) }}</a>
                             </div>
                             <div v-else-if="item instanceof FileSeg" :class="{
                                 'msg-file': true,
@@ -138,7 +140,7 @@
                                     <div>
                                         <a>
                                             <font-awesome-icon :icon="['fas', 'file']" />
-                                            {{ runtimeData.chatInfo.show.type == 'group' ? $t('群文件') : $t('离线文件') }}
+                                            {{ data.session?.type == 'group' ? $t('群文件') : $t('离线文件') }}
                                         </a>
                                         <p>{{ item.name }}</p>
                                     </div>
@@ -204,10 +206,10 @@
                                                 {{ $t('发送中') }}
                                             </div>
                                         </div>
-                                        <div v-else-if="item.content.length > 0"
-                                            v-for="(i, indexItem) in item.content.slice(0, 3)"
+                                        <div v-for="(i, indexItem) in item.content.slice(0, 3)"
+                                            v-else-if="item.content.length > 0"
                                             :key="'raw-forward-' + indexItem">
-                                            {{ i.sender.nickname }}:
+                                            {{ i.sender.name }}:
                                             <span :key="'raw-forward-item-' + i.uuid">
                                                 {{ i.plaintext }}
                                             </span>
@@ -362,12 +364,12 @@
             <div class="emoji-like-body">
                 <TransitionGroup name="emoji-like">
                     <div v-for="info, id in data.emojis"
+                        v-show="getFace(Number(id)) != ''"
+                        :key="'respond-' + data.uuid + '-' + id"
                         :class="{
                             'me-send': info.meSend
                         }"
-                        v-show="getFace(Number(id)) != ''"
-                        @click="$emit('emojiClick', id as string, data)"
-                        :key="'respond-' + data.uuid + '-' + id">
+                        @click="$emit('emojiClick', id as string, data)">
                         <img loading="lazy" :src="getFace(Number(id)) as any">
                         <span>{{ info.count }}</span>
                     </div>
@@ -385,11 +387,10 @@
     import markdownit from 'markdown-it'
 
     import { MsgBodyFuns as ViewFuns } from '@renderer/function/model/msg-body'
-    import { defineComponent } from 'vue'
-    import { Connector } from '@renderer/function/connect'
+    import { defineComponent, type PropType } from 'vue'
     import { runtimeData } from '@renderer/function/msg'
     import { Logger, LogType, PopInfo, PopType } from '@renderer/function/base'
-    import { getFace, getMsgRawTxt, pokeAnime } from '@renderer/function/utils/msgUtil'
+    import { getFace, pokeAnime } from '@renderer/function/utils/msgUtil'
     import {
         openLink,
         sendStatEvent,
@@ -401,7 +402,7 @@
         getViewTime } from '@renderer/function/utils/systemUtil'
     import { linkView } from '@renderer/function/utils/linkViewUtil'
     import { MenuEventData } from '@renderer/function/elements/information'
-    import { 
+    import {
         AtSeg,
         FaceSeg,
         FileSeg,
@@ -414,15 +415,23 @@
         VideoSeg,
         XmlSeg
     } from '@renderer/function/model/seg'
-    import {Msg, SelfMsg} from '@renderer/function/model/msg'
-    import { Role, Sender } from '@renderer/function/model/user'
+    import { Msg, SelfMsg} from '@renderer/function/model/msg'
+    import { Member, Role, IUser } from '@renderer/function/model/user'
     import { wheelMask } from '@renderer/function/utils/input'
+    import { GroupSession } from '@renderer/function/model/session'
 
     export interface MsgBodyConfig {
         specialMe?: boolean,         // 是否特殊处理自己的消息
         showIcon?: boolean,          // 是否显示消息图标
         dimNonExistentMsg?: boolean, // 是否淡化不存在的消息
     }
+
+    export interface MemberInfoBar {
+        start: (user: IUser|number, x: number, y: number) => void
+        close: () => void
+    }
+
+    export type T_MemberInfoBar = PropType<MemberInfoBar>
 
     export default defineComponent({
         name: 'MsgBody',
@@ -443,16 +452,29 @@
                     showIcon: true,
                     dimNonExistentMsg: true,
                 }),
+            },
+            userInfoBar: {
+                type: Object as T_MemberInfoBar,
+                default: () => undefined,
+                required: false,
             }
         },
         emits: {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             scrollToMsg: (_id: string) => true,
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             imageLoaded: (_height: number) => true,
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             leftMove: (_msg: Msg) => true,
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             rightMove: (_msg: Msg) => true,
-            senderDoubleClick: (_user: Sender) => true,
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            senderDoubleClick: (_user: IUser) => true,
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             showMsgMenu: (_event: MenuEventData, _msg: Msg) => true,
-            showUserMenu: (_event: MenuEventData, _user: Sender) => true,
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            showUserMenu: (_event: MenuEventData, _user: IUser) => true,
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             emojiClick: (_id: string, _msg: Msg) => true,
         },
         data() {
@@ -494,6 +516,7 @@
                 XmlSeg,
                 FileSeg,
                 SelfMsg,
+                Member
             }
         },
         mounted() {
@@ -504,14 +527,6 @@
             this.getLink()
         },
         methods: {
-            /**
-             * 获取消息的纯文本（此方法可能会被遗弃）
-             * @param message 消息对象
-             */
-            getMsgRawTxt(message: any) {
-                return getMsgRawTxt(message)
-            },
-
             /**
              * 根据消息状态获取 At 消息实际的 CSS class
              * @param who
@@ -531,21 +546,14 @@
              * 在 At 消息返回内容没有名字的时候尝试在群成员列表内寻找
              * @param item
              */
-            getAtName(item: { [key: string]: any }) {
-                if (item.qq == 'all') {
-                    return '@' + this.$t('全体成员')
-                }
-                if (item.text != undefined) {
-                    return item.text
-                } else {
-                    for (let i = 0; i < runtimeData.chatInfo.info.group_members.length; i++) {
-                        const user = runtimeData.chatInfo.info.group_members[i]
-                        if (user.user_id == Number(item.qq)) {
-                            return ('@' + (user.card != '' && user.card != null? user.card: user.nickname))
-                        }
-                    }
-                    return '@' + item.qq
-                }
+            getAtName(seg: AtSeg): string {
+                // at 需要去会话里拿人的昵称
+                if (seg.text) return seg.text
+                if (!(this.data.session instanceof GroupSession)) return seg.plaintext
+
+                const member = this.data.session.getUserById(Number(seg.qq))
+                if (member) return '@' + member.name
+                return seg.plaintext
             },
 
             /**
@@ -554,7 +562,7 @@
              */
             scrollToMsg(message_id: string) {
                 let uuid: string|undefined = undefined
-                for (const item of this.runtimeData.messageList) {
+                for (const item of runtimeData.nowChat!.messageList) {
                     if (item.message_id === message_id) {
                         uuid = item.uuid
                         break
@@ -595,7 +603,7 @@
              * @param id 消息 ID
              */
             imgClick(id: string) {
-                const images = runtimeData.mergeMessageImgList ?? runtimeData.chatInfo.info.image_list
+                const images = runtimeData.mergeMessageImgList ?? runtimeData.img_list
                 if (images !== undefined) {
                     // 寻找实际的序号
                     let num = -1
@@ -802,39 +810,32 @@
              * 当鼠标悬停在 at 消息上时显示被 at 人的消息悬浮窗
              * @param event 消息事件
              */
-            showUserInfo(event: Event) {
-                const sender = event.currentTarget as HTMLDivElement
-                const id = sender.dataset.id
-                const group = sender.dataset.group
+            showUserInfo(user: IUser|number, event: Event) {
+                if (typeof user === 'number' && this.data.session instanceof GroupSession) {
+                    user = this.data.session?.getUserById(user) ?? user
+                }
                 // 获取鼠标位置
                 const pointEvent =
-                    (event as MouseEvent) || (window.event as MouseEvent)
-                const pointX = pointEvent.offsetX
-                const pointY = pointEvent.clientY
+                    (event as MouseEvent) || (event as MouseEvent)
+                const pointX = pointEvent.screenX
+                const pointY = pointEvent.screenY
                 // TODO: 出界判定不做了怪麻烦的
-                // 请求用户信息
-                Connector.send(
-                    'get_group_member_info',
-                    { group_id: group, user_id: id },
-                    'getGroupMemberInfo_' + pointX + '_' + pointY,
-                )
+                this.userInfoBar?.start(user, pointX, pointY)
             },
 
             /**
              * 隐藏 At 信息面板
              */
             hiddenUserInfo() {
-                if (runtimeData.chatInfo.info.now_member_info !== undefined) {
-                    runtimeData.chatInfo.info.now_member_info = undefined
-                }
+                this.userInfoBar?.close()
             },
 
             /**
              * 尝试在消息列表中寻找这条被回复的消息，获取消息内容
              * @param message_id
              */
-            getRepMsg(message_id: string) {
-                const list = this.runtimeData.messageList.filter((item) => {
+            getRepMsg(message_id: string): string | null {
+                const list = runtimeData.nowChat!.messageList.filter((item) => {
                     return item.message_id === message_id
                 })
                 if (list.length !== 1) return null
@@ -901,7 +902,7 @@
                 // 如果是最后一条消息并且在最近发送
                 if (this.data.uuid != runtimeData.messageList.at(-1)?.uuid) return
                 if (!this.data.time) return
-                if ((new Date().getTime() - getViewTime(this.data.time)) / 1000 < 5) return
+                if ((new Date().getTime() - getViewTime(this.data.time.time)) / 1000 < 5) return
 
                 let windowInfo = null as {
                     x: number
@@ -1105,16 +1106,13 @@
                     x: event.targetTouches[0].pageX,
                     y: event.targetTouches[0].pageY,
                 }
-                console.log('消息触屏长按开始', this.longTouch.startPoint)
                 const eventData: MenuEventData = {
                     x: this.longTouch.startPoint[0].pageX,
                     y: this.longTouch.startPoint[0].pageY,
                     target: event.currentTarget as HTMLElement,
                 }
-                console.log('消息触屏长按开始', eventData)
                 this.longTouch.timeout = setTimeout(() => {
                     logger.add(LogType.UI, '消息触屏长按触发')
-                    console.log('消息触屏长按开始', eventData)
                     switch (source) {
                         case 'msg':
                             this.$emit('showMsgMenu', eventData, this.data)
@@ -1132,6 +1130,7 @@
              * 消息长按判定
              * @param event 触摸事件
              */
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             msgLongTouchMove(event: TouchEvent, _source: 'msg' | 'user') {
                 // 没有开始
                 if (!this.longTouch.timeout) return
@@ -1157,6 +1156,7 @@
              * 消息长按结束
              * @param event 触摸事件
              */
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             msgLongTouchEnd(_event: TouchEvent, _source: 'msg' | 'user') {
                 const logger = new Logger()
                 // 清除长按定时器
@@ -1227,7 +1227,7 @@
                     // 斜度过大
                     if (absY === 0 || absX / absY > 2) {
                         this.dispenseMove('touch', deltaX)
-                    } 
+                    }
                 }
                 this.dispenseMove('touch', 0, true)
                 this.msgMove.touchLast = null
