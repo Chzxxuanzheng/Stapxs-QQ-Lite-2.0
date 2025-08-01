@@ -19,11 +19,16 @@ import {
     rgbToHsl,
     addBackendListener
 } from '@renderer/function/utils/systemUtil'
-import { toRaw } from 'vue'
 import { changeSession, sendMsgRaw } from './msgUtil'
 import { parseMsg } from '../sender'
 import { Notify } from '../notify'
 import { GroupSession, UserSession } from '../model/session'
+import {
+    ShallowRef,
+    shallowRef,
+    watch,
+    toRaw
+} from 'vue'
 
 const popInfo = new PopInfo()
 const logger = new Logger()
@@ -1210,6 +1215,24 @@ export function useStayEvent<T extends Event,C>(
         handle,
         handleEnd,
     }
+}
+
+/**
+ * 有延迟的但个元素的watch
+ * @param getValue 获取值的函数
+ * @param delay 延迟时间，默认 500ms
+ * @returns 返回一个Ref对象，当尝过delay时长未更新后更新
+ */
+export function useBaseDebounced<T>(getValue: () => T, delay: number = 500): ShallowRef<T> {
+    const result: ShallowRef<T> = shallowRef(getValue())
+    let timeout: ReturnType<typeof setTimeout>
+    watch(getValue, (newValue) => {
+        clearTimeout(timeout)
+        timeout = setTimeout(() => {
+            result.value = newValue
+        }, delay)
+    })
+    return result
 }
 
 /**

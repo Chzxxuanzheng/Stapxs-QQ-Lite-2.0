@@ -73,7 +73,6 @@ import app from '@renderer/main'
 import {
     ref,
     watch,
-    defineProps,
     Ref,
 } from 'vue'
 

@@ -1319,3 +1319,36 @@ msgstr ""
 
 msgid "特别关心"
 msgstr ""
+
+msgid "预览通知"
+msgstr ""
+
+msgid "注入撤回消息等事件也会做为预览消息"
+msgstr ""
+
+msgid "自定义跨域服务"
+msgstr ""
+
+msgid "如果你需要使用跨域服务，请在这里输入服务地址"
+msgstr ""
+
+msgid "当应用需要获取腾讯的数据时，可能会被浏览器当作恶意操作阻止。为了访问这些资源，你可以使用桌面端，它自带跨域功能。"
+msgstr ""
+
+msgid "如果你要在web端使用跨域，请填写跨域服务器地址，格式如下："
+msgstr ""
+
+msgid "其中{url}会被替换为实际url。"
+msgstr ""
+
+msgid "跨域服务器你可以在网上寻找公益跨域服务器，但可能存在安全隐患。强烈建议你自己搭建跨域服务器，问问AI就能解决。"
+msgstr ""
+
+msgid "测试失败"
+msgstr ""
+
+msgid "测试成功"
+msgstr ""
+
+msgid "测试ing"
+msgstr ""

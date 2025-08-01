@@ -1,9 +1,9 @@
-import app from '@renderer/main'
+import app, { i18n } from '@renderer/main'
 
 import l10nConfig from '@renderer/assets/l10n/_l10nconfig.json'
 import PO from 'pofile'
 import { runtimeData } from '../msg';
-import { Logger, LogType } from '../base';
+import { Logger, LogType, PopInfo, PopType } from '../base';
 
 /**
  * 异步延迟
@@ -414,6 +414,7 @@ export function getTimeConfig(date: Date) {
  * @param url
  */
 export function stdUrl(url: string){
+    const $t = i18n.global.t
     if (!url.toLowerCase().startsWith('http')) return url
     if (document.location.protocol == 'https:') {
         // 判断文件 URL 的协议
@@ -422,9 +423,23 @@ export function stdUrl(url: string){
             url = 'https' + url.substring(url.indexOf('://'))
         }
     }
-    if (runtimeData.tags.proxyPort) {
-        return `http://localhost:${runtimeData.tags.proxyPort}/assets?url=${encodeURIComponent(url)}`
+    // 获取跨域连接
+    let proxyUrl: string | undefined = undefined
+    if (runtimeData.tags.proxyPort)
+        proxyUrl = `http://localhost:${runtimeData.tags.proxyPort}/assets?url={url}`
+    else if (runtimeData.sysConfig.proxyUrl?.length > 0)
+        proxyUrl = runtimeData.sysConfig.proxyUrl
+
+    // url 校验
+    if (!proxyUrl?.includes('{url}')) {
+        new PopInfo().add(PopType.ERR, $t('代理地址不包含 {url}，请检查配置'),)
+        proxyUrl = undefined
     }
+
+    // 包装 url
+    if (proxyUrl)
+        url = proxyUrl.replace('{url}', encodeURIComponent(url))
+    // TODO: url改正响应式对象
     return url
 }
 

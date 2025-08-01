@@ -74,6 +74,7 @@ export const optDefault: { [key: string]: any } = {
     // Dev
     msg_type: 2,
     log_level: 'err',
+    proxyUrl: '',
     debug_msg: false,
     api_log: '',
 }
