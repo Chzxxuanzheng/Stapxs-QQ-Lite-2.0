@@ -295,7 +295,7 @@
         <!-- 合并转发消息预览器 -->
         <MergePan ref="mergePan" />
         <!-- At 信息悬浮窗 -->
-        <UserInfoPan :data="userInfoPanData" />
+        <UserInfoPanComponent :data="userInfoPanData" />
         <!-- 消息右击菜单 -->
         <Menu ref="msgMenu" name="chat-menu">
             <div class="ss-card msg-menu-body">
@@ -418,6 +418,7 @@
 </template>
 
 <script setup lang="ts">
+import UserInfoPanComponent from '@renderer/components/UserInfoPan.vue'
 import {
     shallowReactive,
     ShallowReactive
