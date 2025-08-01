@@ -621,13 +621,16 @@ div.rotate > div > svg {
     width: 1rem;
     margin: 0 3px;
 }
-.note-notify span {
+.note-notify a {
     margin: 0 3px;
     color: var(--color-main);
     font-weight: bold;
 }
 .note.poking > div.note-notify {
     border: 1px solid var(--color-main);
+}
+.note-base > a.me {
+    color: var(--color-font-1);
 }
 
 .file-view {

@@ -466,7 +466,17 @@ export abstract class Session {
      * @returns 自身成员对象
      */
     getMe(): IUser {
-        return new BaseUser(runtimeData.loginInfo.uin, runtimeData.loginInfo.nickname)
+        return BaseUser.createMe()
+    }
+
+    /**
+     * 获取用户信息,拿不到拿id创建一个BaseUser保底
+     * @param id
+     */
+    getUserByIdWithBu(id: number): IUser {
+        const user = this.getUserById(id)
+        if (user) return user
+        return BaseUser.createById(id)
     }
 
     get showName(): string {

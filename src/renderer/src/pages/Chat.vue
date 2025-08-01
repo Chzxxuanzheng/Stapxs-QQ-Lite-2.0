@@ -64,10 +64,7 @@
                 :msgs="details[3].open ? (tags.search.list as Message[]) : chat.messageList"
                 :show-msg-menu="showMsgMenu"
                 :show-user-menu="showUserMenu"
-                :user-info-bar="{
-                    start: openPopPost,
-                    close: closePopPost,
-                }"
+                :user-info-pan="userInfoPanFunc"
                 @scroll-to-msg="scrollToMsg"
                 @image-loaded="imgLoadedScroll"
                 @left-move="replyMsg"
@@ -94,7 +91,7 @@
                             @add-special-msg="addSpecialMsg" @send-msg="sendMsg" />
                     </Transition>
                     <!-- 精华消息 -->
-                    <Transition name="pan">
+                    <Transition v-if="chat instanceof GroupSession" name="pan">
                         <div v-show="details[2].open"
                             class="ss-card jin-pan">
                             <div>
@@ -103,7 +100,7 @@
                                 <font-awesome-icon :icon="['fas', 'xmark']" @click="details[2].open = !details[2].open" />
                             </div>
                             <div class="jin-pan-body">
-                                <div v-for="(item, index) in (chat as GroupSession).essenceList"
+                                <div v-for="(item, index) in chat.essenceList"
                                     :key="'jin-' + index">
                                     <div>
                                         <img :src="item.sender.getFace()">
@@ -167,7 +164,7 @@
                         <div>
                             <font-awesome-icon :icon="['fas', 'trash-can']" @click="delMsgs" />
                             <span>{{ $t('删除') }}</span>
-                        </div>
+                        </div>ShallowReactive
                         <div>
                             <font-awesome-icon :icon="['fas', 'copy']" @click="copyMsgs" />
                             <span>{{ $t('复制') }}</span>
@@ -298,54 +295,7 @@
         <!-- 合并转发消息预览器 -->
         <MergePan ref="mergePan" />
         <!-- At 信息悬浮窗 -->
-        <Teleport to="body">
-            <div class="member-info">
-                <div v-if="userInfoBar.user instanceof Member"
-                    class="ss-card"
-                    :style="getPopPost()">
-                    <img :src="userInfoBar.user.getFace()">
-                    <div>
-                        <span name="id">{{ userInfoBar.user.user_id }}</span>
-                        <div>
-                            <a>{{ userInfoBar.user.name }}</a>
-                            <div>
-                                <span v-if="userInfoBar.user.role === Role.Owner">
-                                    {{ $t('群主') }}
-                                </span>
-                                <span v-else-if="userInfoBar.user.role === Role.Admin">
-                                    {{ $t('管理员') }}
-                                </span>
-                                <span v-else-if="userInfoBar.user.role === Role.Bot">
-                                    {{ $t('机器人') }}
-                                </span>
-                                <span>Lv {{ userInfoBar.user.level }}</span>
-                            </div>
-                        </div>
-                        <span v-if="userInfoBar.user.join_time">
-                            {{
-                                $t('{time} 加入群聊', {
-                                    time: userInfoBar.user.join_time.format(
-                                        'year',
-                                        'day',
-                                    ),
-                                })
-                            }}
-                        </span>
-                    </div>
-                </div>
-                <div v-else-if="typeof userInfoBar.user === 'number'"
-                    class="ss-card"
-                    :style="getPopPost()">
-                    <img :src="'https://q1.qlogo.cn/g?b=qq&s=0&nk=' + userInfoBar.user">
-                    <div>
-                        <span name="id">{{ userInfoBar.user }}</span>
-                        <div>
-                            <a>{{ $t('已退群( {userId} )', { userId: userInfoBar.user }) }}</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </Teleport>
+        <UserInfoPan :data="userInfoPanData" />
         <!-- 消息右击菜单 -->
         <Menu ref="msgMenu" name="chat-menu">
             <div class="ss-card msg-menu-body">
@@ -416,16 +366,15 @@
                     <div><font-awesome-icon :icon="['fas', 'trash-can']" /></div>
                     <a>{{ $t('移出群聊') }}</a>
                 </div>
-                <div v-show="tags.menuDisplay.config"
+                <div v-if="menuSelectedUser instanceof Member" v-show="tags.menuDisplay.config"
                     @click="switchChatInfoPan();
-                            refs().infoRef?.openMoreConfig(menuSelectedUser as Member);
+                            refs().infoRef?.openMoreConfig(menuSelectedUser);
                             closeMsgMenu();">
                     <div><font-awesome-icon :icon="['fas', 'cog']" /></div>
                     <a>{{ $t('成员设置') }}</a>
                 </div>
             </div>
         </Menu>
-        <!-- </div> -->
         <!-- 群 / 好友信息弹窗 -->
         <Transition>
             <Info v-if="tags.openChatInfo" ref="infoRef" :chat="chat"
@@ -468,6 +417,31 @@
     </div>
 </template>
 
+<script setup lang="ts">
+import {
+    shallowReactive,
+    ShallowReactive
+} from 'vue'
+const userInfoPanData: ShallowReactive<{
+    user: undefined | IUser | number,
+    x: number,
+    y: number,
+}> = shallowReactive({
+    user: undefined,
+    x: 0,
+    y: 0,
+})
+const userInfoPanFunc: UserInfoPan = {
+    open: (user: IUser | number, x: number, y: number) => {
+        userInfoPanData.user = user
+        userInfoPanData.x = x
+        userInfoPanData.y = y
+    },
+    close: () => {
+        userInfoPanData.user = undefined
+    },
+}
+</script>
 <script lang="ts">
     import app from '@renderer/main'
     import SendUtil from '@renderer/function/sender'
@@ -482,9 +456,7 @@
 
     import { defineComponent, nextTick } from 'vue'
     import { v4 as uuid } from 'uuid'
-    import {
-        downloadFile,
-    } from '@renderer/function/utils/appUtil'
+    import { downloadFile } from '@renderer/function/utils/appUtil'
     import {
         addBackendListener,
         delay,
@@ -514,6 +486,11 @@
     import { Message } from '@renderer/function/model/message'
     import { Time } from '@renderer/function/model/data'
 
+    export interface UserInfoPan {
+        open: (user: IUser|number, x: number, y: number) => void
+        close: () => void
+    }
+
     type ComponentRefs = {
         msgBar: InstanceType<typeof MsgBar>|undefined
         mergePan: InstanceType<typeof MergePan>|undefined
@@ -525,7 +502,14 @@
 
     export default defineComponent({
         name: 'ViewChat',
-        components: { Info, FacePan, MergePan, MsgBar, ForwardPan, Menu },
+        components: {
+            Info,
+            MsgBar,
+            FacePan,
+            MergePan,
+            ForwardPan,
+            Menu
+        },
         props: {
             chat: {
                 type: Object as () => Session,
@@ -596,7 +580,7 @@
                     url: string,
                     id: string,
                 }[],
-                userInfoBar: {
+                userInfoPan: {
                     user: null as null | IUser | number,
                     x: 0,
                     y: 0,
@@ -790,6 +774,7 @@
                         this.tags.onAtFind = true
                     }
                     if (this.tags.onAtFind) {
+                        if (!(this.chat instanceof GroupSession)) return
                         if (this.msg.lastIndexOf('@') < 0) {
                             logger.add(LogType.UI, '匹配群成员列表被打断 ……')
                             this.tags.onAtFind = false
@@ -799,7 +784,7 @@
                                 .substring(this.msg.lastIndexOf('@') + 1)
                                 .toLowerCase()
                             if (atInfo != '') {
-                                this.atFindList = (this.chat as GroupSession).memberList
+                                this.atFindList = this.chat.memberList
                                         .filter((item) => { return item.match(atInfo) })
                             }
                         }
@@ -1133,34 +1118,6 @@
                     ],
                 }
                 runtimeData.popBoxList.push(popInfo)
-            },
-
-            /**
-             * 打开用户信息悬浮窗
-             */
-            openPopPost(user: IUser | number, x: number, y: number) {
-                this.userInfoBar.user = user
-                this.userInfoBar.x = x
-                this.userInfoBar.y = y
-                nextTick(() => {
-                    const menu = this.refs().userMenu
-                    if (menu && menu.isShow()) {
-                        menu.closeMenu()
-                    }
-                })
-            },
-
-            closePopPost() {
-                this.userInfoBar.user = null
-            },
-
-            /**
-             * 获取悬浮窗显示位置
-             */
-            getPopPost() {
-                const x = this.userInfoBar.x
-                const y = this.userInfoBar.y
-                return 'margin-left:' + x + 'px;margin-top:' + y + 'px;'
             },
 
             /**

@@ -1316,3 +1316,6 @@ msgstr ""
 
 msgid "正在确认操作……"
 msgstr ""
+
+msgid "特别关心"
+msgstr ""

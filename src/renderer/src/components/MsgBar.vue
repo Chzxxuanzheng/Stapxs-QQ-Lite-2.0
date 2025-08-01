@@ -29,7 +29,7 @@
                 :selected="isSelected(msgIndex)"
                 :data="msgIndex"
                 :config="config"
-                :user-info-bar="userInfoBar"
+                :user-info-pan="userInfoPan"
                 @click="msgClick($event, msgIndex)"
                 @scroll-to-msg="arg=>$emit('scrollToMsg', arg)"
                 @image-loaded="arg=>$emit('imageLoaded', arg)"
@@ -43,13 +43,14 @@
             <NoticeBody v-else-if="msgIndex instanceof Notice"
                 :id="msgIndex.uuid"
                 :key="'notice-' + index"
+                :user-info-pan="userInfoPan"
                 :data="msgIndex" />
         </template>
     </TransitionGroup>
 </template>
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue'
-import MsgBody, { MsgBodyConfig, T_MemberInfoBar } from './MsgBody.vue'
+import MsgBody, { MsgBodyConfig } from './MsgBody.vue'
 import NoticeBody from './NoticeBody.vue'
 
 import { isDeleteMsg, isShowTime } from '@renderer/function/utils/msgUtil';
@@ -60,6 +61,7 @@ import { Notice, SystemNotice } from '@renderer/function/model/notice';
 import { IUser } from '@renderer/function/model/user';
 import { MenuEventData } from '@renderer/function/elements/information';
 import app from '@renderer/main';
+import { UserInfoPan } from '@renderer/pages/Chat.vue';
 
 export interface Config extends MsgBodyConfig {
     canInteraction?: boolean
@@ -93,8 +95,8 @@ export default defineComponent({
             }),
             required: false,
         },
-        userInfoBar: {
-            type: Object as T_MemberInfoBar,
+        userInfoPan: {
+            type: Object as PropType<UserInfoPan>,
             default: () => undefined,
             required: false,
         }

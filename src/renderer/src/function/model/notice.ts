@@ -12,7 +12,7 @@ import { Message } from './message';
 import { GroupSession, Session } from './session';
 import { autoReactive, formatTime } from './utils';
 import { getViewTime, stdUrl } from '../utils/systemUtil';
-import { IUser } from './user';
+import { BaseUser, IUser } from './user';
 
 /**
  * 通知类消息
@@ -20,7 +20,7 @@ import { IUser } from './user';
 export abstract class Notice extends Message {
     abstract readonly type: string
     override session?: Session
-    users: number[] = []
+    users: IUser[] = []
     static matchType: string[]
     static matchSubType?: string[]
 
@@ -33,43 +33,38 @@ export abstract class Notice extends Message {
     get tome(): boolean {
         return false
     }
+
+    protected getUser(id: number | string): IUser {
+        if (!this.session) return BaseUser.createById(Number(id))
+        return this.session.getUserByIdWithBu(Number(id))
+    }
 }
 
 @autoReactive
 export class RevokeNotice extends Notice {
     override readonly type: string = 'revoke'
     message_id: string
-    operator_id: number
-    user_id: number
-    user?: IUser
-    operator?: IUser
+    user: IUser
+    operator: IUser
 
     constructor(data: { message_id: string, user_id: number, operator_id?: number }) {
         super(data)
         this.message_id = data.message_id
-        this.user_id = data.user_id
-        this.operator_id = data.operator_id ?? data.user_id
-        this.operator = this.session?.getUserById(this.operator_id)
-        this.user = this.session?.getUserById(this.user_id)
-        this.users.push(this.user_id, this.operator_id)
-    }
-
-    get user_name(): string {
-        return this.user?.name || this.user_id.toString()
-    }
-
-    get operator_name(): string {
-        return this.operator?.name || this.operator_id.toString()
+        const user_id = data.user_id
+        const operator_id = data.operator_id ?? data.user_id
+        this.user = this.getUser(user_id)
+        this.operator = this.getUser(operator_id)
+        this.users.push(this.user, this.operator)
     }
 
     get selfRevoke(): boolean {
-        return this.user_id === this.operator_id
+        return this.user === this.operator
     }
 
     override get preMsg(): string {
         const { $t } = app.config.globalProperties
-        if (this.selfRevoke) return this.user_name + $t('撤回了一条消息')
-        return this.operator_name + $t('撤回了') + this.user_name + $t('的消息')
+        if (this.selfRevoke) return this.user.name + $t('撤回了一条消息')
+        return this.operator.name + $t('撤回了') + this.user.name + $t('的消息')
     }
 }
 
@@ -77,19 +72,15 @@ export class RevokeNotice extends Notice {
 export class BanNotice extends Notice {
     override readonly type: string = 'ban'
     declare session?: GroupSession
-    user_id: number
-    operator_id: number
     duration: number
-    user?: IUser
-    operator?: IUser
+    user: IUser
+    operator: IUser
     constructor(data: { user_id: number, operator_id: number, duration: number }) {
         super(data)
         this.duration = getViewTime(data.duration)
-        this.user_id = data.user_id
-        this.operator_id = data.operator_id
-        this.user = this.session?.getUserById(this.user_id)
-        this.operator = this.session?.getUserById(this.operator_id)
-        this.users.push(this.user_id, this.operator_id)
+        this.user = this.getUser(data.user_id)
+        this.operator = this.getUser(data.operator_id)
+        this.users.push(this.user, this.operator)
     }
 
     get fTime(): string {
@@ -109,16 +100,8 @@ export class BanNotice extends Notice {
         return back
     }
 
-    get user_name(): string {
-        return this.user?.name || this.user_id.toString()
-    }
-
-    get operator_name(): string {
-        return this.operator?.name || this.operator_id.toString()
-    }
-
     override get tome(): boolean {
-        return this.user_id === runtimeData.loginInfo.uin
+        return this.user.user_id === runtimeData.loginInfo.uin
     }
 
     get formatDuration(): string {
@@ -127,8 +110,8 @@ export class BanNotice extends Notice {
 
     override get preMsg(): string {
         const { $t } = app.config.globalProperties
-        if (this.tome) return this.operator_name + $t('禁言了') + $t('你') + this.fTime
-        return this.operator_name + $t('禁言了') + this.user_name + this.fTime
+        if (this.tome) return this.operator.name + $t('禁言了') + $t('你') + this.fTime
+        return this.operator.name + $t('禁言了') + this.user.name + this.fTime
     }
 }
 
@@ -136,48 +119,34 @@ export class BanNotice extends Notice {
 export class BanLiftNotice extends Notice {
     override readonly type: string = 'lift_ban'
     declare session?: GroupSession
-    user_id: number
-    operator_id: number
-    user?: IUser
-    operator?: IUser
+    user: IUser
+    operator: IUser
     constructor(data: { user_id: number, operator_id: number }) {
         super(data)
-        this.user_id = data.user_id
-        this.operator_id = data.operator_id
-        this.user = this.session?.getUserById(this.user_id)
-        this.operator = this.session?.getUserById(this.operator_id)
-        this.users.push(this.user_id, this.operator_id)
-    }
-
-    get user_name(): string {
-        return this.user?.name || this.user_id.toString()
-    }
-
-    get operator_name(): string {
-        return this.operator?.name || this.operator_id.toString()
+        this.user = this.getUser(data.user_id)
+        this.operator = this.getUser(data.operator_id)
+        this.users.push(this.user, this.operator)
     }
 
     override get tome(): boolean {
-        return this.user_id === runtimeData.loginInfo.uin
+        return this.user.user_id === runtimeData.loginInfo.uin
     }
 
     override get preMsg(): string {
         const { $t } = app.config.globalProperties
-        if (this.tome) return this.operator_name + $t('解除了你的禁言')
-        return this.operator + $t('解除了') + this.user_name + $t('的禁言')
+        if (this.tome) return this.operator.name + $t('解除了你的禁言')
+        return this.operator + $t('解除了') + this.user.name + $t('的禁言')
     }
 }
 
 @autoReactive
 export class PokeNotice extends Notice {
     override readonly type: string = 'poke'
-    user_id: number
-    target_id: number
     action!: string
     suffix!: string
     img!: string
-    user?: IUser
-    target?: IUser
+    user: IUser
+    target: IUser
     constructor(data: {
         user_id: number,
         target_id: number,
@@ -187,12 +156,10 @@ export class PokeNotice extends Notice {
         action_img_url?: string,
     }) {
         super(data)
-        this.user_id = data.user_id
-        this.target_id = data.target_id
-        this.user = this.session?.getUserById(this.user_id)
-        this.target = this.session?.getUserById(this.target_id)
+        this.user = this.getUser(data.user_id)
+        this.target = this.getUser(data.target_id)
 
-        this.users.push(this.user_id, this.target_id)
+        this.users.push(this.user, this.target)
 
         if (data.raw_info) {
             let getTxt = 0
@@ -221,22 +188,14 @@ export class PokeNotice extends Notice {
         } else throw new Error('缺少必要的 poke 信息')
     }
 
-    get user_name(): string {
-        return this.user?.name || this.user_id.toString()
-    }
-
-    get target_name(): string {
-        return this.target?.name || this.target_id.toString()
-    }
-
     override get tome(): boolean {
-        return this.target_id === runtimeData.loginInfo.uin
+        return this.target.user_id === runtimeData.loginInfo.uin
     }
 
     override get preMsg(): string {
         const { $t } = app.config.globalProperties
-        if (this.tome) return this.user_name + $t('戳了你')
-        return this.user + this.action + this.target_name + this.suffix
+        if (this.tome) return this.user.name + $t('戳了你')
+        return this.user + this.action + this.target.name + this.suffix
     }
 }
 
@@ -244,20 +203,15 @@ export class JoinNotice extends Notice {
     override readonly type: string = 'join'
     declare session?: GroupSession
     join_type: 'approve' | 'invite' | 'self'
-    user_id: number
-    operator_id: number
-    user?: IUser
-    operator?: IUser
+    user!: IUser
+    operator!: IUser
+    private user_id: number
+    private operator_id: number
     constructor(data: { user_id: number, operator_id: number, sub_type: 'approve' | 'invite' }) {
         super(data)
         this.join_type = data.sub_type
         this.user_id = data.user_id
-        this.operator_id = data.operator_id
-        this.users.push(this.user_id, this.operator_id)
-        if (this.operator_id === 0) {
-            this.operator_id = this.user_id
-            this.join_type = 'self'
-        }
+        this.operator_id = data.operator_id || data.user_id
     }
 
     /**
@@ -265,62 +219,47 @@ export class JoinNotice extends Notice {
      * 因为刚加群时没他的信息
      */
     refreshUserData(){
-        this.user = this.session?.getUserById(this.user_id)
-        this.operator = this.session?.getUserById(this.operator_id)
-    }
-
-    get user_name(): string {
-        return this.user?.name || this.user_id.toString()
-    }
-
-    get operator_name(): string {
-        return this.operator?.name || this.operator_id.toString()
+        this.user = this.getUser(this.user_id)
+        this.operator = this.getUser(this.operator_id)
+        this.users.push(this.user, this.operator)
+        if (this.operator.user_id === 0) {
+            this.operator.user_id = this.user.user_id
+            this.join_type = 'self'
+        }
     }
 
     override get preMsg(): string {
         const { $t } = app.config.globalProperties
-        if (this.join_type === 'self') return this.user_name + $t('加入了群聊')
-        if (this.join_type === 'approve') return this.operator_name + $t('通过了') + this.user_name + $t('的入群申请')
-        return this.operator_name + $t('邀请') + this.user_name + $t('加入了群聊')
+        if (this.join_type === 'self') return this.user.name + $t('加入了群聊')
+        if (this.join_type === 'approve') return this.operator.name + $t('通过了') + this.user.name + $t('的入群申请')
+        return this.operator.name + $t('邀请') + this.user.name + $t('加入了群聊')
     }
 }
 
 export class LeaveNotice extends Notice {
     override readonly type: string = 'leave'
     declare session?: GroupSession
-    user_id: number
-    operator_id: number
-    user?: IUser
-    operator?: IUser
+    user: IUser
+    operator: IUser
     constructor(data: { user_id: number, operator_id: number }) {
         super(data)
-        this.user_id = data.user_id
-        this.operator_id = data.operator_id
-        if (this.operator_id === 0) this.operator_id = this.user_id
-        this.user = this.session?.getUserById(this.user_id)
-        this.operator = this.session?.getUserById(this.operator_id)
-        this.users.push(this.user_id, this.operator_id)
-    }
-
-    get user_name(): string {
-        return this.user?.name || this.user_id.toString()
-    }
-
-    get operator_name(): string {
-        return this.operator?.name || this.operator_id.toString()
+        if (data.operator_id === 0) data.operator_id = data.user_id
+        this.user = this.getUser(data.user_id)
+        this.operator = this.getUser(data.operator_id)
+        this.users.push(this.user, this.operator)
     }
 
     override get tome(): boolean {
-        return this.user_id === runtimeData.loginInfo.uin
+        return this.user.user_id === runtimeData.loginInfo.uin
     }
 
     get kick(): boolean {
-        return this.operator_id !== this.user_id
+        return this.operator !== this.user
     }
 
     override get preMsg(): string {
         const { $t } = app.config.globalProperties
-        if (this.kick) return this.operator_name + $t('将') + this.user_name + $t('移出群聊')
+        if (this.kick) return this.operator.name + $t('将') + this.user.name + $t('移出群聊')
         return this.user + $t('离开了群聊')
     }
 }

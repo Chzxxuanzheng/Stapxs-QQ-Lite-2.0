@@ -88,8 +88,8 @@ function needSendNotice(session: Session): boolean {
  */
 function hasConnectionWithImport(msg: Message): boolean {
     if (msg instanceof Notice) {
-        for (const userId of msg.users) {
-            if (userIsImportant(userId)) return true
+        for (const user of msg.users) {
+            if (userIsImportant(user.user_id)) return true
         }
         return false
     }else if (msg instanceof Msg) {

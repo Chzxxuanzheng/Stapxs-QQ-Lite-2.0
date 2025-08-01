@@ -24,6 +24,15 @@
         <img v-show="!needSpecialMe()"
             name="avatar"
             :src="data.sender.getFace()"
+
+            @touchstart="LongTouchHandle($event, 'user')"
+            @touchmove="LongTouchHandle($event, 'user')"
+            @touchend="LongTouchEnd($event)"
+
+            @mouseenter="userInfoHoverHandle($event, data.sender)"
+            @mousemove="userInfoHoverHandle($event, data.sender)"
+            @mouseleave="userInfoHoverEnd($event)"
+
             @contextmenu.prevent="$emit('showUserMenu', {
                 x: $event.clientX,
                 y: $event.clientY,
@@ -68,14 +77,14 @@
                 <div
                     :class="{main: true, 'not-exist': !data.exist && getConfig('dimNonExistentMsg')}"
                     @touchstart.stop="
-                        msgLongTouchStart($event, 'msg');
-                        msgMoveStart($event);"
+                        LongTouchHandle($event, 'msg');
+                        msgMoveStart($event)"
                     @touchend.stop="
-                        msgLongTouchEnd($event, 'msg');
-                        msgMoveEnd($event);"
+                        LongTouchEnd($event);
+                        msgMoveEnd($event)"
                     @touchmove.stop="
-                        msgLongTouchEnd($event, 'msg');
-                        msgKeepMove($event);"
+                        LongTouchHandle($event, 'msg');
+                        msgKeepMove($event)"
                     @wheel.stop="
                         msgMoveWheel($event)"
                     @contextmenu.prevent="$emit('showMsgMenu', {
@@ -130,7 +139,9 @@
                                 :class="getAtClass(item.qq)">
                                 <a :data-id="item.qq"
                                     :data-group="data.session?.id"
-                                    @mouseenter="showUserInfo(Number(item.qq), $event)">{{ getAtName(item) }}</a>
+                                    @mouseenter="userInfoHoverHandle($event, getAtMember(item.qq))"
+                                    @mousemove="userInfoHoverHandle($event, getAtMember(item.qq))"
+                                    @mouseleave="userInfoHoverEnd($event)">{{ getAtName(item) }}</a>
                             </div>
                             <div v-else-if="item instanceof FileSeg" :class="{
                                 'msg-file': true,
@@ -380,6 +391,94 @@
     </div>
 </template>
 
+<script setup lang="ts">
+//#region == 声明变量 ================================================================
+const {
+    data,
+    selected,
+    config = {
+        specialMe: true,
+        showIcon: true,
+        dimNonExistentMsg: true,
+    },
+    userInfoPan
+ } = defineProps<{
+    data: Msg | SelfMsg
+    selected?: boolean
+    config: MsgBodyConfig
+    userInfoPan?: UserInfoPan
+}>()
+
+const emit = defineEmits<{
+    scrollToMsg: [id: string]
+    imageLoaded: [height: number]
+    leftMove: [msg: Msg]
+    rightMove: [msg: Msg]
+    senderDoubleClick: [user: IUser]
+    showMsgMenu: [event: MenuEventData, msg: Msg]
+    showUserMenu: [event: MenuEventData, user: IUser]
+    emojiClick: [id: string, msg: Msg]
+}>()
+//#endregion
+
+//#region == 长按/覆盖监视器 =========================================================
+const {
+    handle: LongTouchHandle,
+    handleEnd: LongTouchEnd,
+} = useStayEvent(
+    (event: TouchEvent) => {
+        return {
+            x: event.touches[0].clientX,
+            y: event.touches[0].clientY,
+        }
+    },
+    {onFit: (eventData: MenuEventData, ctx: 'user' | 'msg') => {
+        if (ctx === 'user') {
+            emit('showUserMenu', eventData, data.sender)
+        } else {
+            emit('showMsgMenu', eventData, data)
+        }
+    }}, 400
+)
+const {
+    handle: userInfoHoverHandle,
+    handleEnd: userInfoHoverEnd,
+} = useStayEvent(
+    (event: MouseEvent) => {
+        return {
+            x: event.clientX,
+            y: event.clientY,
+        }
+    },
+    {onFit: (eventData, ctx: number | IUser) => {
+        userInfoPan?.open(ctx, eventData.x, eventData.y)
+    },
+    onLeave: () => {
+        userInfoPan?.close()
+    }}, 495
+)
+//#endregion
+//#region == 工具函数 ================================================================
+function getAtMember(id: string): IUser | number {
+    const user_id = Number(id)
+    const user = data.session?.getUserById(user_id)
+    if (user) return user
+    else return user_id
+}
+//#endregion
+//#region == 暴露给下面的script =======================================================
+defineExpose({
+    setupEmit: emit,
+    setupProps: {
+        data,
+        selected,
+        config,
+        userInfoPan
+    },
+})
+//#endregion
+</script>
+
 <script lang="ts">
     import Option from '@renderer/function/option'
     import CardMessage from './msg-component/CardMessage.vue'
@@ -387,13 +486,14 @@
     import markdownit from 'markdown-it'
 
     import { MsgBodyFuns as ViewFuns } from '@renderer/function/model/msg-body'
-    import { defineComponent, type PropType } from 'vue'
+    import { defineComponent } from 'vue'
     import { runtimeData } from '@renderer/function/msg'
     import { Logger, LogType, PopInfo, PopType } from '@renderer/function/base'
     import { getFace, pokeAnime } from '@renderer/function/utils/msgUtil'
     import {
         openLink,
         sendStatEvent,
+        useStayEvent,
     } from '@renderer/function/utils/appUtil'
     import {
         callBackend,
@@ -419,6 +519,7 @@
     import { Member, Role, IUser } from '@renderer/function/model/user'
     import { wheelMask } from '@renderer/function/utils/input'
     import { GroupSession } from '@renderer/function/model/session'
+    import { UserInfoPan } from '@renderer/pages/Chat.vue'
 
     export interface MsgBodyConfig {
         specialMe?: boolean,         // 是否特殊处理自己的消息
@@ -426,57 +527,9 @@
         dimNonExistentMsg?: boolean, // 是否淡化不存在的消息
     }
 
-    export interface MemberInfoBar {
-        start: (user: IUser|number, x: number, y: number) => void
-        close: () => void
-    }
-
-    export type T_MemberInfoBar = PropType<MemberInfoBar>
-
     export default defineComponent({
         name: 'MsgBody',
         components: { CardMessage },
-        props: {
-            data: {
-                type: [Msg, SelfMsg],
-                required: true,
-            },
-            selected: {
-                type: Boolean,
-                required: false,
-            },
-            config: {
-                type: Object as () => MsgBodyConfig,
-                default: () => ({
-                    specialMe: true,
-                    showIcon: true,
-                    dimNonExistentMsg: true,
-                }),
-            },
-            userInfoBar: {
-                type: Object as T_MemberInfoBar,
-                default: () => undefined,
-                required: false,
-            }
-        },
-        emits: {
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            scrollToMsg: (_id: string) => true,
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            imageLoaded: (_height: number) => true,
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            leftMove: (_msg: Msg) => true,
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            rightMove: (_msg: Msg) => true,
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            senderDoubleClick: (_user: IUser) => true,
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            showMsgMenu: (_event: MenuEventData, _msg: Msg) => true,
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            showUserMenu: (_event: MenuEventData, _user: IUser) => true,
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            emojiClick: (_id: string, _msg: Msg) => true,
-        },
         data() {
             return {
                 md: markdownit({ breaks: true }),
@@ -498,10 +551,6 @@
                     move: 0,
                     onScroll: 'none' as 'none' | 'touch' | 'wheel',
                     touchLast: null as null | TouchEvent,
-                },
-                longTouch: {
-                    startPoint: null as null | { x: number, y: number },
-                    timeout: null as null | ReturnType<typeof setTimeout>,
                 },
                 AtSeg,
                 FaceSeg,
@@ -572,6 +621,7 @@
                     new PopInfo().add(PopType.INFO, this.$t('定位消息失败'))
                     return
                 }
+                // eslint-disable-next-line vue/require-explicit-emits
                 this.$emit('scrollToMsg', 'chat-' + uuid)
             },
 
@@ -631,6 +681,7 @@
              */
             imageLoaded(event: Event) {
                 const img = event.target as HTMLImageElement
+                // eslint-disable-next-line vue/require-explicit-emits
                 this.$emit('imageLoaded', img.offsetHeight)
             },
 
@@ -819,15 +870,14 @@
                     (event as MouseEvent) || (event as MouseEvent)
                 const pointX = pointEvent.screenX
                 const pointY = pointEvent.screenY
-                // TODO: 出界判定不做了怪麻烦的
-                this.userInfoBar?.start(user, pointX, pointY)
+                this.userInfoPan?.open(user, pointX, pointY)
             },
 
             /**
              * 隐藏 At 信息面板
              */
             hiddenUserInfo() {
-                this.userInfoBar?.close()
+                this.userInfoPan?.close()
             },
 
             /**
@@ -1094,79 +1144,6 @@
             //#endregion
 
             //#region ==互动相关================================
-            // 长按和滑动分别处理,降低开发难度,增加代码可读性.反正分开写又不影响效果
-            /**
-             * 消息长按开始
-             * @param event 触摸事件
-             */
-            msgLongTouchStart(event: TouchEvent, source: 'msg' | 'user') {
-                const logger = new Logger()
-                logger.add(LogType.UI, '消息触屏点击事件开始 ……')
-                this.longTouch.startPoint = {
-                    x: event.targetTouches[0].pageX,
-                    y: event.targetTouches[0].pageY,
-                }
-                const eventData: MenuEventData = {
-                    x: this.longTouch.startPoint[0].pageX,
-                    y: this.longTouch.startPoint[0].pageY,
-                    target: event.currentTarget as HTMLElement,
-                }
-                this.longTouch.timeout = setTimeout(() => {
-                    logger.add(LogType.UI, '消息触屏长按触发')
-                    switch (source) {
-                        case 'msg':
-                            this.$emit('showMsgMenu', eventData, this.data)
-                            break
-                        case 'user':
-                            this.$emit('showUserMenu', eventData, this.data.sender)
-                            break
-                        default:
-                            throw new Error('未知的长按类型: ' + source)
-                    }
-                }, 400)
-            },
-
-            /**
-             * 消息长按判定
-             * @param event 触摸事件
-             */
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            msgLongTouchMove(event: TouchEvent, _source: 'msg' | 'user') {
-                // 没有开始
-                if (!this.longTouch.timeout) return
-                const logger = new Logger()
-                // 开始点击的位置
-                const startX = this.longTouch.startPoint?.x ?? -1
-                const startY = this.longTouch.startPoint?.y ?? -1
-                if (startX > -1 && startY > -1) {
-                    // 计算移动差值
-                    const dx = Math.abs(startX - event.targetTouches[0].pageX)
-                    const dy = Math.abs(startY - event.targetTouches[0].pageY)
-                    // 如果 dy 大于 10px 则判定为用户在滚动页面，打断长按消息判定
-                    if (dy > 10 || dx > 5) {
-                        clearTimeout(this.longTouch.timeout)
-                        logger.add(LogType.UI, '消息触屏长按取消')
-                        this.longTouch.startPoint = null
-                        this.longTouch.timeout = null
-                        return
-                    }
-                }
-            },
-            /**
-             * 消息长按结束
-             * @param event 触摸事件
-             */
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            msgLongTouchEnd(_event: TouchEvent, _source: 'msg' | 'user') {
-                const logger = new Logger()
-                // 清除长按定时器
-                if (this.longTouch.timeout) {
-                    clearTimeout(this.longTouch.timeout)
-                    logger.add(LogType.UI, '消息触屏长按取消')
-                    this.longTouch.startPoint = null
-                    this.longTouch.timeout = null
-                }
-            },
             // 滚轮滑动
             msgMoveWheel(event: WheelEvent) {
                 const process = (event: WheelEvent) => {
@@ -1285,10 +1262,12 @@
                 // 如果移动距离大于0.5英尺,触发
                 if (move < -0.5 * inch){
                     new Logger().add(LogType.UI, '左滑触发')
+                    // eslint-disable-next-line vue/require-explicit-emits
                     this.$emit('leftMove', this.data)
                 }
                 else if (move > 0.5 * inch){
                     new Logger().add(LogType.UI, '右滑触发')
+                    // eslint-disable-next-line vue/require-explicit-emits
                     this.$emit('rightMove', this.data)
                 }
             },

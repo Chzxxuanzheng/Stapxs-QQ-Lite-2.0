@@ -94,7 +94,6 @@
 import FriendBody from '@renderer/components/FriendBody.vue'
 
 import {
-    defineEmits,
     onMounted,
     shallowRef,
     type ShallowRef,

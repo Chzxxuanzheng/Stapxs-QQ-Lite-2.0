@@ -16,6 +16,7 @@ import { UserSession } from './session'
 
 export interface IUser {
     user_id: number
+    level?: number
     get name(): string
     get namePy(): string
     getFace(): string
@@ -349,7 +350,7 @@ export class BaseUser {
     sex: Gender = Gender.Unknown
     age?: number
     area?: string
-    level?: string
+    level?: number
     role?: Role
     _title?: Name
     constructor(user_id: number, nickname?: string, remark?: string) {
@@ -367,6 +368,14 @@ export class BaseUser {
             runtimeData.loginInfo.uin,
             runtimeData.loginInfo.nickname,
         )
+    }
+
+    /**
+     * 仅有id的情况
+     * @param user_id 用户id
+     */
+    static createById(user_id: number): BaseUser {
+        return new BaseUser(Number(user_id), undefined, undefined)
     }
 
     /**
@@ -392,7 +401,7 @@ export class BaseUser {
         }
         if (data['age']) base.age = Number(data['age'])
         if (data['area']) base.area = data['area']
-        if (data['level']) base.level = String(data['level'])
+        if (data['level']) base.level = Number(data['level'])
         if (data['role']) {
             switch (data['role']) {
                 case 'owner':
