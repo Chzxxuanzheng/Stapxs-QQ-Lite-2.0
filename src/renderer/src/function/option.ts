@@ -70,6 +70,7 @@ export const optDefault: { [key: string]: any } = {
     dont_parse_delete: false,
     jump_forward: true,
     default_multiselect_forward: false,
+    preview_notice: false,
     // Dev
     msg_type: 2,
     log_level: 'err',

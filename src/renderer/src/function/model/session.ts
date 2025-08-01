@@ -322,10 +322,16 @@ export abstract class Session {
         return this.loadHistoryLock
     }
 
+    /**
+     * 刷新预览消息
+     */
     refushPreMsg(): void {
         for (let i= this.messageList.length - 1; i >= 0; i--) {
             const msg = this.messageList[i]
-            if (!(msg instanceof Msg)) continue
+            // 启用预览通知
+            if (runtimeData.sysConfig.preview_notice) {
+                if (msg instanceof SystemNotice) continue
+            } else if (!(msg instanceof Msg)) continue
             if (isDeleteMsg(msg)) continue
             this.preMessage = msg
             break

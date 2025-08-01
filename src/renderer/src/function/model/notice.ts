@@ -195,7 +195,7 @@ export class PokeNotice extends Notice {
     override get preMsg(): string {
         const { $t } = app.config.globalProperties
         if (this.tome) return this.user.name + $t('戳了你')
-        return this.user + this.action + this.target.name + this.suffix
+        return this.user.name + this.action + this.target.name + this.suffix
     }
 }
 
