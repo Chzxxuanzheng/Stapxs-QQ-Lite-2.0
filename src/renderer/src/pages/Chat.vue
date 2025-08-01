@@ -457,7 +457,7 @@ const userInfoPanFunc: UserInfoPan = {
 
     import { defineComponent, nextTick } from 'vue'
     import { v4 as uuid } from 'uuid'
-    import { downloadFile } from '@renderer/function/utils/appUtil'
+    import { downloadFile, shouldAutoFocus } from '@renderer/function/utils/appUtil'
     import {
         addBackendListener,
         delay,
@@ -612,25 +612,12 @@ const userInfoPanFunc: UserInfoPan = {
         },
         watch: {
             chat() {
-                // 重置部分状态数据
-                const data = (this as any).$options.data(this)
-                this.tags = data.tags
-                this.msgMenus = data.msgMenus
-                this.sendCache = []
-                this.imgCache = [] as string[]
-                this.details = [
-                    { open: false },
-                    { open: false },
-                    { open: false },
-                    { open: false },
-                ]
-                this.initMenuDisplay()
-                this.reflashImgList()
+                this.init()
             },
         },
         async mounted() {
-            // PS：由于监听 list 本身返回的新旧值是一样，于是监听 length（反正也只要知道长度）
-            this.$watch(() => this.chat.messageList.length, this.updateList)
+            // 初始化
+            this.init()
             // 为 viewer 绑定关闭事件
             const viewer = app.config.globalProperties.$viewer
             this.$watch(
@@ -658,8 +645,50 @@ const userInfoPanFunc: UserInfoPan = {
             this.$watch(() => runtimeData.watch.backTimes, () => {
                 this.exitWin()
             })
+            // 新消息滚动到底部
+            // eslint-disable-next-line
+            Session.newMessageHook.push(async (session, _msg)=>{
+                if (session !== this.chat) return
+
+                const pan = document.getElementById('msgPan')
+                if (!pan) return
+
+                // 计算当前滚动位置距离底部的距离
+                const distanceToBottom = pan.scrollHeight - pan.scrollTop - pan.clientHeight
+                // 计算vh的像素值
+                const vh = window.innerHeight / 100
+                // 如果距离底部大于20vh，则不自动滚动
+                if (distanceToBottom > 20 * vh) return
+
+                nextTick(() => {
+                    // 等待下一次 DOM 更新循环
+                    this.scrollBottom(true)
+                })
+            })
         },
         methods: {
+            /**
+             * 初始化自身
+             */
+            init() {
+                // 重置部分状态数据
+                const data = (this as any).$options.data(this)
+                this.tags = data.tags
+                this.msgMenus = data.msgMenus
+                this.sendCache = []
+                this.imgCache = [] as string[]
+                this.details = [
+                    { open: false },
+                    { open: false },
+                    { open: false },
+                    { open: false },
+                ]
+                this.initMenuDisplay()
+                this.reflashImgList()
+                // 聚焦输入框
+                // PS: 有虚拟键盘的设备会弹键盘,要做判断
+                if (shouldAutoFocus()) this.toMainInput()
+            },
             /**
              * 消息区滚动
              * @param event 滚动事件
@@ -1427,19 +1456,6 @@ const userInfoPanFunc: UserInfoPan = {
                     this.scrollBottom(true)
                 })
             },
-
-            updateList(newLength: number, oldLength: number) {
-                // =================== 首次加载消息 ===================
-
-                if (oldLength == 0 && newLength > 0) {
-                    if(['electron', 'tauri'].includes(runtimeData.tags.clientType)) {
-                        // 将焦点移动到发送框
-                        this.toMainInput()
-                    }
-                }
-
-                // =================== 刷新统计数据 ===================
-
                 // TODO: 虚拟列表优化
                 // // 清屏重新加载消息列表（超过 n 条消息、回到底部按钮不显示）
                 // // PS：也就是说只在消息底部时才会触发，以防止你是在看历史消息攒满了刷掉
@@ -1450,7 +1466,6 @@ const userInfoPanFunc: UserInfoPan = {
                 // ) {
                 //     this.loadHistory(false)
                 // }
-            },
 
             /**
              * 获取显示群精华消息

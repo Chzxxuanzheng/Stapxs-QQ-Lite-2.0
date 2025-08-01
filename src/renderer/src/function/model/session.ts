@@ -337,6 +337,8 @@ export abstract class Session {
      * @param msgId 消息id
      */
     async setRead(msgId?: string): Promise<void> {
+        // 避免频繁调用...昨天吃警告了.tx竟然没给我踹下去
+        if (!this.newMsg) return
         if (!msgId) {
             for (const msg of this.messageList) {
                 if (msg instanceof Msg) {

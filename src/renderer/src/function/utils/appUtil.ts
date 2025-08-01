@@ -1211,3 +1211,26 @@ export function useStayEvent<T extends Event,C>(
         handleEnd,
     }
 }
+
+/**
+ * 是否应该自动聚焦输入框
+ * @returns
+ */
+export function shouldAutoFocus(): boolean {
+    // 桌面端
+    if (runtimeData.tags.clientType) {
+        // 除了苹果的不知道啥东西,都可以
+        if (['electron', 'tauri'].includes(runtimeData.tags.clientType)) {
+            return true
+        }
+        return false
+    }
+    // web端
+    else {
+        // 移动端浏览器不自动聚焦
+        if (/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+            return false
+        }
+        return true
+    }
+}
