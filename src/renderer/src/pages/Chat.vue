@@ -354,7 +354,7 @@
                 <div v-show="tags.menuDisplay.at"
                     @click="menuSelectedUser ? addSpecialMsg({ msgObj: { type: 'at', qq: String(menuSelectedUser!.user_id) }, addText: true, }): '';
                             toMainInput();
-                            closeMsgMenu();">
+                            closeUserMenu();">
                     <div><font-awesome-icon :icon="['fas', 'at']" /></div>
                     <a>{{ $t('提及') }}</a>
                 </div>
@@ -369,7 +369,7 @@
                 <div v-if="menuSelectedUser instanceof Member" v-show="tags.menuDisplay.config"
                     @click="switchChatInfoPan();
                             refs().infoRef?.openMoreConfig(menuSelectedUser);
-                            closeMsgMenu();">
+                            closeUserMenu();">
                     <div><font-awesome-icon :icon="['fas', 'cog']" /></div>
                     <a>{{ $t('成员设置') }}</a>
                 </div>
@@ -1104,7 +1104,7 @@ const userInfoPanFunc: UserInfoPan = {
                                     },
                                     'setGroupKick',
                                 )
-                                this.closeMsgMenu()
+                                this.closeUserMenu()
                                 runtimeData.popBoxList.shift()
                             },
                         },
