@@ -35,10 +35,12 @@ Session.newMessageHook.push((session: Session, msg: Message) => {
     if (msg instanceof SystemNotice) return
     if (!needSendNotice(session)) return
 
-    if (!isImportant(msg) && !session.notice) return
+    if (!isImportant(msg) && !groupNeedShowNotice(session)) return
 
     session.showNotice = true
+
     // 发送通知
+    if (!groupNeedSendNotify(session)) return
     sendNotify(session, msg)
 })
 /**
@@ -144,5 +146,26 @@ function sendNotify(session: Session, msg: Message, important: boolean = false):
     } as NotifyInfo
 
     new Notify().notify(msgInfo)
+}
+
+/**
+ * 判断群组是否需要通知
+ * @param session 群组会话
+ */
+function groupNeedShowNotice(session: GroupSession): boolean {
+    if (session.notice) return true
+    if (runtimeData.sysConfig.group_notice_type === 'all') return true
+    if (runtimeData.sysConfig.group_notice_type === 'inner') return true
+    return false
+}
+
+/**
+ * 判断群组是否需要发送通知
+ * @param session 群组会话
+ */
+function groupNeedSendNotify(session: GroupSession): boolean {
+    if (session.notice) return true
+    if (runtimeData.sysConfig.group_notice_type === 'all') return true
+    return false
 }
 //#endregion
