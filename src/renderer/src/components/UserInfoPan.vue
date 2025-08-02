@@ -21,18 +21,14 @@
                             <span name="id">{{ data.user.user_id }}</span>
                             <div>
                                 <a>{{ data.user.name }}</a>
-                                <div>
-                                    <span v-if="data.user.role === Role.Owner">
-                                        {{ $t('群主') }}
+                                    <span v-user-role="data.user.role">
+                                        <template v-if="data.user.level">
+                                            {{ 'Lv.' + data.user.level }}
+                                        </template>
+                                        <template v-if="data.user.title">
+                                            {{ data.user.title.replace(/[\u202A-\u202E\u2066-\u2069]/g, '') }}
+                                        </template>
                                     </span>
-                                    <span v-else-if="data.user.role === Role.Admin">
-                                        {{ $t('管理员') }}
-                                    </span>
-                                    <span v-else-if="data.user.role === Role.Bot">
-                                        {{ $t('机器人') }}
-                                    </span>
-                                    <span>Lv {{ data.user.level }}</span>
-                                </div>
                             </div>
                         </div>
                     </div>

@@ -27,7 +27,8 @@ import {
     ShallowRef,
     shallowRef,
     watch,
-    toRaw
+    toRaw,
+    Directive
 } from 'vue'
 
 const popInfo = new PopInfo()
@@ -632,6 +633,7 @@ import verticalCss from '@renderer/assets/css/append/mobile/append_mobile_vertic
 import { ActionType, LocalNotificationSchema } from '@capacitor/local-notifications'
 import { Session } from '../model/session'
 import { MenuEventData } from '../elements/information'
+import { Role } from '../model/user'
 // import windowsCss from '@renderer/assets/css/append/mobile/append_windows.css?raw'
 /**
 * 装载补充样式
@@ -1070,31 +1072,29 @@ export function sendStatEvent(event: string, data: any) {
 }
 
 /**
-* 切换群组通知状态
-* @param group_id 群组 ID
-* @param open 是否开启通知
-*/
-export function changeGroupNotice(group_id: number, open: boolean) {
-    const noticeInfo = option.get('notice_group') ?? {}
-    const list = noticeInfo[runtimeData.loginInfo.uin]
-    if(open) {
-        if (list) {
-            list.push(group_id)
-        } else {
-            noticeInfo[runtimeData.loginInfo.uin] = [group_id]
+ * 是否应该自动聚焦输入框
+ * @returns
+ */
+export function shouldAutoFocus(): boolean {
+    // 桌面端
+    if (runtimeData.tags.clientType) {
+        // 除了苹果的不知道啥东西,都可以
+        if (['electron', 'tauri'].includes(runtimeData.tags.clientType)) {
+            return true
         }
-        option.save('notice_group', noticeInfo)
-    } else {
-        if (list) {
-            const index = list.indexOf(group_id)
-            if (index >= 0) {
-                list.splice(index, 1)
-            }
+        return false
+    }
+    // web端
+    else {
+        // 移动端浏览器不自动聚焦
+        if (/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+            return false
         }
-        option.save('notice_group', noticeInfo)
+        return true
     }
 }
 
+//#region == use封装 ========================================
 /**
  * 用来封装一个停留事件的处理, 支持传递额外上下文
  * 适用于鼠标或触摸事件，停留一段时间后触发
@@ -1234,26 +1234,29 @@ export function useBaseDebounced<T>(getValue: () => T, delay: number = 500): Sha
     })
     return result
 }
+//#endregion
 
+//#region == v命令封装 ======================================
 /**
- * 是否应该自动聚焦输入框
- * @returns
+ * 根据用户角色设置元素的 class 属性
  */
-export function shouldAutoFocus(): boolean {
-    // 桌面端
-    if (runtimeData.tags.clientType) {
-        // 除了苹果的不知道啥东西,都可以
-        if (['electron', 'tauri'].includes(runtimeData.tags.clientType)) {
-            return true
+export const vUserRole: Directive<HTMLSpanElement, Role> = {
+    mounted(el: HTMLElement, binding: DirectiveBinding<Role>) {
+        const role = binding.value
+        if (!role) return
+        // 设置 class
+        el.classList.add('user-title')
+        switch (role) {
+            case Role.Owner:
+                el.classList.add('owner')
+                break
+            case Role.Admin:
+                el.classList.add('admin')
+                break
+            case Role.Bot:
+                el.classList.add('bot')
+                break
         }
-        return false
-    }
-    // web端
-    else {
-        // 移动端浏览器不自动聚焦
-        if (/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-            return false
-        }
-        return true
     }
 }
+//#endregion

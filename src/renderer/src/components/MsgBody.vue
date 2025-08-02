@@ -47,11 +47,14 @@
         }">
             <!-- 一帮头衔之类的 -->
             <template v-if="data.sender instanceof Member && !needSpecialMe()">
-                <span v-if="data.sender.role === Role.Bot" class="robot">{{ $t('机器人') }}</span>
-                <span v-else-if="data.sender.role === Role.Owner" class="owner">{{ $t('群主') }}</span>
-                <span v-else-if="data.sender.role === Role.Admin" class="admin">{{ $t('管理员') }}</span>
-                <span v-if="data.sender.title">{{ data.sender.title.replace(/[\u202A-\u202E\u2066-\u2069]/g, '') }}</span>
-                <span v-if="data.sender.level" class="level">{{ 'Lv.' + data.sender.level }}</span>
+                <span v-user-role="data.sender.role">
+                    <template v-if="data.sender.level">
+                        {{ 'Lv.' + data.sender.level }}
+                    </template>
+                    <template v-if="data.sender.title">
+                        {{ data.sender.title.replace(/[\u202A-\u202E\u2066-\u2069]/g, '') }}
+                    </template>
+                </span>
             </template>
             <a v-show="!needSpecialMe()">
                 {{ data.sender.name }}
@@ -392,6 +395,48 @@
 </template>
 
 <script setup lang="ts">
+import Option from '@renderer/function/option'
+import CardMessage from './msg-component/CardMessage.vue'
+import app from '@renderer/main'
+import markdownit from 'markdown-it'
+
+import { MsgBodyFuns as ViewFuns } from '@renderer/function/model/msg-body'
+import { defineComponent } from 'vue'
+import { runtimeData } from '@renderer/function/msg'
+import { Logger, LogType, PopInfo, PopType } from '@renderer/function/base'
+import { getFace, pokeAnime } from '@renderer/function/utils/msgUtil'
+import {
+    openLink,
+    sendStatEvent,
+    useStayEvent,
+    vUserRole,
+} from '@renderer/function/utils/appUtil'
+import {
+    callBackend,
+    getSizeFromBytes,
+    getTrueLang,
+    getViewTime } from '@renderer/function/utils/systemUtil'
+import { linkView } from '@renderer/function/utils/linkViewUtil'
+import { MenuEventData } from '@renderer/function/elements/information'
+import {
+    AtSeg,
+    FaceSeg,
+    FileSeg,
+    ForwardSeg,
+    ImgSeg,
+    JsonSeg,
+    MdSeg,
+    ReplySeg,
+    TxtSeg,
+    VideoSeg,
+    XmlSeg
+} from '@renderer/function/model/seg'
+import { Msg, SelfMsg} from '@renderer/function/model/msg'
+import { Member, Role, IUser } from '@renderer/function/model/user'
+import { wheelMask } from '@renderer/function/utils/input'
+import { GroupSession } from '@renderer/function/model/session'
+import { UserInfoPan } from '@renderer/pages/Chat.vue'
+
 //#region == 声明变量 ================================================================
 const {
     data,
@@ -480,47 +525,6 @@ defineExpose({
 </script>
 
 <script lang="ts">
-    import Option from '@renderer/function/option'
-    import CardMessage from './msg-component/CardMessage.vue'
-    import app from '@renderer/main'
-    import markdownit from 'markdown-it'
-
-    import { MsgBodyFuns as ViewFuns } from '@renderer/function/model/msg-body'
-    import { defineComponent } from 'vue'
-    import { runtimeData } from '@renderer/function/msg'
-    import { Logger, LogType, PopInfo, PopType } from '@renderer/function/base'
-    import { getFace, pokeAnime } from '@renderer/function/utils/msgUtil'
-    import {
-        openLink,
-        sendStatEvent,
-        useStayEvent,
-    } from '@renderer/function/utils/appUtil'
-    import {
-        callBackend,
-        getSizeFromBytes,
-        getTrueLang,
-        getViewTime } from '@renderer/function/utils/systemUtil'
-    import { linkView } from '@renderer/function/utils/linkViewUtil'
-    import { MenuEventData } from '@renderer/function/elements/information'
-    import {
-        AtSeg,
-        FaceSeg,
-        FileSeg,
-        ForwardSeg,
-        ImgSeg,
-        JsonSeg,
-        MdSeg,
-        ReplySeg,
-        TxtSeg,
-        VideoSeg,
-        XmlSeg
-    } from '@renderer/function/model/seg'
-    import { Msg, SelfMsg} from '@renderer/function/model/msg'
-    import { Member, Role, IUser } from '@renderer/function/model/user'
-    import { wheelMask } from '@renderer/function/utils/input'
-    import { GroupSession } from '@renderer/function/model/session'
-    import { UserInfoPan } from '@renderer/pages/Chat.vue'
-
     export interface MsgBodyConfig {
         specialMe?: boolean,         // 是否特殊处理自己的消息
         showIcon?: boolean,          // 是否显示消息图标
@@ -529,7 +533,6 @@ defineExpose({
 
     export default defineComponent({
         name: 'MsgBody',
-        components: { CardMessage },
         data() {
             return {
                 md: markdownit({ breaks: true }),
@@ -552,20 +555,6 @@ defineExpose({
                     onScroll: 'none' as 'none' | 'touch' | 'wheel',
                     touchLast: null as null | TouchEvent,
                 },
-                AtSeg,
-                FaceSeg,
-                ForwardSeg,
-                ImgSeg,
-                JsonSeg,
-                MdSeg,
-                Msg,
-                ReplySeg,
-                TxtSeg,
-                VideoSeg,
-                XmlSeg,
-                FileSeg,
-                SelfMsg,
-                Member
             }
         },
         mounted() {
