@@ -79,11 +79,16 @@
                 <br>
                 {{ $t('跨域服务器你可以在网上寻找公益跨域服务器，但可能存在安全隐患。强烈建议你自己搭建跨域服务器，问问AI就能解决。') }}
                 <br>
-                <div class="ga-share">
-                    <font-awesome-icon
-                        :icon="['fas', corsTestRe.icon]"
-                        :style="{color: corsTestRe.iconColor}" />
-                    {{ corsTestRe.status }}
+                <div>
+                    <div>
+                        <font-awesome-icon
+                            :icon="['fas', 'fa-circle']"
+                            :style="{color: corsTestRe.iconColor}" />
+                        {{ corsTestRe.status }}
+                    </div>
+                    <button class="ss-button" @click="testCors">
+                        {{ $t('重新测试') }}
+                    </button>
                 </div>
             </div>
         </div>
@@ -280,11 +285,9 @@ const testUrl = 'https://api.douban.com/v2/movie/top250'
 const proxyUrl = useBaseDebounced(()=>runtimeData.sysConfig.proxyUrl, 500)
 const corsTestRe: ShallowReactive<{
     status: string,
-    icon: string,
     iconColor: string,
 }> = shallowReactive({
     status: $t('测试ing'),
-    icon: 'fa-circle',
     iconColor: 'var(--color-font-2)',
 })
 let currentAbortController: AbortController | undefined
@@ -293,21 +296,21 @@ let currentAbortController: AbortController | undefined
 function testCors() {
     if (currentAbortController) {
         currentAbortController.abort()
-        corsTestRe.status = $t('测试ing')
-        corsTestRe.icon = 'fa-circle-notch'
-        corsTestRe.iconColor = 'var(--color-font-2)'
     }
+    corsTestRe.status = $t('测试ing')
+    corsTestRe.iconColor = 'var(--color-font-2)'
     currentAbortController = new AbortController()
     const url = stdUrl(testUrl)
     fetch(url, { method: 'GET', signal: currentAbortController.signal })
-        .then(() => {
+        .then((res) => res.json())
+        .then((data) => {
+            // 请求参数不对，跨域成功的话会错误信息，判断返回代码就勾勒
+            if (data.code === undefined) throw new Error('Invalid response')
             corsTestRe.status = $t('测试成功')
-            corsTestRe.icon = 'fa-circle-check'
             corsTestRe.iconColor = 'var(--color-green)'
         })
         .catch(() => {
             corsTestRe.status = $t('测试失败')
-            corsTestRe.icon = 'fa-circle-xmark'
             corsTestRe.iconColor = 'var(--color-red)'
         })
         .finally(() => {

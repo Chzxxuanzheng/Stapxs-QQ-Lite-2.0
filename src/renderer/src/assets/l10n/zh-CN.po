@@ -1352,3 +1352,6 @@ msgstr ""
 
 msgid "测试ing"
 msgstr ""
+
+msgid "重新测试"
+msgstr ""

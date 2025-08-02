@@ -392,7 +392,11 @@
     margin-bottom: 10px;
     background-color: var(--color-card);
 }
-.cors > div,
+.cors > div {
+    display: flex;
+    align-items: center;
+}
+.cors > div > div,
 .cors > span {
     margin: 10px 0;
     padding: 0 10px;
@@ -402,7 +406,12 @@
     border-radius: 7px;
     background-color: var(--color-card);
 }
-.cors > div > svg {
+.cors > div > div {
+    flex: 1;
+    margin-right: 10px;
+}
+
+.cors > div > div > svg {
     transition: all 0.5s;
 }
 

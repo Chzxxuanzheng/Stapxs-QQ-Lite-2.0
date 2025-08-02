@@ -542,7 +542,7 @@ export default defineComponent({
             const optTab = document.getElementsByClassName('opt-main-tab')[0] as HTMLDivElement
             switch (view) {
                 case 'Options': {
-                    Connector.send('get_version_info', {}, 'getVersionInfo')
+                    // Connector.send('get_version_info', {}, 'getVersionInfo')
                     if (optTab) {
                         optTab.style.opacity = '1'
                     }

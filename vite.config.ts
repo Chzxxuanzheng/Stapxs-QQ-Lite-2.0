@@ -21,33 +21,7 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/api/, '')
             },
-            '/proxy': {
-                target: 'http://example.com', // target 会被动态覆盖
-                changeOrigin: true,
-                // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                configure: (proxy, _options) => {
-                    // 动态更改 proxy target
-                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                    proxy.on('proxyReq', (proxy) => {
-                        if (!proxy.path) return
-
-                        const proxyUrl = new URL('http://url' + proxy.path, 'http://url')
-
-                        try {
-                            const targetUrl = proxyUrl.searchParams.get('url')
-
-                            if (targetUrl && targetUrl.trim() !== '') {
-                                const target = new URL(targetUrl)
-                                proxy.path = target.pathname + target.search
-                            }
-                        } catch (error) {
-                            // eslint-disable-next-line no-console
-                            console.error('代理配置错误:', error)
-                        }
-                    })
-                }
-            },
-        }
+        },
     },
     plugins: [
         vue(),
