@@ -427,12 +427,12 @@ export function stdUrl(url: string){
     let proxyUrl: string | undefined = undefined
     if (runtimeData.tags.proxyPort)
         proxyUrl = `http://localhost:${runtimeData.tags.proxyPort}/assets?url={url}`
-    else if (runtimeData.sysConfig.proxyUrl?.length > 0)
-        proxyUrl = runtimeData.sysConfig.proxyUrl
+    else if (runtimeData.sysConfig.proxyUrl?.trim().length > 0)
+        proxyUrl = runtimeData.sysConfig.proxyUrl.trim()
 
     // url 校验
-    if (!proxyUrl?.includes('{url}')) {
-        new PopInfo().add(PopType.ERR, $t('代理地址不包含 {url}，请检查配置'),)
+    if (proxyUrl && proxyUrl.includes('{url}')) {
+        new PopInfo().add(PopType.ERR, $t('代理地址不包含 \\{url\\}，请检查配置'),)
         proxyUrl = undefined
     }
 
