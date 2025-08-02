@@ -1086,7 +1086,7 @@ export function sendStatEvent(event: string, data: any) {
  */
 export function shouldAutoFocus(): boolean {
     // 桌面端
-    if (runtimeData.tags.clientType) {
+    if (runtimeData.tags.clientType !== 'web') {
         // 除了苹果的不知道啥东西,都可以
         if (['electron', 'tauri'].includes(runtimeData.tags.clientType)) {
             return true
@@ -1347,4 +1347,25 @@ function createVMenu(): Directive<HTMLElement, (event: MenuEventData)=>void> {
  * @example v-menu="(data: MenuEventData) =>  打开菜单函数(data, 其他参数)"
  */
 export const vMenu: Directive<HTMLElement, (event: MenuEventData)=>void, 'prevent'> = createVMenu()
+/**
+ * 挂在时如果设备支持,自动聚焦输入框
+ */
+export const vAutoFocus: Directive<HTMLInputElement|HTMLTextAreaElement, undefined> = {
+    mounted(el: HTMLInputElement|HTMLTextAreaElement) {
+        // 判断是否支持聚焦
+        if (!shouldAutoFocus()) return
+
+        // 检查元素是否可见
+        const isVisible = () => {
+            const style = window.getComputedStyle(el)
+            return style.display !== 'none' &&
+                   style.visibility !== 'hidden' &&
+                   style.opacity !== '0'
+        }
+
+        if (!isVisible()) return
+
+        el.focus()
+    }
+}
 //#endregion`

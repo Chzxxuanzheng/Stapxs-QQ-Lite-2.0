@@ -24,7 +24,8 @@
                     id="friend-small-search"
                     class="small">
                     <label>
-                        <input id="friend-search-small"
+                        <input
+                            v-auto-focus
                             v-model="searchInfo" type="text"
                             :placeholder="$t('搜索 ……')" @input="search">
                         <font-awesome-icon :icon="['fas', 'magnifying-glass']" />
@@ -37,7 +38,9 @@
                     </div>
                 </div>
                 <label>
-                    <input id="friend-search" v-model="searchInfo" type="text"
+                    <input
+                        v-auto-focus
+                        v-model="searchInfo" type="text"
                         :placeholder="$t('搜索 ……')" @input="search">
                     <font-awesome-icon :icon="['fas', 'magnifying-glass']" />
                 </label>
@@ -101,7 +104,6 @@ import FriendBody from '@renderer/components/FriendBody.vue'
 import FriendMenu from '@renderer/components/FriendMenu.vue'
 
 import {
-    onMounted,
     shallowRef,
     type ShallowRef,
     inject,
@@ -111,6 +113,7 @@ import { reloadUsers, vMenu } from '@renderer/function/utils/appUtil'
 import { login as loginInfo } from '@renderer/function/connect'
 import { callBackend } from '@renderer/function/utils/systemUtil'
 import { SessionClass, Session } from '@renderer/function/model/session'
+import { vAutoFocus } from '@renderer/function/utils/appUtil'
 
 const emit = defineEmits<{
     userClick: [session: Session],
@@ -121,25 +124,6 @@ const searchList: ShallowRef<Session[]> = shallowRef([])
 const searchInfo: ShallowRef<string> = shallowRef('')
 
 const menu: undefined | InstanceType<typeof FriendMenu> = inject('friendMenu')
-
-onMounted(() => {
-    // 判断 friend-small-search 是否 display none
-    const smallSearch = document.getElementById('friend-small-search')
-    if(smallSearch) {
-        const style = window.getComputedStyle(smallSearch)
-        let name = 'friend-search'
-        if(style.display != 'none') {
-            name = 'friend-search-small'
-        }
-        // 将焦点移动到搜索框
-        if(['electron', 'tauri'].includes(runtimeData.tags.clientType)) {
-            const search = document.getElementById(name)
-            if(search) {
-                search.focus()
-            }
-        }
-    }
-})
 
 /**
  * 联系人被点击事件
