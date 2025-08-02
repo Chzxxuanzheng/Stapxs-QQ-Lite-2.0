@@ -11,8 +11,8 @@
     <div :id="'user-' + data.id"
         class="friend-body"
         :class="{
-            'onmenu': isSelected(),
             'active': runtimeData.nowChat === data,
+            'onmenu': runtimeData.nowChat !== data && isSelected(),
         }"
         :data-name="data.name"
         :data-nickname="data instanceof UserSession ? data.name : ''"
