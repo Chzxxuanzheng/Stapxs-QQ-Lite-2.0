@@ -1268,4 +1268,83 @@ export const vUserRole: Directive<HTMLSpanElement, Role> = {
         }
     }
 }
-//#endregion
+/**
+ * 创建一个右键菜单指令
+ * 用于闭包公用停留事件控制器
+ * @returns
+ */
+function createVMenu(): Directive<HTMLElement, (event: MenuEventData)=>void> {
+    // 右键菜单事件数据类型
+    type Binding = DirectiveBinding<(event: MenuEventData)=>void> & { modifiers: {prevent?: boolean} }
+
+    // 右键菜单事件数据类型
+    const {
+        handle: menuTouchHandle,
+        handleEnd: menuTouchEnd,
+    } = useStayEvent(
+        (event: TouchEvent) => {
+            if (event.touches.length > 0) {
+                const touch = event.touches[0]
+                return { x: touch.clientX, y: touch.clientY }
+            }
+            return undefined
+        },
+        {
+            onFit: (data: MenuEventData, binding: Binding) => {
+                // 触发右键菜单事件
+                binding.value(data)
+            }
+        },
+        400,
+    )
+
+    // 创建指令
+    const out = {
+        mounted( el: HTMLElement, binding: Binding, ) {
+            // 创建变量
+            const prevent = binding.modifiers.prevent || false
+            const controller = new AbortController()
+            const options = {signal: controller.signal}
+
+            // 添加监听
+            el.addEventListener('contextmenu', (event) => {
+                if (prevent) event.preventDefault()
+                const data: MenuEventData = {
+                    x: event.clientX,
+                    y: event.clientY,
+                    target: event.target as HTMLElement,
+                }
+                binding.value(data)
+            }, options)
+            el.addEventListener('touchstart', (event) => {
+                if (prevent) event.preventDefault()
+                menuTouchHandle(event, binding)
+            }, options)
+            el.addEventListener('touchmove', (event) => {
+                if (prevent) event.preventDefault()
+                menuTouchHandle(event, binding)
+            }, options)
+            el.addEventListener('touchend', (event) => {
+                if (prevent) event.preventDefault()
+                menuTouchEnd(event)
+            }, options)
+
+            // 绑定控制器
+            ;(el as any)._vMenuController = controller
+        },
+        unmounted(el: HTMLElement) {
+            const controller = (el as any)._vMenuController
+            if (!controller) return
+
+            controller.abort()
+            delete (el as any)._vMenuController
+        },
+    }
+    return out
+}
+/**
+ * 创建一个右键菜单指令
+ * @example v-menu="(data: MenuEventData) =>  打开菜单函数(data, 其他参数)"
+ */
+export const vMenu: Directive<HTMLElement, (event: MenuEventData)=>void, 'prevent'> = createVMenu()
+//#endregion`

@@ -58,7 +58,12 @@
                             <div :id="'class-' + class_.id">
                                 <FriendBody v-for="item in class_.content"
                                     :key=" 'fb-' + item.id "
-                                    :data="item" from="friend"
+                                    v-menu.prevent="event => {
+                                        console.log(menu, menu === undefined)
+                                        menu!.open('friend', item, event)
+                                    }"
+                                    :data="item"
+                                    from="friend"
                                     @click="userClick(item as Session)" />
                             </div>
                         </div>
@@ -69,6 +74,7 @@
                     <div>
                         <FriendBody v-for="item in searchList"
                             :key="'fb-' + item.id"
+                            v-menu.prevent="event => menu?.open('friend', item, event)"
                             :data="item as Session"
                             from="friend"
                             @click="userClick(item as Session)" />
@@ -92,14 +98,16 @@
 
 <script setup lang="ts">
 import FriendBody from '@renderer/components/FriendBody.vue'
+import FriendMenu from '@renderer/components/FriendMenu.vue'
 
 import {
     onMounted,
     shallowRef,
     type ShallowRef,
+    inject,
 } from 'vue'
 import { runtimeData } from '@renderer/function/msg'
-import { reloadUsers } from '@renderer/function/utils/appUtil'
+import { reloadUsers, vMenu } from '@renderer/function/utils/appUtil'
 import { login as loginInfo } from '@renderer/function/connect'
 import { callBackend } from '@renderer/function/utils/systemUtil'
 import { SessionClass, Session } from '@renderer/function/model/session'
@@ -111,6 +119,9 @@ const emit = defineEmits<{
 const isSearch: ShallowRef<boolean> = shallowRef(false)
 const searchList: ShallowRef<Session[]> = shallowRef([])
 const searchInfo: ShallowRef<string> = shallowRef('')
+
+const menu: undefined | InstanceType<typeof FriendMenu> = inject('friendMenu')
+
 onMounted(() => {
     // 判断 friend-small-search 是否 display none
     const smallSearch = document.getElementById('friend-small-search')
@@ -190,8 +201,6 @@ function openLeftBar() {
 
 <style scoped>
     .exp-body > div {
-        /* transition: transform .3s;
-    transform-origin: top; */
         transform: scaleY(0);
         height: 0;
     }

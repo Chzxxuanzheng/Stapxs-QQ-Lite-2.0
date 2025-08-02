@@ -9,7 +9,11 @@
 
 <template>
     <div :id="'user-' + data.id"
-        :class="'friend-body' + (select ? ' active' : menu ? ' onmenu' : '')"
+        class="friend-body"
+        :class="{
+            'onmenu': isSelected(),
+            'active': runtimeData.nowChat === data,
+        }"
         :data-name="data.name"
         :data-nickname="data instanceof UserSession ? data.name : ''"
         :data-type="data.type">
@@ -37,8 +41,9 @@
                 <a :class="from == 'friend' ? 'nick' : ''">{{
                     from == 'friend' ? '' : data.preMessage?.preMsg ?? ''
                 }}</a>
-                <div v-if="from == 'message'" style="margin-left: 10px; display: flex">
+                <div style="margin-left: 10px; display: flex">
                     <font-awesome-icon v-if="data.alwaysTop" :icon="['fas', 'thumbtack']" />
+                    <font-awesome-icon v-if="shouldShowNotice()" :icon="['fas', 'bell']" />
                 </div>
             </div>
         </div>
@@ -46,16 +51,29 @@
 </template>
 
 <script setup lang="ts">
-import { Session, UserSession } from '@renderer/function/model/session'
+import { GroupSession, Session, UserSession } from '@renderer/function/model/session'
+import { runtimeData } from '@renderer/function/msg'
+import { inject } from 'vue'
+import FriendMenu from './FriendMenu.vue';
+
 const {
     data,
-    select=false,
-    menu=false,
     from='message'
 } = defineProps<{
     data: Session,
-    select?: boolean,
-    menu?: boolean,
     from?: 'message' | 'friend'
 }>()
+
+const menu = inject<Ref<InstanceType<typeof FriendMenu> | undefined>>('friendMenu')
+
+function shouldShowNotice(): boolean {
+    if (!(data instanceof GroupSession)) return false
+    if (runtimeData.sysConfig.group_notice_type === 'all')  return false
+    return data.notice
+}
+function isSelected(): boolean {
+    if (!menu?.value) return false
+    if (!menu.value.selectSession) return false
+    return menu.value.selectSession.id === data.id
+}
 </script>

@@ -201,18 +201,25 @@
                 <img v-for="info in scope.images" :key="'imgView-' + info.id" :src="info.url">
             </template>
         </viewer>
+        <FriendMenu ref="friendMenu" />
         <div id="mobile-css" />
     </div>
 </template>
 
-<script lang="ts">
+<script setup lang="ts">
 import Spacing from 'spacingjs/src/spacing'
 import app from '@renderer/main'
 import Option from '@renderer/function/option'
 import Umami from '@stapxs/umami-logger-typescript'
 import * as App from './function/utils/appUtil'
 
-import { defineComponent, defineAsyncComponent } from 'vue'
+import {
+    defineComponent,
+    defineAsyncComponent,
+    ref,
+    Ref,
+    provide,
+} from 'vue'
 import { Connector, login as loginInfo } from '@renderer/function/connect'
 import { Logger, popList, PopInfo, LogType, PopType } from '@renderer/function/base'
 import { runtimeData } from '@renderer/function/msg'
@@ -220,21 +227,20 @@ import { Notify } from './function/notify'
 import { changeSession } from './function/utils/msgUtil'
 import { getDeviceType, callBackend } from './function/utils/systemUtil'
 import { uptime } from '@renderer/main'
+import { Session } from './function/model/session'
 
 import Options from '@renderer/pages/Options.vue'
 import Friends from '@renderer/pages/Friends.vue'
 import Messages from '@renderer/pages/Messages.vue'
-import Chat from '@renderer/pages/Chat.vue'
-import { Session } from './function/model/session'
+import FriendMenu from './components/FriendMenu.vue'
 
+const friendMenu: Ref<undefined|InstanceType<typeof FriendMenu>> = ref()
+provide('friendMenu', friendMenu)
+</script>
+
+<script lang="ts">
 export default defineComponent({
     name: 'App',
-    components: {
-        Options,
-        Friends,
-        Messages,
-        Chat
-    },
     data() {
         return {
             dev: import.meta.env.DEV,

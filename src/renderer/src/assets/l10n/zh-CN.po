@@ -1355,3 +1355,6 @@ msgstr ""
 
 msgid "重新测试"
 msgstr ""
+
+msgid "代理地址不包含 \{url\}，请检查配置"
+msgstr ""

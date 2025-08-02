@@ -21,14 +21,14 @@
                             <span name="id">{{ data.user.user_id }}</span>
                             <div>
                                 <a>{{ data.user.name }}</a>
-                                    <span v-user-role="data.user.role">
-                                        <template v-if="data.user.level">
-                                            {{ 'Lv.' + data.user.level }}
-                                        </template>
-                                        <template v-if="data.user.title">
-                                            {{ data.user.title.replace(/[\u202A-\u202E\u2066-\u2069]/g, '') }}
-                                        </template>
-                                    </span>
+                                <span v-user-role="data.user.role">
+                                    <template v-if="data.user.level">
+                                        {{ 'Lv.' + data.user.level }}
+                                    </template>
+                                    <template v-if="data.user.title">
+                                        {{ data.user.title.replace(/[\u202A-\u202E\u2066-\u2069]/g, '') }}
+                                    </template>
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -117,7 +117,8 @@
 </template>
 
 <script setup lang="ts">
-import { IUser, Member, Role, User } from '@renderer/function/model/user';
+import { vUserRole } from '@renderer/function/utils/appUtil'
+import { IUser, Member, Role, User } from '@renderer/function/model/user'
 import {
     ref,
     type Ref,

@@ -1,6 +1,5 @@
 import jp from 'jsonpath'
 import anime from 'animejs'
-import option from '@renderer/function/option'
 
 import { Logger } from '@renderer/function/base'
 import { runtimeData } from '@renderer/function/msg'
@@ -388,20 +387,6 @@ export function sortActivateSession(): Session[] {
         return a.showNamePy.localeCompare(b.showNamePy)
     })
     return activeSessions
-}
-
-/**
- * 判断当前消息是否可以通知
- * @param id 群号
- * @returns 是否可以通知
- */
-export function canGroupNotice(id: number) {
-    const noticeInfo = option.get('notice_group') ?? {}
-    const list = noticeInfo[runtimeData.loginInfo.uin]
-    if (list) {
-        return list.indexOf(id) >= 0
-    }
-    return false
 }
 
 /**

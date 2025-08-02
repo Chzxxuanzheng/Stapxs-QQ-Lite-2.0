@@ -22,22 +22,13 @@
         :data-time="data.time"
         @mouseleave="hiddenUserInfo">
         <img v-show="!needSpecialMe()"
+            v-menu.prevent="event => $emit('showUserMenu', event, data.sender)"
             name="avatar"
             :src="data.sender.getFace()"
-
-            @touchstart="LongTouchHandle($event, 'user')"
-            @touchmove="LongTouchHandle($event, 'user')"
-            @touchend="LongTouchEnd($event)"
 
             @mouseenter="userInfoHoverHandle($event, data.sender)"
             @mousemove="userInfoHoverHandle($event, data.sender)"
             @mouseleave="userInfoHoverEnd($event)"
-
-            @contextmenu.prevent="$emit('showUserMenu', {
-                x: $event.clientX,
-                y: $event.clientY,
-                target: $event.target as HTMLElement
-            }, data.sender)"
             @dblclick="$emit('senderDoubleClick', data.sender)">
         <div v-if="needSpecialMe()"
             class="message-space" />
@@ -77,24 +68,15 @@
                             :icon="['fas', data.icon.icon]" />
                     </div>
                 </div>
-                <div
-                    :class="{main: true, 'not-exist': !data.exist && getConfig('dimNonExistentMsg')}"
-                    @touchstart.stop="
-                        LongTouchHandle($event, 'msg');
-                        msgMoveStart($event)"
-                    @touchend.stop="
-                        LongTouchEnd($event);
-                        msgMoveEnd($event)"
-                    @touchmove.stop="
-                        LongTouchHandle($event, 'msg');
-                        msgKeepMove($event)"
-                    @wheel.stop="
-                        msgMoveWheel($event)"
-                    @contextmenu.prevent="$emit('showMsgMenu', {
-                        x: $event.clientX,
-                        y: $event.clientY,
-                        target: $event.target as HTMLElement
-                    }, data)">
+                <div v-menu.prevent="event => $emit('showMsgMenu', event, data)"
+                    :class="{
+                        'main': true,
+                        'not-exist': !data.exist && getConfig('dimNonExistentMsg')
+                    }"
+                    @touchstart.stop="msgMoveStart($event)"
+                    @touchend.stop="msgMoveEnd($event)"
+                    @touchmove.stop="msgKeepMove($event)"
+                    @wheel.stop="msgMoveWheel($event)">
                     <!-- 消息体 -->
                     <template v-if="data.message.length === 0">
                         <span class="msg-text" style="opacity: 0.5">{{ $t('空消息') }}</span>
@@ -410,6 +392,7 @@ import {
     sendStatEvent,
     useStayEvent,
     vUserRole,
+    vMenu,
 } from '@renderer/function/utils/appUtil'
 import {
     callBackend,
@@ -467,24 +450,6 @@ const emit = defineEmits<{
 //#endregion
 
 //#region == 长按/覆盖监视器 =========================================================
-const {
-    handle: LongTouchHandle,
-    handleEnd: LongTouchEnd,
-} = useStayEvent(
-    (event: TouchEvent) => {
-        return {
-            x: event.touches[0].clientX,
-            y: event.touches[0].clientY,
-        }
-    },
-    {onFit: (eventData: MenuEventData, ctx: 'user' | 'msg') => {
-        if (ctx === 'user') {
-            emit('showUserMenu', eventData, data.sender)
-        } else {
-            emit('showMsgMenu', eventData, data)
-        }
-    }}, 400
-)
 const {
     handle: userInfoHoverHandle,
     handleEnd: userInfoHoverEnd,
