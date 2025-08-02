@@ -235,6 +235,15 @@ export async function reloadUsers(useCache: boolean = true) {
         session.activate()
     }
 
+    // 设置通知开关
+    const noticeList = runtimeData.sysConfig?.notice_group[runtimeData.loginInfo.uin]
+    if (noticeList) {
+        for (const session of GroupSession.sessionList) {
+            if (!noticeList.includes(session.id)) continue
+            session.setNotice(true, false)
+        }
+    }
+
     // 更新当前会话
     if (nowChatId) {
         const session = Session.getSessionById(nowChatId)
