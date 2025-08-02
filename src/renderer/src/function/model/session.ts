@@ -19,12 +19,16 @@ import { reactive } from 'vue'
 import { getMessageList, runtimeData } from '../msg'
 import { Connector } from '../connect'
 import { SystemNotice } from './notice'
-import { PopInfo, PopType } from '../base'
+import { Logger, PopInfo, PopType } from '../base'
 import { isDeleteMsg } from '../utils/msgUtil'
 import { BaseUser, Member, Role, IUser, User } from './user'
 import { Ann } from './ann'
 import { GroupFile, GroupFileFolder } from './file'
+import { SessionBox } from './box'
 
+/**
+ * 会话基类
+ */
 export abstract class Session {
     // 基本信息
     abstract type: 'group' | 'user' | 'temp'
@@ -45,6 +49,7 @@ export abstract class Session {
     // 高亮信息
     highlightInfo: string[] = []
     showNotice: boolean = false
+    // 分组盒子
 
     // 内部信息
     // 已有会话列表
@@ -101,6 +106,7 @@ export abstract class Session {
         this.preMessage = undefined
         this.highlightInfo = []
         this.isActive = false
+        this.activePromise = undefined
         Session.activeSessions.delete(this)
         this.runHook(Session.unactiveHook)
     }
@@ -237,12 +243,28 @@ export abstract class Session {
                 if (this.msgQueue.at(0) !== msg) return
                 clearInterval(selfId)
                 resolve(true)
-            }, 50)
+            }, 100)
         })
 
-        if (!this.isActive) await this.activate()
-        this.imgFromNewMsg(msg)
-        this.runHook(Session.newMessageHook, msg)
+        // 消息其他处理
+        try {
+            let timeout: ReturnType<typeof setTimeout>
+            const timeoutPromise = new Promise<void>((_, reject) => {
+                timeout = setTimeout(() => reject(new Error('添加消息超时')), 10000)
+            })
+
+            const mainPromise = (async ()=>{
+                if (!this.isActive) await this.activate()
+                this.imgFromNewMsg(msg)
+                this.runHook(Session.newMessageHook, msg)
+                clearTimeout(timeout)
+            })
+            await Promise.race([mainPromise(), timeoutPromise])
+        }catch (e) {
+            new Logger().error(e as Error, '添加消息失败')
+        }
+
+        // 保存消息
         this.messageList.push(msg)
         this.refushPreMsg()
         if(msg instanceof Msg && msg.sender.user_id !== runtimeData.loginInfo.uin)
