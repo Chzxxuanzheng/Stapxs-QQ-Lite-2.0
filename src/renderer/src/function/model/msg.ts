@@ -18,6 +18,7 @@ import { autoReactive } from './utils'
 import { BaseUser, Member, type IUser } from './user'
 import { Message } from './message'
 import { GroupSession, Session, TempSession } from './session'
+import { delay } from '../utils/systemUtil'
 
 const logger = new Logger()
 type IconData = { icon: string, rotate: boolean, desc: string, color: string }
@@ -324,7 +325,7 @@ export class SelfMsg extends Msg {
                     break
                 }
             } catch {/**/}
-            await new Promise(resolve => setTimeout(resolve, 100))
+            await delay(100)
         }
         if (!msg) {
             new PopInfo().add(PopType.ERR, '更新消息失败...')

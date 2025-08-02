@@ -1,5 +1,5 @@
 import app from '@renderer/main'
-import { getSizeFromBytes, stdUrl } from '../utils/systemUtil'
+import { delay, getSizeFromBytes, stdUrl } from '../utils/systemUtil'
 import { MsgBodyFuns } from './msg-body'
 import { createMsg, getFace } from '../utils/msgUtil'
 import { Connector } from '../connect'
@@ -393,7 +393,7 @@ export class ReplySeg extends Seg {
                     return
                 }
             } catch {
-                await new Promise(resolve => setTimeout(resolve, 100))
+                await delay(100)
             }
         }
 
