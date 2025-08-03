@@ -24,11 +24,14 @@ import { parseMsg } from '../sender'
 import { Notify } from '../notify'
 import { GroupSession, UserSession } from '../model/session'
 import {
+    ref,
     ShallowRef,
     shallowRef,
+    shallowReactive,
     watch,
     toRaw,
-    Directive
+    Directive,
+    watchEffect,
 } from 'vue'
 
 const popInfo = new PopInfo()
@@ -1368,4 +1371,59 @@ export const vAutoFocus: Directive<HTMLInputElement|HTMLTextAreaElement, undefin
         el.focus()
     }
 }
+
+export interface SearchBinding<T extends { match(query: string): boolean }> {
+  originList: Iterable<T>
+  isSearch: boolean
+  query: T[]
+  forceUpdate?: number  // 强制刷新
+}
+
+/**
+ * 生成一个 Search 指令
+ */
+export function createVSearch<T extends { match(query: string): boolean }>()
+: Directive<HTMLInputElement, SearchBinding<T>> {
+    return {
+        mounted(el, binding: DirectiveBinding<SearchBinding<T>>) {
+            const controller = new AbortController()
+            const queryTxt = ref('')
+
+            el.addEventListener('input', () => {
+                queryTxt.value = el.value.trim()
+            }, {signal: controller.signal})
+
+            watchEffect(() => {
+                binding.value.forceUpdate
+                if (!queryTxt.value) {
+                    binding.value.isSearch = false
+                    binding.value.query = []
+                } else {
+                    binding.value.isSearch = true
+                    binding.value.query = shallowReactive(Array.from(binding.value.originList)
+                        .filter(item => item.match(queryTxt.value)))
+                }
+            })
+            ;(el as any)._vSearchController = controller
+        },
+        unmounted(el) {
+            const controller = (el as any)._vSearchController
+            if (!controller) return
+
+            controller.abort()
+            delete (el as any)._vSearchController
+        }
+    }
+}
+
+/**
+ * 输入时在制定列表里搜索匹配的项
+ * @example v-search="{
+ *     originList: 制定的列表,
+ *     isSearch: 当前是否在搜索,
+ *     query: 搜索结果列表，
+ * }"
+ * @see createVSearch
+ */
+export const vSearch = createVSearch<any>()
 //#endregion`

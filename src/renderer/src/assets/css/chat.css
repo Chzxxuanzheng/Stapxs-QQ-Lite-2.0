@@ -1763,7 +1763,8 @@ input {
     display: flex;
     flex: 1;
 }
-.forward-pan > div.card > div:nth-child(3) > div {
+
+div.tiny-session-body {
     align-items: center;
     border-radius: 7px;
     cursor: pointer;
@@ -1771,8 +1772,8 @@ input {
     padding: 10px;
     display: flex;
 }
-.forward-pan > div.card > div:nth-child(3) > div > div:nth-child(1) {
-    height: 60%;
+div.tiny-session-body > div:nth-child(1) {
+    height: 1.8rem;
     width: 5px;
     border-radius: 2px;
     margin-left: -10px;
@@ -1781,25 +1782,25 @@ input {
     transition: all 0.3s;
     transform: scaleY(0);
 }
-.forward-pan > div.card > div:nth-child(3) > div.selected {
+div.tiny-session-body.selected {
     background: linear-gradient(to right, var(--color-card-1), 60%, #00000000);
 }
-.forward-pan > div.card > div:nth-child(3) > div.selected > div:nth-child(1) {
+div.tiny-session-body.selected > div:nth-child(1) {
     transform: scaleY(1);
 }
-.forward-pan > div.card > div:nth-child(3) > div:hover {
+div.tiny-session-body:hover {
     background: var(--color-card-2);
 }
-.forward-pan > div.card > div:nth-child(3) > div > img {
+div.tiny-session-body > img {
     border-radius: 7px;
     margin-right: 10px;
     height: 2.5rem;
     width: 2.5rem;
 }
-.forward-pan > div.card > div:nth-child(3) > div > div {
+div.tiny-session-body > div {
     overflow: hidden;
 }
-.forward-pan > div.card > div:nth-child(3) > div p {
+div.tiny-session-body > div p {
     color: var(--color-font);
     white-space: nowrap;
     text-overflow: ellipsis;
@@ -1807,7 +1808,7 @@ input {
     display: block;
     margin: 0;
 }
-.forward-pan > div.card > div:nth-child(3) > div span {
+div.tiny-session-body span {
     color: var(--color-font-1);
     font-size: 0.8rem;
 }

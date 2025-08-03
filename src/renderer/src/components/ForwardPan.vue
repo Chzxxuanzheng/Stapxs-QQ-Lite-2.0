@@ -15,7 +15,9 @@
                         <font-awesome-icon :icon="['fas', 'xmark']" @click="close" />
                     </header>
                     <div>
-                        <input v-model="searchContent" :placeholder="$t('搜索 ……')" @input="searchChat">
+                        <input
+                            v-search="searchInfo"
+                            :placeholder="$t('搜索 ……')">
                         <button v-if="!multiselectMode"
                             @click="multiselectMode=true">
                             多选
@@ -26,25 +28,11 @@
                         </button>
                     </div>
                     <div>
-                        <div v-for="session in searchList ?? chatList"
-                            :key=" 'forwardList-' + session.id"
-                            :class="{
-                                selected: selected.includes(session),
-                            }"
-                            @click="clickChat(session)">
-                            <div />
-                            <img loading="lazy"
-                                :title="session.showName"
-                                :src="session.getFace()">
-                            <div>
-                                <p>
-                                    {{ session.showName }}
-                                </p>
-                                <span v-if="session.type === 'group'">{{ $t('群组') }}</span>
-                                <span v-else-if="session.type === 'user'">{{ $t('好友') }}</span>
-                                <span v-else-if="session.type === 'temp'">{{ $t('临时会话') }}</span>
-                            </div>
-                        </div>
+                        <TinySessionBody v-for="session in displaySession"
+                            :key="session.id"
+                            :session="session"
+                            :selected="selected.includes(session)"
+                            @click="clickChat(session)" />
                     </div>
                 </div>
                 <div class="bg" @click="close" />
@@ -54,26 +42,43 @@
 </template>
 <script setup lang="ts">
 import MsgBar from './MsgBar.vue'
+import TinySessionBody from './TinySessionBody.vue'
+
 import { runtimeData } from '@renderer/function/msg'
 import { markRaw } from 'vue'
 import { Msg, SelfMergeMsg, SelfMsg, SelfPreMergeMsg, SelfPreMsg } from '@renderer/function/model/msg'
 import { Session } from '@renderer/function/model/session'
-import { shallowRef, type ShallowRef } from 'vue'
+import {
+    shallowRef,
+    ShallowRef,
+    shallowReactive,
+    computed,
+} from 'vue'
 import { delay } from '@renderer/function/utils/systemUtil'
 import app from '@renderer/main'
 import { changeSession } from '@renderer/function/utils/msgUtil'
+import { vSearch } from '@renderer/function/utils/appUtil'
 
 //#region == 声明/导出变量 ===========================================================
 // 变量
 const { $t } = app.config.globalProperties
 const show: ShallowRef<boolean> = shallowRef(false)
-const chatList: ShallowRef<Session[]> = shallowRef([])
-const searchList: ShallowRef<Session[]|undefined> = shallowRef(undefined)
-const searchContent: ShallowRef<string> = shallowRef('')
 const selected: ShallowRef<Session[]> = shallowRef([])
 const msgs: ShallowRef<Msg[]> = shallowRef([])
 const type: ShallowRef<'single' | 'merge'> = shallowRef('single')
 const multiselectMode: ShallowRef<boolean> = shallowRef(false)
+const reflashDisplaySession = shallowRef(0)
+const searchInfo = shallowReactive({
+    originList: shallowReactive<Session[]>([]),
+    query: shallowReactive([]),
+    isSearch: false,
+})
+const displaySession = computed(() => {
+    reflashDisplaySession.value
+    const headSession = selected.value
+    const mainSession = searchInfo.isSearch ?searchInfo.query :searchInfo.originList
+    return [...headSession, ...mainSession]
+})
 // 导出
 defineExpose({
     show,
@@ -94,8 +99,9 @@ function init(){
     })
     const allChat = Session.sessionList.filter(item => !activeChat.includes(item))
 
-    chatList.value = [...activeChat, ...allChat] as Session[]
-    searchList.value = chatList.value
+    searchInfo.originList = shallowReactive([...activeChat, ...allChat])
+    searchInfo.query = []
+    searchInfo.isSearch = false
     multiselectMode.value = runtimeData.sysConfig.default_multiselect_forward ?? false
     selected.value = []
 }
@@ -182,15 +188,6 @@ function close(){
     show.value = false
 }
 /**
- * 搜索转发列表
- * @param value 搜索内容
- */
-function searchChat() {
-    if (searchContent.value === '')
-        searchList.value = chatList.value
-    else searchList.value = chatList.value.filter(item => item.match(searchContent.value))
-}
-/**
  * 创建单条转发消息预览
  * @param msgs
  */
@@ -237,8 +234,17 @@ function clickChat(chat: Session) {
         runForward()
     }else {
         const index = selected.value.indexOf(chat)
-        if (index > -1) selected.value.splice(index, 1)
-        else selected.value = [...selected.value, chat]
+        if (index > -1) {
+            selected.value.splice(index, 1)
+            searchInfo.originList.unshift(chat)
+        }
+        else {
+            selected.value.push(chat)
+            const index = searchInfo.originList.indexOf(chat)
+            if (index > -1)
+                searchInfo.originList.splice(index, 1)
+        }
+        reflashDisplaySession.value ++
     }
 }
 //#endregion
