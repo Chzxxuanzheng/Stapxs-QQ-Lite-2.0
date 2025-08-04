@@ -115,6 +115,8 @@ export abstract class Session {
         this.highlightInfo = []
         this.isActive = false
         this.activePromise = undefined
+        this.newMsg = 0
+        this.showNotice = false
         Session.activeSessions.delete(this)
         this.runHook('unactiveHook')
     }
@@ -394,7 +396,6 @@ export abstract class Session {
             }
         }
         // api
-        const readMsg = this.newMsg
         this.newMsg = 0
         this.showNotice = false
         this.highlightInfo = []
@@ -413,7 +414,7 @@ export abstract class Session {
 
         // 更新收纳盒
         for (const box of this.boxs) {
-            box.sessionSetReaded(readMsg)
+            box.sessionSetReaded()
         }
 
         await Connector.callApi(api, params)

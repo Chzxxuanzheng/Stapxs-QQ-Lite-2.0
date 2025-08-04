@@ -14,12 +14,13 @@ import {
     shallowRef,
     ShallowRef,
     watchEffect,
+    computed,
+    ComputedRef
 } from 'vue'
 import { Message } from './message'
 import { Session } from './session'
 import { runtimeData } from '../msg'
 import option from '../option'
-import { Logger } from '../base'
 import { Msg } from './msg'
 
 // 对于会话而言，收纳盒是有序的，对于收纳盒，会话是无序的，所以不把content塞到这个表里
@@ -52,8 +53,27 @@ export class SessionBox {
     // 缓存
     _preMessage: ShallowRef<Message|undefined> = shallowRef(undefined)
     highlightInfo: string[] = shallowReactive([])
-    _showNotice: ShallowRef<boolean> = shallowRef(false)
-    _newMsg: ShallowRef<number> = shallowRef(0)
+    _showNotice: ComputedRef<boolean> = computed(()=>{
+        // 如果有置顶会话，则不显示通知
+        for (const session of this._content) {
+            if (session.alwaysTop) continue
+            if (session.showNotice) return true
+        }
+        return false
+    })
+    _newMsg: ComputedRef<number> = computed(() => {
+        let out = 0
+        for (const session of this._content)
+            out += session.newMsg
+        return out
+    })
+    _isActive: ComputedRef<boolean> = computed(() => {
+        // 如果有置顶会话，则不显示通知
+        for (const session of this._content) {
+            if (session.isActive) return true
+        }
+        return false
+    })
 
     // 静态缓存
     static sessionBoxs: ShallowReactive<SessionBox[]> = shallowReactive([])
@@ -228,9 +248,8 @@ export class SessionBox {
      * 卸载
      */
     unactive(): void {
-        this.showNotice = false
         this.preMessage = undefined
-        this.highlightInfo = []
+        this.highlightInfo.length = 0
         for (const session of this._content) session.unactive()
     }
     /**
@@ -261,8 +280,6 @@ export class SessionBox {
     sessionNewMessage(session: Session, newMsg: Message): void {
         // 更新预览消息
         this.preMessage = newMsg
-        // 更新newMsg
-        this.newMsg += 1
 
         // 置顶会话不更新是否有通知 | 高亮信息（重复显示了）
         if (session.alwaysTop) return
@@ -272,20 +289,12 @@ export class SessionBox {
                 this.highlightInfo.push(info)
             }
         }
-        // 更新通知状态
-        if (session.showNotice) this.showNotice = true
     }
     /**
      * 会话上报自身已读状态
      * @param readMsg 已读消息数量
      */
-    sessionSetReaded(readMsg: number): void {
-        this.newMsg -= readMsg
-        // 异常处理
-        if (this.newMsg < 0) {
-            new Logger().error(null, `收纳盒 ${this.name} 的新消息数量异常, 变为负数(${this.newMsg}), 已重置为0`)
-            this.newMsg = 0
-        }
+    sessionSetReaded(): void {
         // 更新高亮信息
         this.highlightInfo.length = 0
         for (const s of this._content) {
@@ -294,16 +303,6 @@ export class SessionBox {
             for (const info of s.highlightInfo) {
                 if (this.highlightInfo.includes(info)) continue
                 this.highlightInfo.push(info)
-            }
-        }
-        // 更新通知状态
-        this.showNotice = false
-        for (const s of this._content) {
-            if (s.showNotice) {
-                // 过滤置顶会话
-                if (s.alwaysTop) continue
-                this.showNotice = true
-                break
             }
         }
     }
@@ -382,10 +381,6 @@ export class SessionBox {
         return this._showNotice.value
     }
 
-    set showNotice(value: boolean) {
-        this._showNotice.value = value
-    }
-
     private _sortContentByName: ShallowRef<Session[]> = shallowRef([])
     private _sortContentByTime: ShallowRef<Session[]> = shallowRef([])
 
@@ -400,12 +395,12 @@ export class SessionBox {
         return this._newMsg.value
     }
 
-    set newMsg(value: number) {
-        this._newMsg.value = value
-    }
-
     get length(): number {
         return this._content.size
+    }
+
+    get isActive(): boolean {
+        return this._isActive.value
     }
 
     get preMsg(): string {

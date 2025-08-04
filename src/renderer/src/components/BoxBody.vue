@@ -13,7 +13,8 @@
             'box-body': true,
             'open': open,
             'active': active,
-            'onmenu': !active && (onmenu || open)
+            'onmenu': !active && (onmenu || open),
+            'unmounted': from === 'message' && !data.isActive
         }"
         :style="{'--box-color': data.color}"
         @click="data.length ? open = !open : undefined">

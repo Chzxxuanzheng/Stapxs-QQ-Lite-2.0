@@ -21,11 +21,7 @@
             </div>
             <div v-if="displayTag.remove" @click="clickRemove">
                 <div><font-awesome-icon :icon="['fas', 'fa-trash-can']" /></div>
-                <a>{{ $t('删除') }}</a>
-            </div>
-            <div v-if="displayTag.reactive" @click="clickReactive">
-                <div><font-awesome-icon :icon="['fas', 'fa-undo']" /></div>
-                <a>{{ $t('重新加载') }}</a>
+                <a>{{ $t('卸载') }}</a>
             </div>
             <div v-if="displayTag.readed" @click="clickReaded">
                 <div><font-awesome-icon :icon="['fas', 'fa-check-to-slot']" /></div>
@@ -89,7 +85,6 @@ const displayTag: ShallowReactive<{
     top: boolean,
     cancelTop: boolean,
     remove: boolean,
-    reactive: boolean,
     readed: boolean,
     read: boolean,
     noticeOpen: boolean,
@@ -101,7 +96,6 @@ const displayTag: ShallowReactive<{
     top: false,
     cancelTop: false,
     remove: false,
-    reactive: false,
     readed: false,
     read: false,
     noticeOpen: false,
@@ -170,25 +164,22 @@ function checkSessionMenuConfig(
     }
     // 删除与刷新
     if (fromComponent === 'message') {
-        if (session.alwaysTop) {
-            displayTag.remove = false
-            displayTag.reactive = true
-        } else {
+        if (session.isActive) {
             displayTag.remove = true
-            displayTag.reactive = false
+        } else {
+            displayTag.remove = false
         }
     } else {
         displayTag.remove = false
-        displayTag.reactive = false
     }
     // 已读与未读
     if (fromComponent === 'message') {
         if (session.showNotice) {
-            displayTag.readed = false
-            displayTag.read = true
-        } else {
-            displayTag.readed = true
             displayTag.read = false
+            displayTag.readed = true
+        } else {
+            displayTag.read = true
+            displayTag.readed = false
         }
     }else {
         displayTag.readed = false
@@ -229,27 +220,23 @@ function checkBoxMenuConfig(
     }
     // 删除与刷新
     if (fromComponent === 'message') {
-        if (session.alwaysTop) {
-            displayTag.remove = false
-        } else {
+        if (session.isActive) {
             displayTag.remove = true
+        } else {
+            displayTag.remove = false
         }
     } else {
         displayTag.remove = false
-        displayTag.reactive = false
     }
     // 已读与未读
     if (fromComponent === 'message') {
         if (session.showNotice) {
-            displayTag.readed = false
-            displayTag.read = true
-        } else {
             displayTag.readed = true
-            displayTag.read = false
+        } else {
+            displayTag.readed = false
         }
     }else {
         displayTag.readed = false
-        displayTag.read = false
     }
 
     // 设置
@@ -279,11 +266,6 @@ function clickCancelTop() {
 }
 function clickRemove() {
     getTarget().unactive()
-    close()
-}
-function clickReactive() {
-    (getTarget() as Session).unactive();
-    (getTarget() as Session).activate();
     close()
 }
 function clickReaded() {

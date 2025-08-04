@@ -544,6 +544,8 @@ textarea:focus {
         color 0.2s,
         transform 0.2s;
 }
+.box-body.unmounted > div:nth-child(1) > svg,
+.box-body.unmounted > div:nth-child(1) > div,
 .friend-body.unmounted > img,
 .friend-body.unmounted > div {
     opacity: 0.6;

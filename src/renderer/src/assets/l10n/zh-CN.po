@@ -1418,3 +1418,6 @@ msgstr ""
 
 msgid "放入收纳盒"
 msgstr ""
+
+msgid "卸载"
+msgstr ""
