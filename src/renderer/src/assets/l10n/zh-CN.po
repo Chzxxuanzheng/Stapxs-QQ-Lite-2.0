@@ -1421,3 +1421,6 @@ msgstr ""
 
 msgid "卸载"
 msgstr ""
+
+msgid "移除盒子"
+msgstr ""

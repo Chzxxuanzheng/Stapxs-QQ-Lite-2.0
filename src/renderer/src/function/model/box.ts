@@ -277,12 +277,15 @@ export class SessionBox {
      */
     removeSession(session: Session): void {
         // 离开收纳盒
+        console.log(session.boxs.length)
         if (!this._content.has(session)) return
         this._content.delete(session)
         session.leaveBox(this)
         // 更新预览消息
         if (this.preMessage?.session?.id === session.id)
             this.preMessage = undefined
+
+        console.log(session.boxs.length)
 
         if (runtimeData.sysConfig.bubble_sort_user &&
             session.type === 'group' &&

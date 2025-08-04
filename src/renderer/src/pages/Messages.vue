@@ -58,6 +58,7 @@
                 <!-- 群收纳盒 -->
                 <BoxBody
                     v-if="runtimeData.sysConfig.bubble_sort_user"
+                    v-menu.prevent="event => menu?.open('message', BubbleBox.instance, event)"
                     :data="markRaw(BubbleBox.instance)"
                     from="message"
                     @user-click="

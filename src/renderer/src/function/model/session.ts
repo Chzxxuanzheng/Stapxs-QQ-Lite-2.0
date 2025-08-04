@@ -559,7 +559,7 @@ export abstract class Session {
      * @returns
      */
     leaveBox(box: SessionBox): void {
-        const index = this.boxs.indexOf(box)
+        const index = this.boxs.findIndex(b => b.id === box.id)
         if (index < 0) return
         this.boxs.splice(index, 1)
     }

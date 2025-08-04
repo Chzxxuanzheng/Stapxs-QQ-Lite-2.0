@@ -47,6 +47,10 @@
                 <div><font-awesome-icon :icon="['fas', 'fa-gear']" /></div>
                 <a>{{ $t('设置') }}</a>
             </div>
+            <div v-if="displayTag.leaveBox" @click="clickLeaveBox">
+                <div><font-awesome-icon :icon="['fas', 'arrow-up-right-from-square']" /></div>
+                <a>{{ $t('离开盒子') }}</a>
+            </div>
             <div v-if="displayTag.deleteBox" @click="clickDeleteBox">
                 <div><font-awesome-icon :icon="['fas', 'fa-trash']" style="color: var(--color-red)" /></div>
                 <a style="color: var(--color-red)">{{ $t('删除') }}</a>
@@ -70,7 +74,7 @@ import {
 } from 'vue'
 import { MenuEventData } from '@renderer/function/elements/information'
 import { GroupSession, Session } from '@renderer/function/model/session'
-import { SessionBox } from '@renderer/function/model/box'
+import { BubbleBox, SessionBox } from '@renderer/function/model/box'
 import { i18n } from '@renderer/main'
 import { runtimeData } from '@renderer/function/msg'
 import SelectBox from './SelectBox.vue'
@@ -91,6 +95,7 @@ const displayTag: ShallowReactive<{
     noticeClose: boolean,
     putInBox: boolean,
     configBox: boolean,
+    leaveBox: boolean,
     deleteBox: boolean,
 }> = shallowReactive({
     top: false,
@@ -102,6 +107,7 @@ const displayTag: ShallowReactive<{
     noticeClose: false,
     putInBox: false,
     configBox: false,
+    leaveBox: false,
     deleteBox: false,
 })
 
@@ -135,7 +141,7 @@ async function open(
     for (const key in displayTag)
         displayTag[key] = false
 
-    if (session instanceof Session) checkSessionMenuConfig(fromComponent, session)
+    if (session instanceof Session) checkSessionMenuConfig(fromComponent, session, fromBox)
     else checkBoxMenuConfig(fromComponent, session)
 
     await menu.value.showMenu(event.x, event.y)
@@ -151,7 +157,8 @@ async function open(
  */
 function checkSessionMenuConfig(
     fromComponent: 'message' | 'friend',
-    session: Session
+    session: Session,
+    box?: SessionBox,
 ): void {
     // 检测需要显示的菜单项
     // 置顶
@@ -162,7 +169,7 @@ function checkSessionMenuConfig(
         displayTag.top = true
         displayTag.cancelTop = false
     }
-    // 删除与刷新
+    // 删除
     if (fromComponent === 'message') {
         if (session.isActive) {
             displayTag.remove = true
@@ -199,6 +206,12 @@ function checkSessionMenuConfig(
         displayTag.noticeClose = false
     }
     displayTag.putInBox = true
+    // 移除收纳盒
+    if (box && box.id !== BubbleBox.instance.id) {
+        displayTag.leaveBox = true
+    } else {
+        displayTag.leaveBox = false
+    }
 }
 
 /**
@@ -209,6 +222,9 @@ function checkBoxMenuConfig(
     fromComponent: 'message' | 'friend',
     session: SessionBox,
 ): void {
+    if (session.id === BubbleBox.instance.id) {
+        return checkBubbleBoxConfig(fromComponent, session)
+    }
     // 检测需要显示的菜单项
     // 置顶
     if (session.alwaysTop) {
@@ -218,7 +234,7 @@ function checkBoxMenuConfig(
         displayTag.top = true
         displayTag.cancelTop = false
     }
-    // 删除与刷新
+    // 删除
     if (fromComponent === 'message') {
         if (session.isActive) {
             displayTag.remove = true
@@ -243,6 +259,36 @@ function checkBoxMenuConfig(
     displayTag.configBox = true
     // 删除
     displayTag.deleteBox = true
+}
+
+
+/**
+ * 检查群收纳盒的菜单配置
+ */
+function checkBubbleBoxConfig(
+    fromComponent: 'message' | 'friend',
+    session: BubbleBox,
+): void {
+    // 删除
+    if (fromComponent === 'message') {
+        if (session.isActive) {
+            displayTag.remove = true
+        } else {
+            displayTag.remove = false
+        }
+    } else {
+        displayTag.remove = false
+    }
+    // 已读与未读
+    if (fromComponent === 'message') {
+        if (session.showNotice) {
+            displayTag.readed = true
+        } else {
+            displayTag.readed = false
+        }
+    }else {
+        displayTag.readed = false
+    }
 }
 
 function close(): void {
@@ -328,6 +374,12 @@ function clickConfigBox() {
     }
     runtimeData.popBoxList.push(popInfo)
     close()
+}
+function clickLeaveBox() {
+    if (!selectSession.value) return
+    if (!selectBox.value) return
+    selectBox.value.removeSession(selectSession.value)
+    SessionBox.saveData()
 }
 function clickDeleteBox() {
     const target = getTarget() as SessionBox
