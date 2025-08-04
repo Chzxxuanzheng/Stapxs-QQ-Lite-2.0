@@ -164,7 +164,7 @@
                         <div>
                             <font-awesome-icon :icon="['fas', 'trash-can']" @click="delMsgs" />
                             <span>{{ $t('删除') }}</span>
-                        </div>ShallowReactive
+                        </div>
                         <div>
                             <font-awesome-icon :icon="['fas', 'copy']" @click="copyMsgs" />
                             <span>{{ $t('复制') }}</span>
@@ -412,8 +412,8 @@
         </Transition>
         <!-- 转发面板 -->
         <ForwardPan ref="forwardPan" />
-        <div class="bg" :style=" runtimeData.sysConfig.option_view_background ?
-            `backdrop-filter: blur(${runtimeData.sysConfig .chat_background_blur}px);` : ''" />
+        <div class="bg" :style=" runtimeData.sysConfig.chat_background ?
+            `backdrop-filter: blur(${runtimeData.sysConfig.chat_background_blur}px);` : ''" />
     </div>
 </template>
 

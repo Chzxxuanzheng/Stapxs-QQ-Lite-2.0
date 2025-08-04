@@ -113,7 +113,7 @@
     import MsgBar from './MsgBar.vue'
     import Menu from './Menu.vue'
 
-    import { defineComponent, nextTick } from 'vue'
+    import { defineComponent, nextTick, Reactive } from 'vue'
     import { runtimeData } from '@renderer/function/msg'
     import { isDeleteMsg, isShowTime } from '@renderer/function/utils/msgUtil'
     import { wheelMask } from '@renderer/function/utils/input'
@@ -392,7 +392,7 @@
                 if (!menu) return
                 if (menu.isShow()) return
 
-                this.menuDisplay.selectMsg = msg
+                this.menuDisplay.selectMsg = msg as Reactive<Msg>
                 this.menuDisplay.canForward = true
                 this.menuDisplay.downloadImgSrc = ''
 
@@ -542,7 +542,7 @@
                         }
                     }
                     if (time) {
-                        msg += item.sender.nickname +
+                        msg += item.sender.name +
                         ' ' +
                         time.getHours() +
                         ':' +
