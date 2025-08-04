@@ -631,6 +631,9 @@ textarea:focus {
     transform: scaleY(0.5);
     margin-left: 3px;
 }
+.box-body.active > div:nth-child(1) > div:nth-child(1).new{
+    background: var(--color-font-r);
+}
 .box-body > div:nth-child(1) > div p,
 .friend-body > div p {
     font-weight: bold;
