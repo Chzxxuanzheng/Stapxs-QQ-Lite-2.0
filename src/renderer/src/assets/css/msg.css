@@ -666,12 +666,12 @@ span.user-title.robot {
     width: 100%;
 }
 
-.message-list {
+.message-body-container {
     container-type: inline-size;
-    container-name: message-layout;
+    container-name: message-body;
 }
 
-@container (max-width: 49.5rem) {
+@container message-body (max-width: 49.5rem) {
     /* 消息体 */
     .message > img {
         display: unset !important;

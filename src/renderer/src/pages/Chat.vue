@@ -421,7 +421,8 @@
 import UserInfoPanComponent from '@renderer/components/UserInfoPan.vue'
 import {
     shallowReactive,
-    ShallowReactive
+    ShallowReactive,
+    Reactive
 } from 'vue'
 const userInfoPanData: ShallowReactive<{
     user: undefined | IUser | number,
@@ -444,6 +445,7 @@ const userInfoPanFunc: UserInfoPan = {
 }
 </script>
 <script lang="ts">
+// TODO: 改setup式，把as Reactive的变量改成ref
     import app from '@renderer/main'
     import SendUtil from '@renderer/function/sender'
     import Option, { get } from '@renderer/function/option'
@@ -815,7 +817,7 @@ const userInfoPanFunc: UserInfoPan = {
                                 .toLowerCase()
                             if (atInfo != '') {
                                 this.atFindList = this.chat.memberList
-                                        .filter((item) => { return item.match(atInfo) })
+                                        .filter((item) => { return item.match(atInfo) }) as Reactive<Member[]>
                             }
                         }
                     }
@@ -902,7 +904,7 @@ const userInfoPanFunc: UserInfoPan = {
                 if (!menu) return
                 if (menu.isShow()) return
 
-                this.menuSelectedMsg = msg
+                this.menuSelectedMsg = msg as Reactive<Msg>
 
                 // 检查消息，确认菜单显示状态
                 // 关闭回应功能
@@ -1060,7 +1062,7 @@ const userInfoPanFunc: UserInfoPan = {
             replyMsg(msg: Msg) {
                 if (msg.message_id) {
                     // 显示回复指示器
-                    this.msgWhileReply = msg
+                    this.msgWhileReply = msg as Reactive<Msg>
                     // 聚焦输入框
                     this.toMainInput()
                 }else {
@@ -1213,7 +1215,7 @@ const userInfoPanFunc: UserInfoPan = {
                         if (data.addTop === true) {
                             this.msg = '[SQ:' + index + ']' + this.msg
                         } else {
-                            this.msg += '[SQ:' + index + ']'
+                            this.msg += '[S@conQ:' + index + ']'
                         }
                     }
                     return index
@@ -1487,14 +1489,14 @@ const userInfoPanFunc: UserInfoPan = {
                 if (this.details[3].open) {
                     const value = (event.target as HTMLInputElement).value
                     if (value.length == 0) {
-                        this.tags.search.list = this.chat.messageList
+                        this.tags.search.list = this.chat.messageList as Reactive<Msg[]>
                     } else if (value.length > 0) {
                         this.tags.search.list = this.chat.messageList.filter(
                             (item: any) => {
                                 const rawMessage = item.plaintext
                                 return rawMessage.indexOf(value) !== -1
                             },
-                        )
+                        ) as Reactive<Msg[]>
                     }
                 }
             },
@@ -1505,7 +1507,7 @@ const userInfoPanFunc: UserInfoPan = {
             closeSearch() {
                 this.details[3].open = !this.details[3].open
                 this.msg = ''
-                this.tags.search.list = this.chat.messageList
+                this.tags.search.list = this.chat.messageList as Reactive<Msg[]>
             },
 
             /**

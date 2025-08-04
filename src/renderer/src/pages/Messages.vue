@@ -23,7 +23,7 @@
                     <span>{{ $t('消息') }}</span>
                     <div style="flex: 1" />
                     <font-awesome-icon :icon="['fas', 'compress-arrows-alt']"
-                    @click="foldAllBox" />
+                        @click="foldAllBox" />
                     <font-awesome-icon :icon="['fas', 'trash-can']" @click="cleanList" />
                 </div>
                 <div class="small">

@@ -7,8 +7,8 @@
 <template>
     <TransitionGroup
         :name="runtimeData.sysConfig.opt_fast_animation ? '' : 'msglist'"
+        class="message-body-container"
         :class="{
-            'message-list': true,
             'disable-interaction': !allowInteraction || multiselectMode,
         }"
         tag="div">
@@ -49,7 +49,8 @@
     </TransitionGroup>
 </template>
 <script lang="ts">
-import { defineComponent, type PropType } from 'vue'
+// TODO: 重构成setup式，标as Reactive的地方改成ref
+import { defineComponent, type PropType, Reactive } from 'vue'
 import MsgBody, { MsgBodyConfig } from './MsgBody.vue'
 import NoticeBody from './NoticeBody.vue'
 
@@ -165,7 +166,7 @@ export default defineComponent({
         },
         openMsgMenu(eventData: MenuEventData, msg: Msg) {
             if (!this.showMsgMenu) return
-            this.selectMsg = msg
+            this.selectMsg = msg as Reactive<Msg>
             const promise = this.showMsgMenu(eventData, msg)
             if (!promise) return
             promise.then(() => {
@@ -207,7 +208,7 @@ export default defineComponent({
          */
         forceAddToMultiselectList(msg: Msg) {
             if (!this.multiselectMode) throw new Error('多选模式未开启，无法添加消息到多选列表。')
-            if (!this.multipleSelectList.has(msg)) this.multipleSelectList.add(msg)
+            if (!this.multipleSelectList.has(msg as Reactive<Msg>)) this.multipleSelectList.add(msg as Reactive<Msg>)
         },
         /**
          * 获取多选列表长度
@@ -227,7 +228,7 @@ export default defineComponent({
             const out: Msg[] = []
             for (const msg of this.msgs) {
                 if (!(msg instanceof Msg)) continue
-                if (this.multipleSelectList.has(msg)) {
+                if (this.multipleSelectList.has(msg as Reactive<Msg>)) {
                     out.push(msg)
                 }
             }
@@ -237,12 +238,12 @@ export default defineComponent({
             if (!this.multiselectMode) {
                 throw new Error('多选模式未开启，无法添加消息到多选列表。')
             }
-            if (!this.multipleSelectList.has(msg)) {
-                this.multipleSelectList.add(msg)
+            if (!this.multipleSelectList.has(msg as Reactive<Msg>)) {
+                this.multipleSelectList.add(msg as Reactive<Msg>)
                 if (msg.hasCard()) this.multipleSelectListCardNum ++
             }
             else {
-                this.multipleSelectList.delete(msg)
+                this.multipleSelectList.delete(msg as Reactive<Msg>)
                 if (msg.hasCard()) this.multipleSelectListCardNum --
             }
         },
@@ -262,7 +263,7 @@ export default defineComponent({
 
         //#region ====工具函数==============================================
         isSelected(msg: Msg): boolean{
-            return this.multipleSelectList.has(msg) || this.selectMsg === msg
+            return this.multipleSelectList.has(msg as Reactive<Msg>) || this.selectMsg === msg
         },
         //#endregion
     }

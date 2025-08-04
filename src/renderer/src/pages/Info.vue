@@ -220,6 +220,7 @@
 </template>
 
 <script lang="ts">
+// TODO: 改setup式，把as Reactive的变量改成ref
     import app from '@renderer/main'
     import BulletinBody from '@renderer/components/BulletinBody.vue'
     import FileBody from '@renderer/components/FileBody.vue'
@@ -228,7 +229,7 @@
 
     import { Connector } from '@renderer/function/connect'
     import { PopInfo, PopType } from '@renderer/function/base'
-    import { defineComponent, ShallowRef, shallowRef } from 'vue'
+    import { defineComponent, Reactive, ShallowRef, shallowRef } from 'vue'
     import { delay, getTrueLang } from '@renderer/function/utils/systemUtil'
     import { runtimeData } from '@renderer/function/msg'
     import { GroupSession, Session, UserSession } from '@renderer/function/model/session'
@@ -483,7 +484,7 @@
             },
 
             openMoreConfig(mem: Member) {
-                this.showUserConfig = mem
+                this.showUserConfig = mem as Reactive<Member>
                 // 初始化一些内容
                 this.showUserConfigRaw = {
                     card: mem.card?.toString() ?? '',
@@ -505,7 +506,7 @@
                 if (value !== '') {
                     this.searchList = (this.chat as GroupSession).memberList.filter(
                         (mem: Member) => mem.match(value),
-                    )
+                    ) as Reactive<Member>[]
                 } else {
                     this.searchList = [] as any[]
                 }

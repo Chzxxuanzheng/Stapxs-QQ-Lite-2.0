@@ -1293,7 +1293,7 @@ defineExpose({
         }
     }
 
-    @container (min-width: 49.5rem) {
+    @container message-body (min-width: 49.5rem) {
         .emoji-like.me {
             flex-direction: row-reverse;
         }
