@@ -305,7 +305,8 @@ function openLeftBar() {
 function cleanList() {
     // 卸载非置顶会话
     for (const item of Session.activeSessions) {
-        if (!item.alwaysTop) item.unactive()
+        if (item.id === runtimeData.nowChat?.id) continue
+        item.unactive()
     }
 }
 </script>

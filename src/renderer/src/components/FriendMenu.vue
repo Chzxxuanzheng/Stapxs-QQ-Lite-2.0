@@ -376,10 +376,11 @@ function clickConfigBox() {
     close()
 }
 function clickLeaveBox() {
-    if (!selectSession.value) return
-    if (!selectBox.value) return
-    selectBox.value.removeSession(selectSession.value)
-    SessionBox.saveData()
+    if (selectBox.value && selectSession.value) {
+        selectBox.value.removeSession(selectSession.value)
+        SessionBox.saveData()
+    }
+    close()
 }
 function clickDeleteBox() {
     const target = getTarget() as SessionBox
