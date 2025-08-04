@@ -22,7 +22,7 @@
         <font-awesome-icon v-if="data.id == -10000" :icon="['fas', 'bell']" />
         <font-awesome-icon v-else-if="data.id == -10001" :icon="['fas', 'user-group']" />
         <img v-else loading="lazy" :title="data.showName"
-            :src="data.getFace()">
+            :src="data.face">
         <div>
             <div>
                 <p>{{ data.showName }}</p>

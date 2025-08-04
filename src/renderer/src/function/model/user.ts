@@ -13,13 +13,14 @@ import { runtimeData } from '../msg'
 import { stdUrl } from '../utils/systemUtil'
 import { Name, Time } from './data'
 import { UserSession } from './session'
+import { computed } from 'vue'
 
 export interface IUser {
     user_id: number
     level?: number
     get name(): string
     get namePy(): string
-    getFace(): string
+    get face(): string
     match(search: string): boolean
     canBeAdmined?(other: Role): boolean
     canAdmin?(other: Role): boolean
@@ -179,8 +180,14 @@ export class Member implements IUser {
         return name
     }
 
-    getFace(): string {
+    private _face = computed(()=>{
         return stdUrl('https://q1.qlogo.cn/g?b=qq&s=0&nk=' + this.user_id)
+    })
+
+    get face(): string {
+        // 用来解决vue自动解包的
+        if (typeof this._face === 'string') return this._face
+        return this._face.value
     }
 
     /**
@@ -326,8 +333,14 @@ export class User implements IUser {
         return name
     }
 
-    getFace(): string {
+    private _face = computed(()=>{
         return stdUrl('https://q1.qlogo.cn/g?b=qq&s=0&nk=' + this.user_id)
+    })
+
+    get face(): string {
+        // 用来解决vue自动解包的
+        if (typeof this._face === 'string') return this._face
+        return this._face.value
     }
 
     match(search: string): boolean {
@@ -490,9 +503,14 @@ export class BaseUser {
         return canBeAdmined(this.role, other)
     }
 
-
-    getFace(): string {
+    private _face = computed(()=>{
         return stdUrl('https://q1.qlogo.cn/g?b=qq&s=0&nk=' + this.user_id)
+    })
+
+    get face(): string {
+        // 用来解决vue自动解包的
+        if (typeof this._face === 'string') return this._face
+        return this._face.value
     }
 
     match(search: string): boolean {

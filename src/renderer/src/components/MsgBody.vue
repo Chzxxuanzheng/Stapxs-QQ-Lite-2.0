@@ -24,7 +24,7 @@
         <img v-show="!needSpecialMe()"
             v-menu.prevent="event => $emit('showUserMenu', event, data.sender)"
             name="avatar"
-            :src="data.sender.getFace()"
+            :src="data.sender.face"
 
             @mouseenter="userInfoHoverHandle($event, data.sender)"
             @mousemove="userInfoHoverHandle($event, data.sender)"

@@ -15,6 +15,7 @@
     "update:icon": "npx @capacitor/assets generate --assetPath 'src/mobile/_assets' --iosProject 'src/mobile/ios/App' --androidProject 'src/mobile/android' --android --ios",
     "update:version": "npx @stapxs/capacitor-sync-version android ios",
     "dev": "vite dev",
+    "preview": "vite preview",
     "dev:electron": "electron-vite dev",
     "dev:tauri": "tauri dev -c src/tauri/tauri.conf.json",
     "dev:ios": "vite build && capacitor sync ios && capacitor run ios",

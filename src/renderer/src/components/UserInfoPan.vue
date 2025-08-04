@@ -16,7 +16,7 @@
                         leave: data.user.leave,
                     }">
                     <div>
-                        <img :src="data.user.getFace()">
+                        <img :src="data.user.face">
                         <div>
                             <span name="id">{{ data.user.user_id }}</span>
                             <div>
@@ -70,7 +70,7 @@
                     ref="body"
                     class="ss-card">
                     <div>
-                        <img :src="data.user.getFace()">
+                        <img :src="data.user.face">
                         <div>
                             <span name="id">{{ data.user.user_id }}</span>
                             <div>
@@ -90,7 +90,7 @@
                     ref="body"
                     class="ss-card">
                     <div>
-                        <img :src="data.user.getFace()">
+                        <img :src="data.user.face">
                         <div>
                             <span name="id">{{ data.user.user_id }}</span>
                             <div>

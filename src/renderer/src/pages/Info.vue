@@ -15,7 +15,7 @@
             </header>
             <div :class="'chat-info-base ' + chat.type">
                 <div>
-                    <img :src="chat.getFace()">
+                    <img :src="chat.face">
                     <div>
                         <a>{{ chat.showName }}</a>
                         <span>{{ chat.id }}</span>
@@ -102,7 +102,7 @@
                         <div v-for="member in searchList.length > 0 ? searchList : chat.memberList"
                             :key="'chatinfomlist-' + member.user_id" class="edit">
                             <img alt="nk" loading="lazy"
-                                :src="member.getFace()">
+                                :src="member.face">
                             <div>
                                 <a @click="startChat(member as Member)">{{ member.name }}</a>
                                 <font-awesome-icon v-if="member.role === 'owner'" :icon="['fas', 'crown']" />
@@ -149,7 +149,7 @@
             </BcTab>
             <div v-if="showUserConfig && chat instanceof GroupSession" class="ss-card user-config show">
                 <div>
-                    <img alt="nk" :src="showUserConfig.getFace()">
+                    <img alt="nk" :src="showUserConfig.face">
                     <div>
                         <a>{{ showUserConfig.name }}</a>
                         <span>{{ showUserConfig.user_id }}</span>

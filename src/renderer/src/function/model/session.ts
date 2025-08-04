@@ -10,7 +10,12 @@
 
 import app from '@renderer/main'
 import option from '../option'
-import { shallowRef, ShallowRef } from 'vue'
+import {
+    shallowRef,
+    ShallowRef,
+    ComputedRef,
+    computed
+} from 'vue'
 import { stdUrl } from '../utils/systemUtil'
 import { Name } from './data'
 import { Message } from './message'
@@ -37,6 +42,7 @@ export abstract class Session {
     abstract sessionClass: SessionClass
     id: number
     _name: Name
+    protected abstract _face: ComputedRef<string>
     // 消息列表相关
     messageList: Message[] = []
     imgList: {url: string, id: string}[] = []
@@ -129,11 +135,6 @@ export abstract class Session {
      * @param str 搜索内容
      */
     abstract match(str: string): boolean
-    /**
-     * 获取群头像
-     * @returns 群头像链接
-     */
-    abstract getFace(): string
     /**
      * 通过id获取用户
      * @param id 用户id
@@ -575,6 +576,12 @@ export abstract class Session {
         return this._name
     }
 
+    get face(): string {
+        // 用来解决vue自动解包的
+        if (typeof this._face === 'string') return this._face
+        return this._face.value
+    }
+
     set name(name: string|Name) {
         if (name instanceof Name) this._name = name
         else this._name = new Name(name)
@@ -687,9 +694,9 @@ export class GroupSession extends Session {
         return false
     }
 
-    override getFace(): string {
+    override _face = computed(() => {
         return stdUrl('https://p.qlogo.cn/gh/' + this.id + '/' + this.id + '/0')
-    }
+    })
 
     static override getSessionById(id: number): GroupSession | undefined {
         return GroupSession.sessionList.find(item => item.id === id)
@@ -875,9 +882,9 @@ export class UserSession extends Session {
         return false
     }
 
-    override getFace(): string {
+    override _face = computed(() => {
         return stdUrl('https://q1.qlogo.cn/g?b=qq&s=0&nk=' + this.id)
-    }
+    })
 
     override get showName(): string {
         if (!this._remark) return super.showName
@@ -996,9 +1003,9 @@ export class TempSession extends Session {
         return TempSession.sessionList.find(item => item.id === id)
     }
 
-    override getFace(): string {
+    override _face = computed(() => {
         return stdUrl('https://q1.qlogo.cn/g?b=qq&s=0&nk=' + this.id)
-    }
+    })
 
     override get showName(): string {
         const { $t } = app.config.globalProperties

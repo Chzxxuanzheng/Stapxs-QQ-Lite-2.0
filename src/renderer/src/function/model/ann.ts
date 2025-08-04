@@ -46,7 +46,7 @@ export class Ann {
 
     getSenderFace(): string {
         if (this.sender instanceof Member) {
-            return this.sender.getFace()
+            return this.sender.face
         } else {
             return `https://q1.qlogo.cn/g?b=qq&s=0&nk=${this.sender}`
         }

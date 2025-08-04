@@ -19,7 +19,7 @@
             :style="{'--color':session.color}" />
         <img v-else loading="lazy"
             :title="session.showName"
-            :src="session.getFace()">
+            :src="session.face">
         <div>
             <p>
                 {{ session.showName }}

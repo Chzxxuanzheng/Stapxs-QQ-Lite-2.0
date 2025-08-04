@@ -486,7 +486,7 @@ export default defineComponent({
                         list.push({
                             id: session.id,
                             name: session.showName,
-                            image: session.getFace()
+                            image: session.face
                         })
                     }
                     callBackend(undefined, 'sys:flushOnMessage', false, list)

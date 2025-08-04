@@ -22,7 +22,7 @@
         <!-- 聊天基本信息 -->
         <div class="info">
             <font-awesome-icon :icon="['fas', 'bars-staggered']" @click="openLeftBar" />
-            <img :src="chat.getFace()">
+            <img :src="chat.face">
             <div class="info">
                 <p>
                     {{ chat.showName }}
@@ -103,7 +103,7 @@
                                 <div v-for="(item, index) in chat.essenceList"
                                     :key="'jin-' + index">
                                     <div>
-                                        <img :src="item.sender.getFace()">
+                                        <img :src="item.sender.face">
                                         <div>
                                             <a>{{ item.sender.name }}</a>
                                             <span>{{ item.time?.format() }}
@@ -204,7 +204,7 @@
                     <div v-for="item in atFindList != null ? atFindList : []"
                         :key="'atFind-' + item.user_id"
                         @click="choiceAt(item.user_id)">
-                        <img :src="item.getFace()">
+                        <img :src="item.face">
                         <span>{{ item.name }}</span>
                         <a>{{ item.user_id }}</a>
                     </div>

@@ -139,7 +139,7 @@ function sendNotify(session: Session, msg: Message, important: boolean = false):
         title: session.showName,
         body: msg.preMsg,
         tag: `${session.id}/${msg.message_id}`,
-        icon: session.getFace(),
+        icon: session.face,
         image: undefined as any,
         type: session.type,
         is_important: important,
