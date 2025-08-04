@@ -14,7 +14,7 @@
 <template>
     <div class="friend-view">
         <div id="message-list"
-            :class="'friend-list' +
+            :class="'session-body-container friend-list' +
                 (runtimeData.tags.openSideBar ? ' open' : '') +
                 (showGroupAssist ? ' show' : '')">
             <div>
@@ -71,13 +71,24 @@
                     }"
                     @click="showGroupAssistCheck" /> -->
                 <!-- 其他消息 -->
-                <FriendBody
-                    v-for="item in showSessionList"
-                    :key="'inMessage-' + item.id"
-                    v-menu.prevent="event => menu?.open('message', item, event)"
-                    :data="item as Session"
-                    from="message"
-                    @click="userClick(item as Session)" />
+                <template v-for="item in showSessionList">
+                    <FriendBody
+                        v-if="item instanceof Session"
+                        :key="'inMessage-' + item.id"
+                        v-menu.prevent="event => menu?.open('message', item, event)"
+                        :data="item"
+                        from="message"
+                        @click="userClick(item)" />
+                    <BoxBody
+                        v-else-if="item instanceof SessionBox"
+                        :key="'box-' + item.id"
+                        v-menu.prevent="event => menu?.open('message', item, event)"
+                        :data="item"
+                        from="message"
+                        @user-click="
+                            (session)=>userClick(session, item)
+                        " />
+                </template>
             </TransitionGroup>
         </div>
         <div id="group-assist-message-list"
@@ -135,7 +146,6 @@ import { runtimeData } from '@renderer/function/msg'
 import { getRaw as getOpt, run as runOpt } from '@renderer/function/option'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { login as loginInfo } from '@renderer/function/connect'
-import { sortActivateSession } from '@renderer/function/utils/msgUtil'
 
 import {
     faThumbTack,
@@ -147,12 +157,14 @@ import { Notify } from '@renderer/function/notify'
 import { Session } from '@renderer/function/model/session'
 import { Message } from '@renderer/function/model/message'
 import { vMenu } from '@renderer/function/utils/appUtil'
+import { SessionBox } from '@renderer/function/model/box'
+import BoxBody from '@renderer/components/BoxBody.vue'
 
 const emit = defineEmits<{
-    userClick: [Session]
+    userClick: [session: Session, fromBox?: SessionBox]
 }>()
 
-const showSessionList = shallowRef<Session[]>([])
+const showSessionList = shallowRef<(Session | SessionBox)[]>([])
 // 旧群收纳盒的东西
 const showGroupAssist = false
 const menu: undefined | InstanceType<typeof FriendMenu> = inject('friendMenu')
@@ -160,14 +172,24 @@ const menu: undefined | InstanceType<typeof FriendMenu> = inject('friendMenu')
 onMounted(()=>{
     library.add(faCheckToSlot, faThumbTack, faTrashCan, faGripLines)
     reflashSessionList()
-    // TODO: 调整置顶状况时刷新
+    // 刷新会话列表时用
     watch(
-        () => Session.activeSessions.size,
+        () => Session.sessionList.length,
+        reflashSessionList,
+    )
+    watch(
+        () => SessionBox.alwaysTopBoxs.size,
+        reflashSessionList,
+    )
+    watch(
+        () => Session.alwaysTopSessions.size,
         reflashSessionList,
     )
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     Session.newMessageHook.push((_: Session, _1: Message)=>{
-        reflashSessionList()
+        // 等到会话列表更新后再刷新
+        // TODO: 更好的钩子系统,支持before, on, after等
+        setTimeout(reflashSessionList, 100)
     })
 })
 
@@ -175,14 +197,61 @@ onMounted(()=>{
  * 刷新会话列表
  */
 function reflashSessionList() {
-    // 监听激活会话列表变化,按照时间排序
-    showSessionList.value = sortActivateSession()
+    // 时间排序算法
+    const sort = (
+        a: Session | SessionBox,
+        b: Session | SessionBox,
+    ) => {
+        // 置顶最优先
+        if (a.alwaysTop && !b.alwaysTop) return -1
+        if (!a.alwaysTop && b.alwaysTop) return 1
+        // 按照时间戳降序
+        if (a.preMessage?.time && !b.preMessage?.time) return -1
+        if (!a.preMessage?.time && b.preMessage?.time) return 1
+        if (a.preMessage?.time && b.preMessage?.time) {
+            return b.preMessage.time.time - a.preMessage.time.time
+        }
+        // 按照名称首字母排序
+        return a.showNamePy.localeCompare(b.showNamePy)
+    }
+
+    // 拼装置顶列表和主列表
+    const mainList: (Session | SessionBox)[] = []
+    const alwaysTop = [
+        ...Session.alwaysTopSessions,
+        ...SessionBox.alwaysTopBoxs
+    ]
+    const putBox: Set<SessionBox> = new Set()
+
+    for (const session of Session.activeSessions) {
+        // 过滤掉已经置顶的会话
+        if (session.alwaysTop) continue
+
+        // 查询收纳盒
+        if (session.boxs.length > 0) {
+            // 如果有收纳盒，把收纳盒塞进列表里
+            for (const box of session.boxs) {
+                // 如果收纳盒是置顶的，就放到置顶列表里
+
+                // 过滤已经有的收纳盒
+                if (box.alwaysTop) continue
+                if (putBox.has(box)) continue
+
+                putBox.add(box)
+                mainList.push(box)
+            }
+        }else {
+            // 如果没有收纳盒，直接放入主列表
+            mainList.push(session)
+        }
+    }
+    showSessionList.value = [...alwaysTop.sort(sort), ...mainList.sort(sort)]
 }
 /**
  * 会话点击事件
  * @param data 会话对象
  */
-function userClick(data: Session) {
+function userClick(data: Session, fromBox?: SessionBox) {
     const id = data.id
     if (id != runtimeData.nowChat?.id) {
         if (runtimeData.tags.openSideBar) {
@@ -196,7 +265,7 @@ function userClick(data: Session) {
         new Notify().closeAll((data.id).toString())
 
         // 更新聊天框
-        emit('userClick', data)
+        emit('userClick', data, fromBox)
         // 重置消息面板
         // PS：这儿的作用是在运行时如果切换到了特殊面板，在点击联系人的时候可以切回来
         if (

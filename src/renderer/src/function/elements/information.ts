@@ -1,6 +1,8 @@
+import { SessionBox } from '../model/box'
 import  type { Message } from '../model/message'
 import { ForwardSeg } from '../model/seg'
 import { Session } from '../model/session'
+import { optDefault } from '../option'
 
 export enum BotMsgType {
     CQCode,
@@ -8,7 +10,7 @@ export enum BotMsgType {
 }
 
 export interface RunTimeDataElem {
-    sysConfig: { [key: string]: any }
+    sysConfig: Record<keyof typeof optDefault, any | null>
     jsonMap?: any
     botInfo: { [key: string]: any }
     loginInfo: {
@@ -67,7 +69,9 @@ export interface RunTimeDataElem {
     mergeMessageImgList?: any[] | undefined
     stickerCache?: any[]
     nowChat: undefined | Session
+    nowBox: undefined | SessionBox  // 当前的会话盒子
     img_list: {url: string, id: string}[]
+    color_mod: 'light' | 'dark'
     popBoxList: {
         // 通用弹窗
         svg?: string // 弹窗图标

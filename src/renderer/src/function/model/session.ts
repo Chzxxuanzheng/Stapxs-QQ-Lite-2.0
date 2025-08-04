@@ -28,6 +28,8 @@ import { SessionBox } from './box'
 
 /**
  * 会话基类
+ * 早期写的代码，对响应式对象理解不到位
+ * @TODO 改为浅层式响应对象...这不太优雅
  */
 export abstract class Session {
     // 基本信息
@@ -50,6 +52,7 @@ export abstract class Session {
     highlightInfo: string[] = []
     showNotice: boolean = false
     // 分组盒子
+    boxs: SessionBox[] = []
 
     // 内部信息
     // 已有会话列表
@@ -58,14 +61,19 @@ export abstract class Session {
      * 激活会在message里显示，且会调用获取历史记录等API
      */
     isActive = false
+    // 缓存
     /**
      * 会话列表
      */
     static sessionList: Session[] = reactive([])
     /**
+     * 置顶列表
+     */
+    static alwaysTopSessions: Set<Session> = reactive(new Set()) as unknown as Set<Session>
+    /**
      * 激活会话列表
      */
-    static activeSessions: Set<Session> = reactive(new Set()) as Set<Session>
+    static activeSessions: Set<Session> = reactive(new Set()) as unknown as Set<Session>
 
     constructor(id: number, name: string) {
         this.id = id
@@ -87,7 +95,7 @@ export abstract class Session {
         if (this.isActive) return
 
         await this.prepareActive()
-        await this.runHook(Session.prepareActiveHook)
+        await this.runHook('prepareActiveHook')
 
         this.isActive = true
         Session.activeSessions.add(this)
@@ -108,7 +116,7 @@ export abstract class Session {
         this.isActive = false
         this.activePromise = undefined
         Session.activeSessions.delete(this)
-        this.runHook(Session.unactiveHook)
+        this.runHook('unactiveHook')
     }
     abstract prepareUnactive(): void
     //#endregion
@@ -180,6 +188,7 @@ export abstract class Session {
             session.unactive()
 
         Session.sessionList.length = 0
+        Session.alwaysTopSessions.clear()
         GroupSession.sessionList.length = 0
         UserSession.sessionList.length = 0
         TempSession.sessionList.length = 0
@@ -196,6 +205,12 @@ export abstract class Session {
      */
     setAlwaysTop(flag: boolean, saveCfg: boolean = true): void {
         this.alwaysTop = flag
+
+        // 更新置顶列表
+        if (flag && !Session.alwaysTopSessions.has(this))
+            Session.alwaysTopSessions.add(this)
+        else if(!flag && Session.alwaysTopSessions.has(this))
+            Session.alwaysTopSessions.delete(this)
 
         if (!saveCfg) return
 
@@ -223,8 +238,6 @@ export abstract class Session {
             topInfo[id] = topList
             option.save('top_info', topInfo)
         }
-
-        // TODO: 刷新群收纳盒
     }
     //#endregion
 
@@ -256,7 +269,7 @@ export abstract class Session {
             const mainPromise = (async ()=>{
                 if (!this.isActive) await this.activate()
                 this.imgFromNewMsg(msg)
-                this.runHook(Session.newMessageHook, msg)
+                this.runHook('newMessageHook', msg)
                 clearTimeout(timeout)
             })
             await Promise.race([mainPromise(), timeoutPromise])
@@ -270,6 +283,11 @@ export abstract class Session {
         if(msg instanceof Msg && msg.sender.user_id !== runtimeData.loginInfo.uin)
             this.newMsg ++
         this.msgQueue.shift()
+
+        // 刷新收纳盒
+        for (const box of this.boxs) {
+            box.sessionNewMessage(this, msg)
+        }
     }
 
     private loadHistoryLock: boolean = false
@@ -376,6 +394,7 @@ export abstract class Session {
             }
         }
         // api
+        const readMsg = this.newMsg
         this.newMsg = 0
         this.showNotice = false
         this.highlightInfo = []
@@ -391,6 +410,12 @@ export abstract class Session {
             api = 'set_user_message_read'
         }
         params.message_id = msgId
+
+        // 更新收纳盒
+        for (const box of this.boxs) {
+            box.sessionSetReaded(readMsg)
+        }
+
         await Connector.callApi(api, params)
     }
 
@@ -402,7 +427,7 @@ export abstract class Session {
         if (index < 0) return
         this.messageList.splice(index, 1)
         this.removeImgList(msg.imgList)
-        await this.runHook(Session.rmMessageHook, msg)
+        await this.runHook('rmMessageHook', msg)
     }
 
     //#endregion
@@ -410,21 +435,28 @@ export abstract class Session {
     //#region == 钩子相关 ==============================================================
     // 我为啥要写这东西?我自己也不知道...照着nb抄着抄着就有这东西了...
     static prepareActiveHook: ((session: Session) => void|Promise<void>)[] = []
+    prepareActiveHook: ((session: Session) => void|Promise<void>)[] = []
     static unactiveHook: ((session: Session) => void|Promise<void>)[] = []
+    unactiveHook: ((session: Session) => void|Promise<void>)[] = []
     static newMessageHook: ((session: Session, msg: Message) => void|Promise<void>)[] = []
+    newMessageHook: ((session: Session, msg: Message) => void|Promise<void>)[] = []
     static loadHistoryHook: ((session: Session, state: 'success' | 'fail' | 'end', msgs: Msg[]) => Promise<boolean>)[] = []
+    loadHistoryHook: ((session: Session, state: 'success' | 'fail' | 'end', msgs: Msg[]) => Promise<boolean>)[] = []
     static rmMessageHook: ((session: Session, msg: Msg) => void|Promise<void>)[] = []
+    rmMessageHook: ((session: Session, msg: Msg) => void|Promise<void>)[] = []
     /**
      * 执行钩子
      * @param hookList 钩子列表
      * @param args 参数
      */
     async runHook(
-        hookList: ((session: Session, ...args: any[]) => void|Promise<void>)[],
+        hookNames: 'prepareActiveHook' | 'unactiveHook' | 'newMessageHook' | 'loadHistoryHook' | 'rmMessageHook',
         ...args: any[]
     ): Promise<void> {
         const tasks: Promise<any>[] = []
-        for (const hook of hookList) {
+        const hooks: ((...args: any[]) => void | Promise<void>)[]
+            = [...this[hookNames], ...Session[hookNames]] as any
+        for (const hook of hooks) {
             const task = hook(this, ...args)
             if (task instanceof Promise) tasks.push(task)
         }
@@ -507,6 +539,27 @@ export abstract class Session {
         const user = this.getUserById(id)
         if (user) return user
         return BaseUser.createById(id)
+    }
+
+    /**
+     * 加入到收纳盒
+     * @param box
+     * @returns
+     */
+    addBox(box: SessionBox): void {
+        if (this.boxs.includes(box)) return
+        this.boxs.push(box)
+    }
+
+    /**
+     * 离开收纳盒
+     * @param box
+     * @returns
+     */
+    leaveBox(box: SessionBox): void {
+        const index = this.boxs.indexOf(box)
+        if (index < 0) return
+        this.boxs.splice(index, 1)
     }
 
     get showName(): string {

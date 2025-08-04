@@ -1797,6 +1797,14 @@ div.tiny-session-body > img {
     height: 2.5rem;
     width: 2.5rem;
 }
+div.tiny-session-body > svg {
+    border-radius: 7px;
+    margin-right: 10px;
+    height: 1.25rem;
+    width: 1.25rem;
+    padding: 0.625rem;
+    background-color: var(--color);
+}
 div.tiny-session-body > div {
     overflow: hidden;
 }

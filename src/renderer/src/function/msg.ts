@@ -15,7 +15,7 @@
 import qed from '@renderer/assets/qed.txt?raw'
 
 import app from '@renderer/main'
-import Option from './option'
+import Option, { optDefault } from './option'
 
 import Umami from '@stapxs/umami-logger-typescript'
 
@@ -34,6 +34,7 @@ import {
     updateMenu,
     loadJsonMap,
     sendStatEvent,
+    reloadSessionBoxs,
 } from '@renderer/function/utils/appUtil'
 import { reactive, markRaw, defineAsyncComponent } from 'vue'
 import { PopInfo, PopType, Logger, LogType } from './base'
@@ -289,7 +290,7 @@ const msgFunctions = {
     /**
      * 保存账号信息
      */
-    getLoginInfo: (_: string, msg: { [key: string]: any }) => {
+    getLoginInfo: async (_: string, msg: { [key: string]: any }) => {
         const msgBody = getMsgData('login_info', msg, msgPath.login_info)
         if (msgBody) {
             const data = msgBody[0]
@@ -320,7 +321,8 @@ const msgFunctions = {
             const barMsg = document.getElementById('bar-msg')
             if (barMsg != null) barMsg.click()
             // 加载列表消息
-            reloadUsers()
+            await reloadUsers()
+            reloadSessionBoxs()
         }
     },
 
@@ -549,13 +551,15 @@ const baseRuntime = {
     groupAssistList: [],
     loginInfo: {} as unknown as {nickname: string, uin: number},
     botInfo: {},
-    sysConfig: {},
+    sysConfig: {} as Record<keyof typeof optDefault, any | null>,
     messageList: [],
     popBoxList: [],
     mergeMsgStack: [],
     inch: getInch(),
     nowChat: undefined,
+    nowBox: undefined,
     img_list: [],
+    color_mod: 'light' as 'light' | 'dark',
 }
 
 export const runtimeData: RunTimeDataElem = reactive(baseRuntime)

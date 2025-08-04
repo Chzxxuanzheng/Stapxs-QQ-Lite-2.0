@@ -9,6 +9,7 @@
         :class="'top-bar' + ((runtimeData.tags.platform == 'win32' && dev) ? ' win' : '')"
         name="appbar"
         data-tauri-drag-region="true">
+        <!-- TODO: 诸如hyprland等窗口管理器不支持最小化和全屏按钮(其实关闭按钮虽然能用但也是不合法的...) -->
         <div class="bar-button" @click="barMainClick()" />
         <div class="space" />
         <div class="controller">
@@ -25,21 +26,28 @@
     <div id="base-app">
         <div class="main-body">
             <ul :style="get('fs_adaptation') > 0 ? `padding-bottom: ${get('fs_adaptation')}px;` : ''">
-                <li id="bar-home" :class="(tags.page == 'Home' ? 'active' : '') +
-                    (loginInfo.status ? ' hiden-home' : '')"
+                <li id="bar-home" :class="{
+                    'active': tags.page === 'Home',
+                    'hiden-home': loginInfo.status,
+                }"
                     @click="changeTab('主页', 'Home', false)">
                     <font-awesome-icon :icon="['fas', 'home']" />
                     <span>{{ $t('主页') }}</span>
                 </li>
-                <li id="bar-msg" :class="tags.page == 'Messages' ? 'active' : ''"
+                <li id="bar-msg" :class="{'active': tags.page === 'Messages'}"
                     @click="changeTab('信息', 'Messages', true)">
                     <font-awesome-icon :icon="['fas', 'envelope']" />
                     <span>{{ $t('信息') }}</span>
                 </li>
-                <li id="bar-friends" :class="tags.page == 'Friends' ? 'active' : ''"
+                <li id="bar-friends" :class="{'active': tags.page === 'Friends'}"
                     @click="changeTab('列表', 'Friends', true)">
                     <font-awesome-icon :icon="['fas', 'user']" />
                     <span>{{ $t('列表') }}</span>
+                </li>
+                <li id="bar-box" :class="{'active': tags.page == 'Box'}"
+                    @click="changeTab('收纳盒', 'Box', true)">
+                    <font-awesome-icon :icon="['fas', 'fa-box']" />
+                    <span>{{ $t('收纳盒') }}</span>
                 </li>
                 <div class="side-bar-space" />
                 <li :class="tags.page == 'Options' ? 'active' : ''" @click="changeTab('设置', 'Options', false)">
@@ -126,11 +134,14 @@
                         </div>
                     </div>
                 </div>
-                <div v-if="tags.page == 'Messages'" id="messageTab">
-                    <Messages @user-click="changeChat" />
+                <div v-else-if="tags.page == 'Messages'" id="messageTab">
+                    <Messages @user-click="changeSession" />
                 </div>
-                <div v-if="tags.page == 'Friends'">
-                    <Friends @user-click="changeChat" />
+                <div v-else-if="tags.page == 'Friends'">
+                    <Friends @user-click="changeSession" />
+                </div>
+                <div v-else-if="tags.page == 'Box'">
+                    <Boxs @user-click="changeSession" />
                 </div>
                 <div class="opt-main-tab" style="opacity: 0">
                     <Options :show="tags.page == 'Options'" :class="tags.page == 'Options' ? 'active' : ''"
@@ -144,7 +155,8 @@
             v-show="tags.showChat"
             ref="chat"
             :chat="runtimeData.nowChat"
-            @user-click="changeChat" />
+            @user-click="changeSession" />
+        <!-- 通知列表 -->
         <TransitionGroup class="app-msg" name="appmsg" tag="div">
             <div v-for="msg in appMsgs" :key="'appmsg-' + msg.id">
                 <div><font-awesome-icon :icon="['fas', msg.svg]" /></div>
@@ -154,6 +166,7 @@
                 </div>
             </div>
         </TransitionGroup>
+        <!-- 弹窗列表 -->
         <Transition>
             <div v-if="runtimeData.popBoxList.length > 0" class="pop-box">
                 <div :class="'pop-box-body ss-card' +
@@ -232,7 +245,8 @@ import { Session } from './function/model/session'
 import Options from '@renderer/pages/Options.vue'
 import Friends from '@renderer/pages/Friends.vue'
 import Messages from '@renderer/pages/Messages.vue'
-import FriendMenu from './components/FriendMenu.vue'
+import Boxs from '@renderer/pages/Boxs.vue'
+import FriendMenu from '@renderer/components/FriendMenu.vue'
 
 const friendMenu: Ref<undefined|InstanceType<typeof FriendMenu>> = ref()
 provide('friendMenu', friendMenu)
@@ -616,14 +630,6 @@ export default defineComponent({
                 this.fps.value = fps
             }
             requestAnimationFrame(this.rafLoop)
-        },
-
-        /**
-         * 切换聊天对象状态
-         * @param data 切换信息
-         */
-        changeChat(data: Session) {
-            changeSession(data)
         },
 
         /**

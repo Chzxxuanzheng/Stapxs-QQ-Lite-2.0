@@ -13,7 +13,10 @@
         class="tiny-session-body"
         :class="{selected: selected}">
         <div />
-        <font-awesome-icon v-if="session instanceof SessionBox" :icon="['fas', session.icon]" />
+        <font-awesome-icon
+            v-if="session instanceof SessionBox"
+            :icon="['fas', session.icon]"
+            :style="{'--color':session.color}" />
         <img v-else loading="lazy"
             :title="session.showName"
             :src="session.getFace()">

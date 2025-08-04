@@ -25,8 +25,8 @@
                     class="small">
                     <label>
                         <input
-                            v-auto-focus
-                            v-model="searchInfo" type="text"
+                            v-model="searchInfo"
+                            v-auto-focus type="text"
                             :placeholder="$t('搜索 ……')" @input="search">
                         <font-awesome-icon :icon="['fas', 'magnifying-glass']" />
                     </label>
@@ -39,13 +39,13 @@
                 </div>
                 <label>
                     <input
-                        v-auto-focus
-                        v-model="searchInfo" type="text"
+                        v-model="searchInfo"
+                        v-auto-focus type="text"
                         :placeholder="$t('搜索 ……')" @input="search">
                     <font-awesome-icon :icon="['fas', 'magnifying-glass']" />
                 </label>
             </div>
-            <div :class="runtimeData.tags.openSideBar ? 'open' : ''">
+            <div class="session-body-container" :class="runtimeData.tags.openSideBar ? 'open' : ''">
                 <template v-if="!isSearch">
                     <template v-for="class_ in SessionClass.getClasses()"
                         :key="'class-' + class_.id">

@@ -235,7 +235,6 @@ export async function reloadUsers(useCache: boolean = true) {
         }
         logger.debug('设置置顶会话：' + id)
         session.setAlwaysTop(true, false)
-        session.activate()
     }
 
     // 设置通知开关
@@ -253,6 +252,21 @@ export async function reloadUsers(useCache: boolean = true) {
         if (!session?.isActive) await session?.activate()
         runtimeData.nowChat = session
     }
+}
+
+/**
+ * 刷新收纳盒列表
+ */
+export function reloadSessionBoxs() {
+    // 加载用户列表
+    if (!login.status) return
+
+    // 清除旧数据
+    SessionBox.clear()
+
+
+    // 加载
+    SessionBox.load()
 }
 
 /**
@@ -646,6 +660,7 @@ import { ActionType, LocalNotificationSchema } from '@capacitor/local-notificati
 import { Session } from '../model/session'
 import { MenuEventData } from '../elements/information'
 import { Role } from '../model/user'
+import { SessionBox } from '../model/box'
 // import windowsCss from '@renderer/assets/css/append/mobile/append_windows.css?raw'
 /**
 * 装载补充样式
@@ -1278,7 +1293,7 @@ export const vUserRole: Directive<HTMLSpanElement, Role> = {
  */
 function createVMenu(): Directive<HTMLElement, (event: MenuEventData)=>void> {
     // 右键菜单事件数据类型
-    type Binding = DirectiveBinding<(event: MenuEventData)=>void> & { modifiers: {prevent?: boolean} }
+    type Binding = DirectiveBinding<(event: MenuEventData)=>void> & { modifiers: {prevent?: boolean, stop?: boolean} }
 
     // 右键菜单事件数据类型
     const {
@@ -1306,12 +1321,14 @@ function createVMenu(): Directive<HTMLElement, (event: MenuEventData)=>void> {
         mounted( el: HTMLElement, binding: Binding, ) {
             // 创建变量
             const prevent = binding.modifiers.prevent || false
+            const stop = binding.modifiers.stop || false
             const controller = new AbortController()
             const options = {signal: controller.signal}
 
             // 添加监听
             el.addEventListener('contextmenu', (event) => {
                 if (prevent) event.preventDefault()
+                if (stop) event.stopPropagation()
                 const data: MenuEventData = {
                     x: event.clientX,
                     y: event.clientY,
@@ -1321,14 +1338,17 @@ function createVMenu(): Directive<HTMLElement, (event: MenuEventData)=>void> {
             }, options)
             el.addEventListener('touchstart', (event) => {
                 if (prevent) event.preventDefault()
+                if (stop) event.stopPropagation()
                 menuTouchHandle(event, binding)
             }, options)
             el.addEventListener('touchmove', (event) => {
                 if (prevent) event.preventDefault()
+                if (stop) event.stopPropagation()
                 menuTouchHandle(event, binding)
             }, options)
             el.addEventListener('touchend', (event) => {
                 if (prevent) event.preventDefault()
+                if (stop) event.stopPropagation()
                 menuTouchEnd(event)
             }, options)
 
@@ -1349,7 +1369,7 @@ function createVMenu(): Directive<HTMLElement, (event: MenuEventData)=>void> {
  * 创建一个右键菜单指令
  * @example v-menu="(data: MenuEventData) =>  打开菜单函数(data, 其他参数)"
  */
-export const vMenu: Directive<HTMLElement, (event: MenuEventData)=>void, 'prevent'> = createVMenu()
+export const vMenu: Directive<HTMLElement, (event: MenuEventData)=>void, 'prevent' | 'stop'> = createVMenu()
 /**
  * 挂在时如果设备支持,自动聚焦输入框
  */
@@ -1426,4 +1446,51 @@ export function createVSearch<T extends { match(query: string): boolean }>()
  * @see createVSearch
  */
 export const vSearch = createVSearch<any>()
+/**
+ * 如果自身超出了父组件的范围，则隐藏自身
+ */
+export const vOverflowHide: Directive<HTMLElement, undefined> = {
+    mounted(el: HTMLElement) {
+        const parent = el.parentElement
+        if (!parent) return
+
+        // 检查元素是否完全在父容器内
+        const update = () => {
+            const pRect = parent.getBoundingClientRect()
+            const eRect = el.getBoundingClientRect()
+            if (
+                eRect.left   < pRect.left   ||
+                eRect.top    < pRect.top    ||
+                eRect.right  > pRect.right  ||
+                eRect.bottom > pRect.bottom
+            ) {
+                el.style.opacity = '0'
+            } else {
+                el.style.opacity = ''
+            }
+        }
+
+        // 监听窗口尺寸变化
+        const controller = new AbortController()
+        parent.addEventListener('resize', update, { signal: controller.signal })
+
+        // 使用 ResizeObserver 监听大小或内容变化
+        const observer = new ResizeObserver(update)
+        observer.observe(el)
+        observer.observe(parent)
+
+        // 初始检查
+        update()
+
+        // 保存以便卸载时清理
+        ;(el as any)._vOverflowHideController = { observer, controller }
+    },
+    unmounted(el: HTMLElement) {
+        const data = (el as any)._vOverflowHideController
+        if (!data) return
+        data.observer.disconnect()
+        data.controller.abort()
+        delete (el as any)._vOverflowHideController
+    }
+}
 //#endregion`

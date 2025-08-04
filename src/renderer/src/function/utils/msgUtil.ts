@@ -11,6 +11,7 @@ import { Message } from '../model/message'
 import { Seg } from '../model/seg'
 import { Session, UserSession } from '../model/session'
 import { IUser } from '../model/user'
+import { SessionBox } from '../model/box'
 
 const logger = new Logger()
 
@@ -369,27 +370,6 @@ export function sendMsgRaw(
 }
 
 /**
- * 排序已激活的会话
- */
-export function sortActivateSession(): Session[] {
-    const activeSessions = [...Session.activeSessions]
-    activeSessions.sort((a, b) => {
-        // 置顶最优先
-        if (a.alwaysTop && !b.alwaysTop) return -1
-        if (!a.alwaysTop && b.alwaysTop) return 1
-        // 按照时间戳降序
-        if (a.preMessage?.time && !b.preMessage?.time) return -1
-        if (!a.preMessage?.time && b.preMessage?.time) return 1
-        if (a.preMessage?.time && b.preMessage?.time) {
-            return b.preMessage.time.time - a.preMessage.time.time
-        }
-        // 按照名称首字母排序
-        return a.showNamePy.localeCompare(b.showNamePy)
-    })
-    return activeSessions
-}
-
-/**
  * 戳一戳触发动画
  * @param animeBody 动画作用的元素
  * @param windowInfo 窗口信息，在 electron 中使用
@@ -481,7 +461,8 @@ export function isDeleteMsg(msg: Message): boolean {
  * 切换会话
  * @param session 会话对象
  */
-export function changeSession(session: Session) {
+export function changeSession(session: Session, fromBox?: SessionBox) {
+    runtimeData.nowBox = fromBox
     if (runtimeData.nowChat === session) return
     if (!session.isActive) session.activate()
     runtimeData.nowChat = session

@@ -43,26 +43,47 @@
                 <div><font-awesome-icon :icon="['fas', 'fa-volume-xmark']" /></div>
                 <a>{{ $t('关闭通知') }}</a>
             </div>
+            <div v-if="displayTag.putInBox" @click="clickPutInBox">
+                <div><font-awesome-icon :icon="['fas', 'fa-box']" /></div>
+                <a>{{ $t('收纳盒') }}</a>
+            </div>
+            <div v-if="displayTag.configBox" @click="clickConfigBox">
+                <div><font-awesome-icon :icon="['fas', 'fa-gear']" /></div>
+                <a>{{ $t('设置') }}</a>
+            </div>
+            <div v-if="displayTag.deleteBox" @click="clickDeleteBox">
+                <div><font-awesome-icon :icon="['fas', 'fa-trash']" style="color: var(--color-red)" /></div>
+                <a style="color: var(--color-red)">{{ $t('删除') }}</a>
+            </div>
         </div>
     </Menu>
 </template>
 
 <script setup lang="ts">
 import Menu from './Menu.vue'
+import ConfigBox from './ConfigBox.vue'
+
 import {
     shallowRef,
     ShallowRef,
     shallowReactive,
     ShallowReactive,
     ref,
-    Ref
+    Ref,
+    markRaw,
 } from 'vue'
-import { MenuEventData } from '@renderer/function/elements/information';
-import { GroupSession, Session } from '@renderer/function/model/session';
+import { MenuEventData } from '@renderer/function/elements/information'
+import { GroupSession, Session } from '@renderer/function/model/session'
+import { SessionBox } from '@renderer/function/model/box'
+import { i18n } from '@renderer/main'
+import { runtimeData } from '@renderer/function/msg'
+import SelectBox from './SelectBox.vue'
 
 //#region == 声明变量 ================================================================
+const $t = i18n.global.t
 const menu: Ref<undefined|InstanceType<typeof Menu>> = ref()
 const selectSession: ShallowRef<Session|undefined> = shallowRef(undefined)
+const selectBox: ShallowRef<SessionBox|undefined> = shallowRef(undefined)
 const from: ShallowRef<'message' | 'friend'> = shallowRef('message')
 const displayTag: ShallowReactive<{
     top: boolean,
@@ -73,6 +94,9 @@ const displayTag: ShallowReactive<{
     read: boolean,
     noticeOpen: boolean,
     noticeClose: boolean,
+    putInBox: boolean,
+    configBox: boolean,
+    deleteBox: boolean,
 }> = shallowReactive({
     top: false,
     cancelTop: false,
@@ -81,12 +105,16 @@ const displayTag: ShallowReactive<{
     readed: false,
     read: false,
     noticeOpen: false,
-    noticeClose: false
+    noticeClose: false,
+    putInBox: false,
+    configBox: false,
+    deleteBox: false,
 })
 
 // 导出
 defineExpose({
     selectSession,
+    selectBox,
     open,
 })
 //#endregion
@@ -94,17 +122,43 @@ defineExpose({
 //#region == 方法函数 ================================================================
 async function open(
     fromComponent: 'message' | 'friend',
-    session: Session,
-    event: MenuEventData
+    session: Session | SessionBox,
+    event: MenuEventData,
+    fromBox?: SessionBox
 ): Promise<void> {
-    from.value = fromComponent
-    selectSession.value = session
-    console.log('open menu', fromComponent, session.id, event.x, event.y)
-    console.log(menu.value)
     if (!menu.value) return
-    if (menu.value.isShow()) return
-    console.log('open menu', fromComponent, session.id, event.x, event.y)
+    if (menu.value?.isShow()) return
 
+    from.value = fromComponent
+    if (session instanceof SessionBox) {
+        selectBox.value = session
+        selectSession.value = undefined
+    } else {
+        selectSession.value = session
+        selectBox.value = fromBox
+    }
+
+    for (const key in displayTag)
+        displayTag[key] = false
+
+    if (session instanceof Session) checkSessionMenuConfig(fromComponent, session)
+    else checkBoxMenuConfig(fromComponent, session)
+
+    await menu.value.showMenu(event.x, event.y)
+
+    selectSession.value = undefined
+    selectBox.value = undefined
+}
+
+/**
+ * 检查会话菜单配置
+ * @param fromComponent
+ * @param session
+ */
+function checkSessionMenuConfig(
+    fromComponent: 'message' | 'friend',
+    session: Session
+): void {
     // 检测需要显示的菜单项
     // 置顶
     if (session.alwaysTop) {
@@ -153,10 +207,55 @@ async function open(
         displayTag.noticeOpen = false
         displayTag.noticeClose = false
     }
+    displayTag.putInBox = true
+}
 
-    console.log(displayTag)
+/**
+ * 检查收纳盒菜单配置
+ * @param session
+ */
+function checkBoxMenuConfig(
+    fromComponent: 'message' | 'friend',
+    session: SessionBox,
+): void {
+    // 检测需要显示的菜单项
+    // 置顶
+    if (session.alwaysTop) {
+        displayTag.top = false
+        displayTag.cancelTop = true
+    } else {
+        displayTag.top = true
+        displayTag.cancelTop = false
+    }
+    // 删除与刷新
+    if (fromComponent === 'message') {
+        if (session.alwaysTop) {
+            displayTag.remove = false
+        } else {
+            displayTag.remove = true
+        }
+    } else {
+        displayTag.remove = false
+        displayTag.reactive = false
+    }
+    // 已读与未读
+    if (fromComponent === 'message') {
+        if (session.showNotice) {
+            displayTag.readed = false
+            displayTag.read = true
+        } else {
+            displayTag.readed = true
+            displayTag.read = false
+        }
+    }else {
+        displayTag.readed = false
+        displayTag.read = false
+    }
 
-    await menu.value.showMenu(event.x, event.y)
+    // 设置
+    displayTag.configBox = true
+    // 删除
+    displayTag.deleteBox = true
 }
 
 function close(): void {
@@ -164,25 +263,31 @@ function close(): void {
     menu.value.closeMenu()
 }
 
+function getTarget(): Session | SessionBox {
+    if (selectSession.value) return selectSession.value
+    else if (selectBox.value) return selectBox.value
+    else throw new Error('没有选择会话或收纳盒')
+}
+
 function clickTop() {
-    selectSession.value?.setAlwaysTop(true)
+    getTarget().setAlwaysTop(true)
     close()
 }
 function clickCancelTop() {
-    selectSession.value?.setAlwaysTop(false)
+    getTarget().setAlwaysTop(false)
     close()
 }
 function clickRemove() {
-    selectSession.value?.unactive()
+    getTarget().unactive()
     close()
 }
 function clickReactive() {
-    selectSession.value?.unactive()
-    selectSession.value?.activate()
+    (getTarget() as Session).unactive();
+    (getTarget() as Session).activate();
     close()
 }
 function clickReaded() {
-    selectSession.value?.setRead()
+    getTarget().setRead()
     close()
 }
 function clickRead() {
@@ -191,11 +296,79 @@ function clickRead() {
     close()
 }
 function clickNoticeOpen() {
-    (selectSession.value as GroupSession)?.setNotice(true)
+    (getTarget() as GroupSession)?.setNotice(true)
     close()
 }
 function clickNoticeClose() {
-    (selectSession.value as GroupSession)?.setNotice(false)
+    (getTarget() as GroupSession)?.setNotice(false)
+    close()
+}
+function clickPutInBox() {
+    const popInfo = {
+        title: $t('放入收纳盒'),
+        template: markRaw(SelectBox),
+        templateValue: { session: markRaw(getTarget()) },
+        button: [
+            {
+                text: $t('确定'),
+                master: true,
+                fun: () => {
+                    // 更新群组->收纳盒映射
+                    // TODO: 这个操作容易遗忘，看看能不能放进设置界面里
+                    // 注：新建收纳盒也在用这个
+                    SessionBox.saveData()
+                    runtimeData.popBoxList.shift()
+                },
+            },
+        ],
+    }
+    runtimeData.popBoxList.push(popInfo)
+    close()
+}
+function clickConfigBox() {
+    const popInfo = {
+        title: $t('收纳盒设置'),
+        template: markRaw(ConfigBox),
+        templateValue: { baseBox: markRaw(getTarget()) },
+        button: [
+            {
+                text: $t('确定'),
+                master: true,
+                fun: () => {
+                    // 更新群组->收纳盒映射
+                    // TODO: 这个操作容易遗忘，看看能不能放进设置界面里
+                    // 注：新建收纳盒也在用这个
+                    SessionBox.saveData()
+                    runtimeData.popBoxList.shift()
+                },
+            },
+        ],
+    }
+    runtimeData.popBoxList.push(popInfo)
+    close()
+}
+function clickDeleteBox() {
+    const target = getTarget() as SessionBox
+    const popInfo = {
+        html: '<span>' + $t('确定要删除收纳盒吗？它会永远消失的！') + '</span>',
+        button: [
+            {
+                text: $t('确定'),
+                fun: async () => {
+                    target.remove()
+                    runtimeData.popBoxList.shift()
+                },
+            },
+            {
+                text: $t('取消'),
+                master: true,
+                fun: () => {
+                    runtimeData.popBoxList.shift()
+                },
+            },
+        ],
+    }
+    runtimeData.popBoxList.push(popInfo)
     close()
 }
 //#endregion
