@@ -28,18 +28,21 @@ import {
     getPortableFileLang,
     getTrueLang,
 } from '@renderer/function/utils/systemUtil'
-import { updateBaseOnMsgList } from './utils/msgUtil'
+import { GroupSession, Session } from './model/session'
+import { BubbleBox } from './model/box'
 
 let cacheConfigs: { [key: string]: any }
 
 // 设置项的初始值，防止下拉菜单选项为空或者首次使用初始错误
-export const optDefault: { [key: string]: any } = {
+export const optDefault = {
     // System
     address: '',
     top_info: {},
     save_password: '',
     notice_group: {},
     auto_connect: false,
+    boxs: {},           // 存储收纳盒消息
+    sessionBoxs: {},    // 存储会话被那些收纳盒收录...这俩名字起的也不行，容易混淆...
     // View
     language: 'zh-CN',
     opt_dark: false,
@@ -70,11 +73,12 @@ export const optDefault: { [key: string]: any } = {
     open_ga_bot: true,
     dont_parse_delete: false,
     jump_forward: true,
-    show_revoke_msg: false,
     default_multiselect_forward: false,
+    preview_notice: false,
     // Dev
     msg_type: 2,
     log_level: 'err',
+    proxyUrl: '',
     debug_msg: false,
     api_log: '',
 }
@@ -93,7 +97,7 @@ const configFunction: { [key: string]: (value: any) => void } = {
     opt_revolve: viewRevolve,
     opt_always_top: viewAlwaysTop,
     opt_fast_animation: updateFarstAnimation,
-    bubble_sort_user: clearGroupAssist,
+    bubble_sort_user: switchBubbleBox,
     merge_forward_width_type: setMergeForwardWidth,
 }
 
@@ -113,8 +117,24 @@ function setMergeForwardWidth(value: boolean | null) {
     )
 }
 
-function clearGroupAssist() {
-    updateBaseOnMsgList()
+function switchBubbleBox() {
+    if (runtimeData.sysConfig.bubble_sort_user) {
+        // 开启群收纳盒
+        for (const session of Session.activeSessions) {
+            // 过滤置顶
+            if (session.alwaysTop) continue
+            // 过滤非群聊
+            if (!(session instanceof GroupSession)) continue
+            // 过滤已经有收纳盒的
+            if (session.boxs.length > 0) continue
+            BubbleBox.instance.putSession(session)
+        }
+    }else {
+        // 关闭群收纳盒
+        for (const session of BubbleBox.instance._content) {
+            BubbleBox.instance.removeSession(session)
+        }
+    }
 }
 
 function updateFarstAnimation(value: boolean) {
@@ -222,8 +242,10 @@ function setLanguage(name: string) {
  */
 function setDarkMode(value = true) {
     if (value === true) {
+        runtimeData.color_mod = 'dark'
         changeColorMode('dark')
     } else {
+        runtimeData.color_mod = 'light'
         changeColorMode('light')
     }
 }
@@ -273,7 +295,7 @@ function setAutoDark(value: boolean) {
  * 修改颜色模式
  * @param mode 颜色模式
  */
-function changeColorMode(mode: string) {
+function changeColorMode(mode: 'light' | 'dark') {
     if (!runtimeData.tags.firstLoad) {
         // 启用颜色渐变动画
         document.body.style.transition =
@@ -383,7 +405,7 @@ function changeChatView(name: string | undefined) {
  * 读取并序列化 localStorage 中的设置项（electron 读取 electron-store 存储）
  * @returns 设置项集合
  */
-export async function load(): Promise<{ [key: string]: any }> {
+export async function load(): Promise<Record<keyof typeof optDefault,any|null>> {
     let data = {} as { [key: string]: any }
 
     if ('electron' == runtimeData.tags.clientType) {
@@ -415,7 +437,7 @@ export async function load(): Promise<{ [key: string]: any }> {
             }
         }
     }
-    return loadOptData(data)
+    return loadOptData(data) as any
 }
 
 function loadOptData(data: { [key: string]: any }) {
@@ -531,7 +553,7 @@ export function getRaw(name: string) {
  * @param name 设置项名称
  * @param value 设置项值
  */
-export function save(name: string, value: any) {
+export function save(name: keyof typeof optDefault, value: any) {
     cacheConfigs[name] = value
     saveAll()
 }
@@ -571,7 +593,7 @@ export function saveAll(config = {} as { [key: string]: any }) {
  * @param value 设置项值
  */
 export function runAS(name: string, value: any) {
-    save(name, value)
+    save(name as any, value)
     run(name, value)
 }
 

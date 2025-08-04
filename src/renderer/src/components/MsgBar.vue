@@ -7,17 +7,17 @@
 <template>
     <TransitionGroup
         :name="runtimeData.sysConfig.opt_fast_animation ? '' : 'msglist'"
+        class="message-body-container"
         :class="{
-            'message-list': true,
             'disable-interaction': !allowInteraction || multiselectMode,
         }"
         tag="div">
         <template v-for="(msgIndex, index) in msgs">
             <!-- 时间戳 -->
             <NoticeBody
-                v-if="msgIndex.time && isShowTime(msgs[index - 1] ? msgs[index - 1].time : undefined, msgIndex.time)"
-                :key="'notice-time-' + (msgIndex.time / ( 4 * 60 )).toFixed(0)"
-                :data="SystemNotice.time(msgIndex.time)" />
+                v-if="msgIndex.time && isShowTime(msgs.at(index - 1)?.time?.time, msgIndex.time.time)"
+                :key="'notice-time-' + (msgIndex.time.time / ( 4 * 60 )).toFixed(0)"
+                :data="SystemNotice.time(msgIndex.time.time)" />
             <!-- [已删除]消息 -->
             <NoticeBody
                 v-if="isDeleteMsg(msgIndex)"
@@ -29,6 +29,7 @@
                 :selected="isSelected(msgIndex)"
                 :data="msgIndex"
                 :config="config"
+                :user-info-pan="userInfoPan"
                 @click="msgClick($event, msgIndex)"
                 @scroll-to-msg="arg=>$emit('scrollToMsg', arg)"
                 @image-loaded="arg=>$emit('imageLoaded', arg)"
@@ -37,18 +38,19 @@
                 @left-move="arg => $emit('leftMove', arg)"
                 @right-move="arg => $emit('rightMove', arg)"
                 @sender-double-click="arg => $emit('senderDoubleClick', arg)"
-                @emoji-click="(id, msg) => $emit('emojiClick', id, msg)"
-                />
+                @emoji-click="(id, msg) => $emit('emojiClick', id, msg)" />
             <!-- 其他通知消息 -->
             <NoticeBody v-else-if="msgIndex instanceof Notice"
                 :id="msgIndex.uuid"
                 :key="'notice-' + index"
+                :user-info-pan="userInfoPan"
                 :data="msgIndex" />
         </template>
     </TransitionGroup>
 </template>
 <script lang="ts">
-import { defineComponent, type PropType } from 'vue'
+// TODO: 重构成setup式，标as Reactive的地方改成ref
+import { defineComponent, type PropType, Reactive } from 'vue'
 import MsgBody, { MsgBodyConfig } from './MsgBody.vue'
 import NoticeBody from './NoticeBody.vue'
 
@@ -57,15 +59,17 @@ import { runtimeData } from '@renderer/function/msg';
 import { Msg } from '@renderer/function/model/msg';
 import { Message } from '@renderer/function/model/message';
 import { Notice, SystemNotice } from '@renderer/function/model/notice';
-import { Sender } from '@renderer/function/model/user';
+import { IUser } from '@renderer/function/model/user';
 import { MenuEventData } from '@renderer/function/elements/information';
 import app from '@renderer/main';
+import { UserInfoPan } from '@renderer/pages/Chat.vue';
 
 export interface Config extends MsgBodyConfig {
     canInteraction?: boolean
 }
 
 export default defineComponent({
+    name: 'MsgBar',
     components: { MsgBody, NoticeBody },
     props: {
         msgs: {
@@ -74,9 +78,13 @@ export default defineComponent({
         },
         showMsgMenu: {
             type: Function as PropType<undefined | ((eventData: MenuEventData, msg: Msg) => (Promise<void> | void))>,
+            default: () => undefined,
+            required: false,
         },
         showUserMenu: {
-            type: Function as PropType<undefined | ((eventData: MenuEventData, user: Sender) => (Promise<void> | void))>,
+            type: Function as PropType<undefined | ((eventData: MenuEventData, user: IUser) => (Promise<void> | void))>,
+            default: () => undefined,
+            required: false,
         },
         config: {
             type: Object as PropType<Config>,
@@ -86,15 +94,28 @@ export default defineComponent({
                 showIcon: true,
                 dimNonExistentMsg: true,
             }),
+            required: false,
+        },
+        userInfoPan: {
+            type: Object as PropType<UserInfoPan>,
+            default: () => undefined,
+            required: false,
         }
     },
     emits: {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         msgClick: (_event: MouseEvent, _msg: Msg) => true,
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         imageLoaded: (_height: number) => true,
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         scrollToMsg: (_id: string) => true,
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         leftMove: (_msg: Msg) => true,
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         rightMove: (_msg: Msg) => true,
-        senderDoubleClick: (_user: Sender) => true,
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        senderDoubleClick: (_user: IUser) => true,
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         emojiClick: (_id: string, _msg: Msg) => true,
     },
     data() {
@@ -145,19 +166,19 @@ export default defineComponent({
         },
         openMsgMenu(eventData: MenuEventData, msg: Msg) {
             if (!this.showMsgMenu) return
-            this.selectMsg = msg
+            this.selectMsg = msg as Reactive<Msg>
             const promise = this.showMsgMenu(eventData, msg)
             if (!promise) return
             promise.then(() => {
                 this.selectMsg = null
             })
         },
-        openUserMenu(eventData: MenuEventData, user: Sender) {
+        openUserMenu(eventData: MenuEventData, user: IUser) {
             if (!this.showUserMenu) return
             this.showUserMenu(eventData, user)
         },
         //#endregion
-        
+
 
         //#region ====多选模式相关==========================================
         /**
@@ -187,7 +208,7 @@ export default defineComponent({
          */
         forceAddToMultiselectList(msg: Msg) {
             if (!this.multiselectMode) throw new Error('多选模式未开启，无法添加消息到多选列表。')
-            if (!this.multipleSelectList.has(msg)) this.multipleSelectList.add(msg)
+            if (!this.multipleSelectList.has(msg as Reactive<Msg>)) this.multipleSelectList.add(msg as Reactive<Msg>)
         },
         /**
          * 获取多选列表长度
@@ -207,7 +228,7 @@ export default defineComponent({
             const out: Msg[] = []
             for (const msg of this.msgs) {
                 if (!(msg instanceof Msg)) continue
-                if (this.multipleSelectList.has(msg)) {
+                if (this.multipleSelectList.has(msg as Reactive<Msg>)) {
                     out.push(msg)
                 }
             }
@@ -217,12 +238,12 @@ export default defineComponent({
             if (!this.multiselectMode) {
                 throw new Error('多选模式未开启，无法添加消息到多选列表。')
             }
-            if (!this.multipleSelectList.has(msg)) {
-                this.multipleSelectList.add(msg)
+            if (!this.multipleSelectList.has(msg as Reactive<Msg>)) {
+                this.multipleSelectList.add(msg as Reactive<Msg>)
                 if (msg.hasCard()) this.multipleSelectListCardNum ++
             }
             else {
-                this.multipleSelectList.delete(msg)
+                this.multipleSelectList.delete(msg as Reactive<Msg>)
                 if (msg.hasCard()) this.multipleSelectListCardNum --
             }
         },
@@ -242,7 +263,7 @@ export default defineComponent({
 
         //#region ====工具函数==============================================
         isSelected(msg: Msg): boolean{
-            return this.multipleSelectList.has(msg) || this.selectMsg === msg
+            return this.multipleSelectList.has(msg as Reactive<Msg>) || this.selectMsg === msg
         },
         //#endregion
     }

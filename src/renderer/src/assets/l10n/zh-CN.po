@@ -996,13 +996,16 @@ msgstr ""
 msgid "别划了别划了被看见了啦"
 msgstr ""
 
-msgid "[有人@你]"
-msgstr "[有人{'@'}你]"
+msgid "@你"
+msgstr "{'@'}你"
 
-msgid "[@全体]"
-msgstr "[{'@'}全体]"
+msgid "@全体"
+msgstr "{'@'}全体"
 
-msgid "[特別关心]"
+msgid "特別关心"
+msgstr ""
+
+msgid "公告"
 msgstr ""
 
 msgid "离线文件"
@@ -1285,4 +1288,139 @@ msgid "请选择要转发的消息"
 msgstr ""
 
 msgid "最多只能转发99条消息"
+msgstr ""
+
+msgid "确认修改昵称？"
+msgstr ""
+
+msgid "确认"
+msgstr ""
+
+msgid "等级"
+msgstr ""
+
+msgid "注册时间"
+msgstr ""
+
+msgid "获取群文件失败"
+msgstr ""
+
+msgid "未知大小"
+msgstr ""
+
+msgid "禁言了"
+msgstr ""
+
+msgid "发送失败"
+msgstr ""
+
+msgid "正在确认操作……"
+msgstr ""
+
+msgid "特别关心"
+msgstr ""
+
+msgid "预览通知"
+msgstr ""
+
+msgid "注入撤回消息等事件也会做为预览消息"
+msgstr ""
+
+msgid "自定义跨域服务"
+msgstr ""
+
+msgid "如果你需要使用跨域服务，请在这里输入服务地址"
+msgstr ""
+
+msgid "当应用需要获取腾讯的数据时，可能会被浏览器当作恶意操作阻止。为了访问这些资源，你可以使用桌面端，它自带跨域功能。"
+msgstr ""
+
+msgid "如果你要在web端使用跨域，请填写跨域服务器地址，格式如下："
+msgstr ""
+
+msgid "其中{url}会被替换为实际url。"
+msgstr ""
+
+msgid "跨域服务器你可以在网上寻找公益跨域服务器，但可能存在安全隐患。强烈建议你自己搭建跨域服务器，问问AI就能解决。"
+msgstr ""
+
+msgid "测试失败"
+msgstr ""
+
+msgid "测试成功"
+msgstr ""
+
+msgid "测试ing"
+msgstr ""
+
+msgid "重新测试"
+msgstr ""
+
+msgid "代理地址不包含 \{url\}，请检查配置"
+msgstr ""
+
+msgid "收纳盒"
+msgstr ""
+
+msgid "可恶——这里面为什么什么都没有！"
+msgstr ""
+
+msgid "新收纳盒"
+msgstr ""
+
+msgid "拟吼哇.欧四与个会所话读后组～"
+msgstr ""
+
+msgid "听说给stapxs-qq-lite给star会有好运发生"
+msgstr ""
+
+msgid "你就是我的新主人吗？请多多指教～"
+msgstr ""
+
+msgid "我的眼里只有你，亿万星辰犹不及"
+msgstr ""
+
+msgid "电动的，来自拉格让日点牛奶"
+msgstr ""
+
+msgid "爱丽丝·妈个陀螺仪的"
+msgstr ""
+
+msgid "NoneBot，是一个用于工业级单片机通讯的框架"
+msgstr ""
+
+msgid "await mathcer.send(\'ciallo world\')"
+msgstr ""
+
+msgid "(...args: any[]) => \'ciallo world\'"
+msgstr ""
+
+msgid "await UniMessage(\'ciallo world\').send()"
+msgstr ""
+
+msgid "你也是起名困难症嘛？"
+msgstr ""
+
+msgid "新建收纳盒"
+msgstr ""
+
+msgid "确定要删除收纳盒吗？它会永远消失的！"
+msgstr ""
+
+msgid "收纳了"
+msgstr ""
+
+msgid "个会话"
+msgstr ""
+
+msgid "收纳盒设置"
+msgstr ""
+
+msgid "放入收纳盒"
+msgstr ""
+
+msgid "卸载"
+msgstr ""
+
+msgid "移除盒子"
 msgstr ""

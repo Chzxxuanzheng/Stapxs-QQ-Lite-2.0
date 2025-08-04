@@ -384,6 +384,36 @@
 .opt-item div.ss-range input::-webkit-slider-runnable-track {
     opacity: 0;
 }
+.opt-page > div.ss-card > div.cors {
+    display: flex;
+    flex-direction: column;
+}
+.cors > input {
+    margin-bottom: 10px;
+    background-color: var(--color-card);
+}
+.cors > div {
+    display: flex;
+    align-items: center;
+}
+.cors > div > div,
+.cors > span {
+    margin: 10px 0;
+    padding: 0 10px;
+    height: 35px;
+    display: flex;
+    align-items: center;
+    border-radius: 7px;
+    background-color: var(--color-card);
+}
+.cors > div > div {
+    flex: 1;
+    margin-right: 10px;
+}
+
+.cors > div > div > svg {
+    transition: all 0.5s;
+}
 
 .l10n-info {
     border-left: 7px solid var(--color-main);

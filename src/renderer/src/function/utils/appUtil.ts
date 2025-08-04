@@ -13,17 +13,26 @@ import { KeyboardInfo } from '@capacitor/keyboard'
 import { LogType, Logger, PopInfo, PopType } from '@renderer/function/base'
 import { Connector, login } from '@renderer/function/connect'
 import { runtimeData } from '@renderer/function/msg'
-import { BaseChatInfoElem } from '@renderer/function/elements/information'
 import {
     hslToRgb,
     callBackend,
     rgbToHsl,
     addBackendListener
 } from '@renderer/function/utils/systemUtil'
-import { toRaw, nextTick } from 'vue'
-import { sendMsgRaw } from './msgUtil'
+import { changeSession, sendMsgRaw } from './msgUtil'
 import { parseMsg } from '../sender'
 import { Notify } from '../notify'
+import { GroupSession, UserSession } from '../model/session'
+import {
+    ref,
+    ShallowRef,
+    shallowRef,
+    shallowReactive,
+    watch,
+    toRaw,
+    Directive,
+    watchEffect,
+} from 'vue'
 
 const popInfo = new PopInfo()
 const logger = new Logger()
@@ -125,78 +134,139 @@ export function openLink(url: string, external = false) {
 }
 
 /**
- * 加载历史消息
- * @param info 聊天基本信息
- */
-export function loadHistory(info: BaseChatInfoElem) {
-    runtimeData.messageList = []
-    if (!loadHistoryMessage(info.id, info.type)) {
-        new PopInfo().add(
-            PopType.ERR,
-            app.config.globalProperties.$t('获取历史记录失败'),
-        )
-    }
-}
-export function loadHistoryMessage(
-    id: number,
-    type: string,
-    count = 20,
-    echo = 'getChatHistoryFist',
-) {
-    let name: string
-    const fullPage = runtimeData.jsonMap.message_list?.pagerType == 'full'
-    if (runtimeData.jsonMap.message_list && type != 'group') {
-        name = runtimeData.jsonMap.message_list.private_name
-    } else {
-        name = runtimeData.jsonMap.message_list.name
-    }
-
-    Connector.send(
-        name ?? 'get_chat_history',
-        {
-            group_id: type == 'group' ? id : undefined,
-            user_id: type != 'group' ? id : undefined,
-            message_id: 0,
-            count: fullPage ? runtimeData.messageList.length + count : count,
-        },
-        echo,
-    )
-    return true
-}
-
-/**
  * 重新加载用户列表
+ * @param useCache 是否使用缓存
  */
-export function reloadUsers() {
+export async function reloadUsers(useCache: boolean = true) {
     // 加载用户列表
-    if (login.status) {
-        runtimeData.userList = []
-        let friendName = 'get_friend_list'
-        let groupName = 'get_group_list'
-        if (runtimeData.jsonMap.user_list?.name) {
-            friendName = runtimeData.jsonMap.user_list.name.split('|')[0]
-            groupName = runtimeData.jsonMap.user_list.name.split('|')[1]
-        } else if (
-            runtimeData.jsonMap.friend_list?.name &&
-            runtimeData.jsonMap.group_list?.name
-        ) {
-            friendName = runtimeData.jsonMap.friend_list.name
-            groupName = runtimeData.jsonMap.group_list.name
+    if (!login.status) return
+
+    // 保存当前会话信息
+    const nowChatId = runtimeData.nowChat?.id
+
+    // 清除旧数据
+    Session.clear()
+
+    const task: Promise<void>[] = []
+    const friendData: any[] = []
+    const groupData: any[] = []
+    // 加载群组列表
+    task.push((async()=>{
+        const data = await Connector.callApi('group_list', {no_cache: !useCache})
+        for (const item of data) {
+            groupData.push({
+                group_id: item.group_id,
+                group_name: item.group_name,
+                member_count: item.member_count,
+            })
         }
-        Connector.send(friendName, {}, 'getFriendList')
-        Connector.send(groupName, {}, 'getGroupList')
+    })())
+    // 加载好友列表
+    task.push((async()=>{
+        let data = await Connector.callApi('friend_list', {no_cache: !useCache})
+        if (data !== undefined) {
+            for (const item of data) {
+                friendData.push({
+                    user_id: item.user_id,
+                    nickname: item.nickname,
+                    remark: item.remark,
+                    class_id: item.class_id[0],
+                    class_name: item.class_name[0],
+                })
+            }
+            return
+        }
+        // 好麻烦啊，写适配器必须提上日程
+        data = await Connector.callApi('friend_category', {})
+        for (const classItem of data) {
+            const class_id = classItem.categoryId
+            const class_name = classItem.categoryName
+            for (let i=0; i < classItem.user_ids.length; i++) {
+                friendData.push({
+                    user_id: classItem.user_ids[i],
+                    nickname: classItem.user_nicknames[i],
+                    remark: classItem.user_remark[i],
+                    class_id: class_id,
+                    class_name: class_name,
+                })
+            }
+        }
+    })())
+    await Promise.all(task)
+    for (const item of groupData) {
+        if (!GroupSession.getSessionById(item.group_id)) {
+            new GroupSession(item.group_id, item.group_name, item.member_count)
+        }
+    }
+    for (const item of friendData) {
+        if (!UserSession.getSessionById(item.user_id)) {
+            new UserSession(
+                item.user_id,
+                item.nickname,
+                item.class_id,
+                item.class_name,
+                item.remark,
+            )
+        }
+    }
+
+    // 更新菜单
+    updateMenu({
+        parent: 'account',
+        id: 'userList',
+        action: 'label',
+        value: app.config.globalProperties.$t('用户列表（{count}）', {
+            count: Session.sessionList.length,
+        }),
+    })
+
+    // 设置置顶列表
+    const topList = runtimeData.sysConfig.top_info as {
+        [key: string]: number[]
+    } | null
+    if (!topList) return
+    const topSessions = topList[runtimeData.loginInfo.uin]
+    if (!topSessions) return
+    for (const id of topSessions) {
+        const session = Session.getSessionById(id)
+        if (!session) {
+            logger.debug('未找到置顶会话：' + id)
+            continue
+        }
+        logger.debug('设置置顶会话：' + id)
+        session.setAlwaysTop(true, false)
+    }
+
+    // 设置通知开关
+    const noticeList = runtimeData.sysConfig?.notice_group[runtimeData.loginInfo.uin]
+    if (noticeList) {
+        for (const session of GroupSession.sessionList) {
+            if (!noticeList.includes(session.id)) continue
+            session.setNotice(true, false)
+        }
+    }
+
+    // 更新当前会话
+    if (nowChatId) {
+        const session = Session.getSessionById(nowChatId)
+        if (!session?.isActive) await session?.activate()
+        runtimeData.nowChat = session
     }
 }
 
 /**
-* 获取 Cookie
-*/
-export function reloadCookies(domain = 'qun.qq.com') {
-    Connector.send(
-        'get_cookies',
-        { domain: domain },
-        'getCookies_' + domain,
-    )
+ * 刷新收纳盒列表
+ */
+export function reloadSessionBoxs() {
+    // 加载用户列表
+    if (!login.status) return
+
+    // 清除旧数据
+    SessionBox.clear()
+
+
+    // 加载
+    SessionBox.load()
 }
 
 /**
@@ -205,38 +275,23 @@ export function reloadCookies(domain = 'qun.qq.com') {
  * @param msgId
  */
 export function jumpToChat(userId: string, msgId: string) {
-    if (runtimeData.chatInfo.show.id != Number(userId)) {
-        const body = document.getElementById('user-' + userId)
-        if (body === null) {
-            // 从缓存列表里寻找这个 ID
-            for (let i = 0; i < runtimeData.userList.length; i++) {
-                const item = runtimeData.userList[i]
-                const id =
-                    item.user_id !== undefined ? item.user_id : item.group_id
-                if (String(id) === userId) {
-                    // 把它插入到显示列表的第一个
-                    runtimeData.showList?.unshift(item)
-                    nextTick(() => {
-                        const bodyNext = document.getElementById(
-                            'user-' + userId,
-                        )
-                        if (bodyNext !== null) {
-                            // 添加一个消息跳转标记
-                            bodyNext.dataset.jump = msgId
-                            // 然后点一下它触发聊天框切换
-                            bodyNext.click()
-                        }
-                    })
-                    break
-                }
-            }
-        } else {
-            body.click()
-        }
-    } else {
-        // 当前聊天已经打开，是没有焦点触发的消息通知；直接滚动到消息。
-        scrollToMsg(msgId, true)
+    const session = Session.getSessionById(Number(userId))
+    if (!session) return
+    if (!session.isActive) return // 未激活哪里来的消息?
+    const msg = session.messageList.filter(msg => msg.message_id === msgId)[0]
+    if (!msg) return // 没有找到对应的消息
+
+    // 当前聊天已经打开，是没有焦点触发的消息通知；直接滚动到消息。
+    if (runtimeData.nowChat === session) {
+        scrollToMsg(`chat-${msg.uuid}`, true)
+        return
     }
+
+    changeSession(session)
+    // 跳转到对应消息
+    setTimeout(()=>{
+        scrollToMsg(`chat-${msg.uuid}`, true)
+    }, 500)
 }
 
 /**
@@ -285,7 +340,8 @@ export function downloadFile(
 }
 
 /**
-* Windows：获取加载系统主题色
+* Windows：获取加载系统主题色        setTimeout(()=>{userInfoPanData.user = undefined}, 2000)
+
 * @param color 颜色
 */
 export function updateWinColor(color: string) {
@@ -366,7 +422,7 @@ export function createMenu() {
         menuTitles.login = $t('连接')
         menuTitles.logout = $t('登出')
         menuTitles.userList = $t('用户列表（{count}）', {
-            count: runtimeData.userList.length,
+            count: Session.sessionList.length,
         })
         menuTitles.flushUser = $t('刷新列表…')
 
@@ -404,16 +460,12 @@ export function createIpc() {
     })
     addBackendListener(undefined, 'bot:quickReply', (event, data) => {
         const info = data ?? event.payload
-        const preMsg = sendMsgRaw(info.id, info.type,
+        const session = Session.getSessionById(info.id)
+        if (!session) return
+        sendMsgRaw(session,
             parseMsg(info.content, [], [], String(info.msg)))
-        runtimeData.messageList.push(preMsg)
         // 去消息列表内寻找，去除新消息标记
-        const item = runtimeData.baseOnMsgList.get(info.id)
-        if(item) {
-            item.new_msg = false
-            item.highlight = undefined
-            runtimeData.baseOnMsgList.set(Number(info.id), item)
-        }
+        session.setRead()
     })
     // 应用功能
     addBackendListener(undefined, 'app:about', () => {
@@ -520,19 +572,14 @@ export async function loadMobile() {
                         notification.extra.msgId)
                 } else if(info.actionId == 'REPLY_ACTION') {
                     // 快速回复
-                    const preMsg = sendMsgRaw(
-                        notification.extra.userId,
-                        notification.extra.chatType,
+                    const session = Session.getSessionById(notification.extra.userId)
+                    if (!session) return
+                    sendMsgRaw(
+                        session,
                         parseMsg(info.inputValue ?? '', [], [], String(notification.extra.msgId)),
                     )
-                    runtimeData.messageList.push(preMsg)
                     // 去消息列表内寻找，去除新消息标记
-                    const item = runtimeData.baseOnMsgList.get(Number(notification.extra.userId))
-                    if(item) {
-                        item.new_msg = false
-                        item.highlight = undefined
-                        runtimeData.baseOnMsgList.set(Number(notification.extra.userId), item)
-                    }
+                    session.setRead()
                 }
             })
         }
@@ -610,6 +657,10 @@ export async function loadMobile() {
 import horizontalCss from '@renderer/assets/css/append/mobile/append_mobile_horizontal.css?raw'
 import verticalCss from '@renderer/assets/css/append/mobile/append_mobile_vertical.css?raw'
 import { ActionType, LocalNotificationSchema } from '@capacitor/local-notifications'
+import { Session } from '../model/session'
+import { MenuEventData } from '../elements/information'
+import { Role } from '../model/user'
+import { SessionBox } from '../model/box'
 // import windowsCss from '@renderer/assets/css/append/mobile/append_windows.css?raw'
 /**
 * 装载补充样式
@@ -1048,27 +1099,398 @@ export function sendStatEvent(event: string, data: any) {
 }
 
 /**
-* 切换群组通知状态
-* @param group_id 群组 ID
-* @param open 是否开启通知
-*/
-export function changeGroupNotice(group_id: number, open: boolean) {
-    const noticeInfo = option.get('notice_group') ?? {}
-    const list = noticeInfo[runtimeData.loginInfo.uin]
-    if(open) {
-        if (list) {
-            list.push(group_id)
-        } else {
-            noticeInfo[runtimeData.loginInfo.uin] = [group_id]
+ * 是否应该自动聚焦输入框
+ * @returns
+ */
+export function shouldAutoFocus(): boolean {
+    // 桌面端
+    if (runtimeData.tags.clientType !== 'web') {
+        // 除了苹果的不知道啥东西,都可以
+        if (['electron', 'tauri'].includes(runtimeData.tags.clientType)) {
+            return true
         }
-        option.save('notice_group', noticeInfo)
-    } else {
-        if (list) {
-            const index = list.indexOf(group_id)
-            if (index >= 0) {
-                list.splice(index, 1)
-            }
+        return false
+    }
+    // web端
+    else {
+        // 移动端浏览器不自动聚焦
+        if (/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+            return false
         }
-        option.save('notice_group', noticeInfo)
+        return true
     }
 }
+
+//#region == use封装 ========================================
+/**
+ * 用来封装一个停留事件的处理, 支持传递额外上下文
+ * 适用于鼠标或触摸事件，停留一段时间后触发
+ * 例如：长按菜单,鼠标悬浮等
+ * @param getPos 从事件里提取坐标的函数
+ * @param continueTime 成功的持续时间
+ * @param hooks 钩子函数 支持成功时,失败时,退出时
+ * @returns {
+ *   acceptStartEvent: (event: T, exArg?: E) => void, // 接受开始事件
+ *   acceptUpdateEvent: (event: T) => void, // 接受更新事件
+ *   acceptEndEvent: (event: T) => void // 接受结束事件
+ * }
+ */
+export function useStayEvent<T extends Event,C>(
+    getPos: (event: T)=>{x: number, y: number} | void,
+    hooks: {
+        onFit?: ((eventData: MenuEventData, ctx: C)=>void)
+              | ((eventData: MenuEventData)=>void)
+              | ((ctx: C)=>void)
+              | (()=>void)
+        onLeave?: ((ctx: C)=>void)
+                | (()=>void)
+        onFail?: ((ctx: C)=>void)
+               | (()=>void)
+    },
+    continueTime: number,
+): {
+    handle: (event: T, ctx?: C | undefined) => void,
+    handleEnd: (event: T) => void,
+} {
+    // 表示结束
+    let end: boolean = true
+    // 表示是否符合条件
+    let fit: boolean = false
+    // 记录开始位置
+    let startPos: {x: number, y: number} | undefined = undefined
+    // settiemout
+    let timeout: number
+    // 开始时事件数据
+    let startEventData: MenuEventData
+    // 额外参数
+    let ctx: C | undefined
+    function handle(event: T, _ctx?: C|undefined) {
+        if (end) _acceptStartEvent(event, _ctx)
+        else _acceptUpdateEvent(event)
+    }
+    function handleEnd(event: T) {
+        if (end) return
+        _acceptEndEvent(event)
+    }
+    function _acceptStartEvent(event: T, _ctx?: C|undefined) {
+        fit = false
+        end = false
+        ctx = _ctx
+        startPos = getPos(event) as {x: number, y: number}
+        startEventData = {
+            x: startPos.x,
+            y: startPos.y,
+            target: event.target as HTMLElement,
+        }
+        timeout = setTimeout(() => {
+            fit = true
+            _callFit()
+        }, continueTime) as unknown as number
+    }
+    function _acceptUpdateEvent(event: T) {
+        if (end) return
+        const pos = getPos(event)
+        if (!pos) return
+        if (!startPos) return
+        // 位置改变
+        if (Math.abs(pos.x - startPos.x) > 10 ||
+            Math.abs(pos.y - startPos.y) > 10) {
+                _setEnd()
+            }
+    }
+    function _acceptEndEvent(event: T) {
+        if (end) return
+        _setEnd()
+        if (getPos(event)) _acceptUpdateEvent(event)
+    }
+    // ==工具函数=====================================
+    function _setEnd() {
+        end = true
+        if (fit) _callLeave()
+        else _callFail()
+        // 清除定时器
+        clearTimeout(timeout)
+    }
+    function _callFit() {
+        if (hooks.onFit?.length === 0) {
+            (hooks.onFit as () => void)()
+        } else if (hooks.onFit?.length === 1) {
+            let arg
+            if (ctx) arg = ctx
+            else arg = startEventData;
+
+            (hooks.onFit as (arg: MenuEventData|C) => void)(arg)
+        } else if (hooks.onFit?.length === 2) {
+            (hooks.onFit as (eventData: MenuEventData, ctx?: C) => void)(startEventData, ctx)
+        }
+    }
+    function _callLeave() {
+        if (hooks.onLeave?.length === 0) {
+            (hooks.onLeave as () => void)()
+        } else if (hooks.onLeave?.length === 1) {
+            (hooks.onLeave as (ctx?: C) => void)(ctx)
+        }
+    }
+    function _callFail() {
+        if (hooks.onFail?.length === 0) {
+            (hooks.onFail as () => void)()
+        } else if (hooks.onFail?.length === 1) {
+            (hooks.onFail as (ctx?: C) => void)(ctx)
+        }
+    }
+    return {
+        handle,
+        handleEnd,
+    }
+}
+
+/**
+ * 有延迟的但个元素的watch
+ * @param getValue 获取值的函数
+ * @param delay 延迟时间，默认 500ms
+ * @returns 返回一个Ref对象，当尝过delay时长未更新后更新
+ */
+export function useBaseDebounced<T>(getValue: () => T, delay: number = 500): ShallowRef<T> {
+    const result: ShallowRef<T> = shallowRef(getValue())
+    let timeout: ReturnType<typeof setTimeout>
+    watch(getValue, (newValue) => {
+        clearTimeout(timeout)
+        timeout = setTimeout(() => {
+            result.value = newValue
+        }, delay)
+    })
+    return result
+}
+//#endregion
+
+//#region == v命令封装 ======================================
+/**
+ * 根据用户角色设置元素的 class 属性
+ */
+export const vUserRole: Directive<HTMLSpanElement, Role> = {
+    mounted(el: HTMLElement, binding: DirectiveBinding<Role>) {
+        const role = binding.value
+        if (!role) return
+        // 设置 class
+        el.classList.add('user-title')
+        switch (role) {
+            case Role.Owner:
+                el.classList.add('owner')
+                break
+            case Role.Admin:
+                el.classList.add('admin')
+                break
+            case Role.Bot:
+                el.classList.add('bot')
+                break
+        }
+    }
+}
+/**
+ * 创建一个右键菜单指令
+ * 用于闭包公用停留事件控制器
+ * @returns
+ */
+function createVMenu(): Directive<HTMLElement, (event: MenuEventData)=>void> {
+    // 右键菜单事件数据类型
+    type Binding = DirectiveBinding<(event: MenuEventData)=>void> & { modifiers: {prevent?: boolean, stop?: boolean} }
+
+    // 右键菜单事件数据类型
+    const {
+        handle: menuTouchHandle,
+        handleEnd: menuTouchEnd,
+    } = useStayEvent(
+        (event: TouchEvent) => {
+            if (event.touches.length > 0) {
+                const touch = event.touches[0]
+                return { x: touch.clientX, y: touch.clientY }
+            }
+            return undefined
+        },
+        {
+            onFit: (data: MenuEventData, binding: Binding) => {
+                // 触发右键菜单事件
+                binding.value(data)
+            }
+        },
+        400,
+    )
+
+    // 创建指令
+    const out = {
+        mounted( el: HTMLElement, binding: Binding, ) {
+            // 创建变量
+            const prevent = binding.modifiers.prevent || false
+            const stop = binding.modifiers.stop || false
+            const controller = new AbortController()
+            const options = {signal: controller.signal}
+
+            // 添加监听
+            el.addEventListener('contextmenu', (event) => {
+                if (prevent) event.preventDefault()
+                if (stop) event.stopPropagation()
+                const data: MenuEventData = {
+                    x: event.clientX,
+                    y: event.clientY,
+                    target: event.target as HTMLElement,
+                }
+                binding.value(data)
+            }, options)
+            el.addEventListener('touchstart', (event) => {
+                if (prevent) event.preventDefault()
+                if (stop) event.stopPropagation()
+                menuTouchHandle(event, binding)
+            }, options)
+            el.addEventListener('touchmove', (event) => {
+                if (prevent) event.preventDefault()
+                if (stop) event.stopPropagation()
+                menuTouchHandle(event, binding)
+            }, options)
+            el.addEventListener('touchend', (event) => {
+                if (prevent) event.preventDefault()
+                if (stop) event.stopPropagation()
+                menuTouchEnd(event)
+            }, options)
+
+            // 绑定控制器
+            ;(el as any)._vMenuController = controller
+        },
+        unmounted(el: HTMLElement) {
+            const controller = (el as any)._vMenuController
+            if (!controller) return
+
+            controller.abort()
+            delete (el as any)._vMenuController
+        },
+    }
+    return out
+}
+/**
+ * 创建一个右键菜单指令
+ * @example v-menu="(data: MenuEventData) =>  打开菜单函数(data, 其他参数)"
+ */
+export const vMenu: Directive<HTMLElement, (event: MenuEventData)=>void, 'prevent' | 'stop'> = createVMenu()
+/**
+ * 挂在时如果设备支持,自动聚焦输入框
+ */
+export const vAutoFocus: Directive<HTMLInputElement|HTMLTextAreaElement, undefined> = {
+    mounted(el: HTMLInputElement|HTMLTextAreaElement) {
+        // 判断是否支持聚焦
+        if (!shouldAutoFocus()) return
+
+        // 检查元素是否可见
+        const isVisible = () => {
+            const style = window.getComputedStyle(el)
+            return style.display !== 'none' &&
+                   style.visibility !== 'hidden' &&
+                   style.opacity !== '0'
+        }
+
+        if (!isVisible()) return
+
+        el.focus()
+    }
+}
+
+export interface SearchBinding<T extends { match(query: string): boolean }> {
+  originList: Iterable<T>
+  isSearch: boolean
+  query: T[]
+  forceUpdate?: number  // 强制刷新
+}
+
+/**
+ * 生成一个 Search 指令
+ */
+export function createVSearch<T extends { match(query: string): boolean }>()
+: Directive<HTMLInputElement, SearchBinding<T>> {
+    return {
+        mounted(el, binding: DirectiveBinding<SearchBinding<T>>) {
+            const controller = new AbortController()
+            const queryTxt = ref('')
+
+            el.addEventListener('input', () => {
+                queryTxt.value = el.value.trim()
+            }, {signal: controller.signal})
+
+            watchEffect(() => {
+                binding.value.forceUpdate
+                if (!queryTxt.value) {
+                    binding.value.isSearch = false
+                    binding.value.query = []
+                } else {
+                    binding.value.isSearch = true
+                    binding.value.query = shallowReactive(Array.from(binding.value.originList)
+                        .filter(item => item.match(queryTxt.value)))
+                }
+            })
+            ;(el as any)._vSearchController = controller
+        },
+        unmounted(el) {
+            const controller = (el as any)._vSearchController
+            if (!controller) return
+
+            controller.abort()
+            delete (el as any)._vSearchController
+        }
+    }
+}
+
+/**
+ * 输入时在制定列表里搜索匹配的项
+ * @example v-search="{
+ *     originList: 制定的列表,
+ *     isSearch: 当前是否在搜索,
+ *     query: 搜索结果列表，
+ * }"
+ * @see createVSearch
+ */
+export const vSearch = createVSearch<any>()
+/**
+ * 如果自身超出了父组件的范围，则隐藏自身
+ */
+export const vOverflowHide: Directive<HTMLElement, undefined> = {
+    mounted(el: HTMLElement) {
+        const parent = el.parentElement
+        if (!parent) return
+
+        // 检查元素是否完全在父容器内
+        const update = () => {
+            const pRect = parent.getBoundingClientRect()
+            const eRect = el.getBoundingClientRect()
+            if (
+                eRect.left   < pRect.left   ||
+                eRect.top    < pRect.top    ||
+                eRect.right  > pRect.right  ||
+                eRect.bottom > pRect.bottom
+            ) {
+                el.style.opacity = '0'
+            } else {
+                el.style.opacity = ''
+            }
+        }
+
+        // 监听窗口尺寸变化
+        const controller = new AbortController()
+        parent.addEventListener('resize', update, { signal: controller.signal })
+
+        // 使用 ResizeObserver 监听大小或内容变化
+        const observer = new ResizeObserver(update)
+        observer.observe(el)
+        observer.observe(parent)
+
+        // 初始检查
+        update()
+
+        // 保存以便卸载时清理
+        ;(el as any)._vOverflowHideController = { observer, controller }
+    },
+    unmounted(el: HTMLElement) {
+        const data = (el as any)._vOverflowHideController
+        if (!data) return
+        data.observer.disconnect()
+        data.controller.abort()
+        delete (el as any)._vOverflowHideController
+    }
+}
+//#endregion`

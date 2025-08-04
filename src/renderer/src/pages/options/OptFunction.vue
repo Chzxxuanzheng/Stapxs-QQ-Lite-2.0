@@ -60,6 +60,21 @@
                     </option>
                 </select>
             </div>
+            <div class="opt-item">
+                <div :class="checkDefault('preview_notice')" />
+                <font-awesome-icon :icon="['fas', 'eye']" />
+                <div>
+                    <span>{{ $t('预览通知') }}</span>
+                    <span>{{ $t('注入撤回消息等事件也会做为预览消息') }}</span>
+                </div>
+                <label class="ss-switch">
+                    <input v-model="runtimeData.sysConfig.preview_notice"
+                        type="checkbox" name="preview_notice" @change="save">
+                    <div>
+                        <div />
+                    </div>
+                </label>
+            </div>
         </div>
         <div class="ss-card">
             <header>{{ $t('聊天选项') }}</header>
@@ -204,21 +219,6 @@
                 <label class="ss-switch">
                     <input v-model="runtimeData.sysConfig.jump_forward"
                         type="checkbox" name="jump_forward" @change="save">
-                    <div>
-                        <div />
-                    </div>
-                </label>
-            </div>
-            <div class="opt-item">
-                <div :class="checkDefault('show_revoke_msg')" />
-                <font-awesome-icon :icon="['fas', 'undo']" />
-                <div>
-                    <span>{{ $t('显示撤回消息') }}</span>
-                    <span>{{ $t('既然来了,那就别想走') }}</span>
-                </div>
-                <label class="ss-switch">
-                    <input v-model="runtimeData.sysConfig.show_revoke_msg"
-                        type="checkbox" name="show_revoke_msg" @change="save">
                     <div>
                         <div />
                     </div>

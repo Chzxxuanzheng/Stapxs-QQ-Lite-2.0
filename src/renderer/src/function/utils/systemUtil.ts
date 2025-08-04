@@ -1,9 +1,9 @@
-import app from '@renderer/main'
+import app, { i18n } from '@renderer/main'
 
 import l10nConfig from '@renderer/assets/l10n/_l10nconfig.json'
 import PO from 'pofile'
 import { runtimeData } from '../msg';
-import { Logger, LogType } from '../base';
+import { Logger, LogType, PopInfo, PopType } from '../base';
 
 /**
  * 异步延迟
@@ -345,6 +345,16 @@ export function randomNum(minNum: number, maxNum: number) {
 }
 
 /**
+ * 从参数列表中随机选择一个元素
+ * @param args 参数列表
+ * @returns 随机选择的元素
+ */
+export function randomChoice<T>(...args: T[]): T{
+    const id = randomNum(0, args.length - 1)
+    return args[id]
+}
+
+/**
  * 获取显示的时间，由于获得的时间戳可能是秒级的，也可能是毫秒级的，所以需要判断
  * @param time
  * @param i0n
@@ -357,12 +367,32 @@ export function getViewTime(time: number) {
     }
 }
 
+const second = 1000
+const minute = second * 60
+const hour = minute * 60
+const day = hour * 24
+const month = day * 30
+const year = day * 365
+
 /**
  * 获取时间的配置
  * @param date
  * @returns
  */
 export function getTimeConfig(date: Date) {
+    // 倒计时型
+    if (date.getTime() < 100 * 365 * 24 * 3600 * 1000) {
+        const base = {} as Intl.DateTimeFormatOptions
+        const time = date.getTime()
+        if (true && time < hour) base.second = 'numeric'
+        if (minute < time && time < day) base.minute = 'numeric'
+        if (hour < time && time < month) base.hour = 'numeric'
+        if (day < time && time < year) base.day = 'numeric'
+        if (month < time && true) base.month = 'short'
+        if (year < time && true) base.year = 'numeric'
+        return base
+    }
+    // 日期型
     const base = {
         hour: 'numeric',
         minute: 'numeric',
@@ -391,9 +421,10 @@ export function getTimeConfig(date: Date) {
 
 /**
  * 标准化url,处理通信协议,加http
- * @param url 
+ * @param url
  */
 export function stdUrl(url: string){
+    const $t = i18n.global.t
     if (!url.toLowerCase().startsWith('http')) return url
     if (document.location.protocol == 'https:') {
         // 判断文件 URL 的协议
@@ -402,9 +433,23 @@ export function stdUrl(url: string){
             url = 'https' + url.substring(url.indexOf('://'))
         }
     }
-    if (runtimeData.tags.proxyPort) {
-        return `http://localhost:${runtimeData.tags.proxyPort}/assets?url=${encodeURIComponent(url)}`
+    // 获取跨域连接
+    let proxyUrl: string | undefined = undefined
+    if (runtimeData.tags.proxyPort)
+        proxyUrl = `http://localhost:${runtimeData.tags.proxyPort}/assets?url={url}`
+    else if (runtimeData.sysConfig.proxyUrl?.trim().length > 0)
+        proxyUrl = runtimeData.sysConfig.proxyUrl.trim()
+
+    // url 校验
+    if (proxyUrl && proxyUrl.includes('{url}')) {
+        new PopInfo().add(PopType.ERR, $t('代理地址不包含 \\{url\\}，请检查配置'),)
+        proxyUrl = undefined
     }
+
+    // 包装 url
+    if (proxyUrl)
+        url = proxyUrl.replace('{url}', encodeURIComponent(url))
+    // TODO: url改正响应式对象
     return url
 }
 

@@ -18,45 +18,39 @@
         @touchstart="chatMoveStartEvent"
         @touchmove="chatMoveEvent"
         @touchend="chatMoveEndEvent"
-        @wheel="chatWheelEvent"
-        >
+        @wheel="chatWheelEvent">
         <!-- 聊天基本信息 -->
         <div class="info">
             <font-awesome-icon :icon="['fas', 'bars-staggered']" @click="openLeftBar" />
-            <img :src="chat.show.avatar">
+            <img :src="chat.face">
             <div class="info">
                 <p>
-                    {{ chat.show.name }}
-                    <template
-                        v-if="runtimeData.chatInfo.show.type == 'group'">
-                        ({{
-                            runtimeData.chatInfo.info.group_members.length
-                        }})
+                    {{ chat.showName }}
+                    <template v-if="chat instanceof GroupSession">
+                        ({{ chat.memberList.length }})
                     </template>
                 </p>
-                <span v-if="chat.show.temp">
-                    {{ $t('来自群聊：{group}', { group: chat.show.temp }) }}
-                </span>
-                <span v-else>
-                    <template v-if="chat.show.appendInfo">
-                        {{ chat.show.appendInfo }}
+                <span>
+                    <template v-if="chat.appendInfo">
+                        {{ chat.appendInfo }}
                     </template>
-                    <template v-else>
-                        {{
-                            list.at(-1) ? $t('上次消息 - {time}', {
-                                time: list.at(-1)?.formatTime()
-                            }) : $t('暂无消息')
-                        }}
-                    </template>
+                    {{
+                        chat.preMessage ? $t('上次消息 - {time}', {
+                            time: chat.preMessage.time?.format()
+                        }) : $t('暂无消息')
+                    }}
                 </span>
             </div>
             <div class="space" />
             <div class="more">
-                <font-awesome-icon :icon="['fas', 'ellipsis-vertical']" @click="openChatInfoPan" />
+                <font-awesome-icon v-if="chat.isActive"
+                    :icon="['fas', 'ellipsis-vertical']" @click="switchChatInfoPan" />
+                <font-awesome-icon v-else
+                    :icon="['fas', 'spinner']" class="loading" />
             </div>
         </div>
         <!-- 加载中指示器 -->
-        <div :class=" 'loading' + (tags.nowGetHistroy && runtimeData.tags.canLoadHistory ? ' show' : '')">
+        <div :class=" 'loading' + (chat.isLoadingHistory && chat.canLoadMoreHistory ? ' show' : '')">
             <font-awesome-icon :icon="['fas', 'spinner']" />
             <span>{{ $t('加载中') }}</span>
         </div>
@@ -66,15 +60,16 @@
             @scroll="chatScroll">
             <MsgBar
                 :ref="'msgBar'"
-                :msgs="details[3].open ? tags.search.list :list"
+                :key="chat.id"
+                :msgs="details[3].open ? (tags.search.list as Message[]) : chat.messageList"
                 :show-msg-menu="showMsgMenu"
                 :show-user-menu="showUserMenu"
-                @scrollToMsg="scrollToMsg"
-                @imageLoaded="imgLoadedScroll"
+                :user-info-pan="userInfoPanFunc"
+                @scroll-to-msg="scrollToMsg"
+                @image-loaded="imgLoadedScroll"
                 @left-move="replyMsg"
                 @sender-double-click="(user)=>sendPoke(user.user_id)"
-                @emoji-click="changeRespond"
-                />
+                @emoji-click="changeRespond" />
         </div>
         <!-- 滚动到底部悬浮标志 -->
         <div v-show="tags.showBottomButton"
@@ -82,7 +77,7 @@
             @click="scrollBottom(true)">
             <div class="ss-card">
                 <font-awesome-icon :icon="['fas', 'comment']" />
-                <span v-if="NewMsgNum > 0">{{ NewMsgNum }}</span>
+                <span v-if="chat.newMsg > 0">{{ chat.newMsg }}</span>
             </div>
         </div>
         <!-- 底部区域 -->
@@ -96,54 +91,39 @@
                             @add-special-msg="addSpecialMsg" @send-msg="sendMsg" />
                     </Transition>
                     <!-- 精华消息 -->
-                    <Transition name="pan">
-                        <div v-show="details[2].open && runtimeData.chatInfo.info.jin_info.list.length > 0"
+                    <Transition v-if="chat instanceof GroupSession" name="pan">
+                        <div v-show="details[2].open"
                             class="ss-card jin-pan">
                             <div>
                                 <font-awesome-icon :icon="['fas', 'message']" />
                                 <span>{{ $t('精华消息') }}</span>
                                 <font-awesome-icon :icon="['fas', 'xmark']" @click="details[2].open = !details[2].open" />
                             </div>
-                            <div
-                                class="jin-pan-body"
-                                @scroll="jinScroll">
-                                <div v-for="(item, index) in runtimeData.chatInfo.info.jin_info.list"
+                            <div class="jin-pan-body">
+                                <div v-for="(item, index) in chat.essenceList"
                                     :key="'jin-' + index">
                                     <div>
-                                        <img :src="`https://q1.qlogo.cn/g?b=qq&s=0&nk=${item.sender_uin}`">
+                                        <img :src="item.sender.face">
                                         <div>
-                                            <a>{{ item.sender_nick }}</a>
-                                            <span>{{ Intl.DateTimeFormat(
-                                                      trueLang,
-                                                      {
-                                                          hour: 'numeric',
-                                                          minute: 'numeric',
-                                                      },
-                                                  ).format(new Date(item.sender_time * 1000))
-                                                  }}
+                                            <a>{{ item.sender.name }}</a>
+                                            <span>{{ item.time?.format() }}
                                                 {{ $t('发送') }}</span>
                                         </div>
                                         <span>{{
                                             $t('{time}，由 {name} 设置', {
-                                                time: Intl.DateTimeFormat(
-                                                    trueLang,
-                                                    {
-                                                        hour: 'numeric',
-                                                        minute: 'numeric',
-                                                    },
-                                                ).format(new Date(item.sender_time * 1000)),
-                                                name: item.add_digest_nick,
+                                                time: item.operatorTime?.format(),
+                                                name: item.operator.name,
                                             })
                                         }}</span>
                                     </div>
                                     <div class="context">
                                         <template
-                                            v-for="(context, indexc) in item.msg_content"
+                                            v-for="(seg, indexc) in item.message"
                                             :key="'jinc-' + index + '-' + indexc">
-                                            <span v-if="context.msg_type === 1">{{ context.text }}</span>
-                                            <img v-if="context.msg_type === 2"
-                                                class="face" :src="getFace(context.face_index)">
-                                            <img v-if="context.msg_type === 3" :src="context.image_url">
+                                            <span v-if="seg instanceof TxtSeg">{{ seg.text }}</span>
+                                            <img v-if="seg instanceof FaceSeg"
+                                                class="face" :src="seg.src">
+                                            <img v-if="seg instanceof ImgSeg" :src="seg.src">
                                         </template>
                                     </div>
                                 </div>
@@ -224,10 +204,8 @@
                     <div v-for="item in atFindList != null ? atFindList : []"
                         :key="'atFind-' + item.user_id"
                         @click="choiceAt(item.user_id)">
-                        <img :src="'https://q1.qlogo.cn/g?b=qq&s=0&nk=' + item.user_id">
-                        <span>{{
-                            item.card != '' && item.card != null ? item.card : item.nickname
-                        }}</span>
+                        <img :src="item.face">
+                        <span>{{ item.name }}</span>
                         <a>{{ item.user_id }}</a>
                     </div>
                     <div v-if="atFindList?.length == 0" class="emp">
@@ -256,12 +234,12 @@
                                 (tags.showMoreDetail = false)">
                         <font-awesome-icon :icon="['fas', 'face-laugh']" />
                     </div>
-                    <div v-if="chat.show.type === 'user'"
+                    <div v-if="chat instanceof UserSession"
                         :title="$t('戳一戳')"
-                        @click="sendPoke(chat.show.id)">
+                        @click="sendPoke(chat.id)">
                         <font-awesome-icon :icon="['fas', 'fa-hand-point-up']" />
                     </div>
-                    <div v-if="chat.show.type === 'group'"
+                    <div v-if="chat instanceof GroupSession"
                         :title="$t('精华消息')" @click="showJin">
                         <font-awesome-icon :icon="['fas', 'star']" />
                     </div>
@@ -286,15 +264,11 @@
                             v-model="msg"
                             type="text"
                             autocomplete="off"
-                            :disabled="runtimeData.tags.openSideBar || chat.info.me_info.shut_up_timestamp > 0"
+                            :disabled="runtimeData.tags.openSideBar || getMeBan() !== undefined"
                             :placeholder="
-                                chat.info.me_info.shut_up_timestamp > 0
+                                getMeBan()
                                     ? $t('已被禁言至：{time}', {
-                                        time: Intl.DateTimeFormat(
-                                            trueLang, getTimeConfig(
-                                                new Date(chat.info.me_info.shut_up_timestamp),
-                                            ),
-                                        ).format(new Date(chat.info.me_info.shut_up_timestamp)),
+                                        time: getMeBan()?.format(),
                                     }) : ''"
                             @paste="addImg"
                             @keyup="mainKeyUp"
@@ -321,49 +295,18 @@
         <!-- 合并转发消息预览器 -->
         <MergePan ref="mergePan" />
         <!-- At 信息悬浮窗 -->
-        <div class="mumber-info">
-            <div v-if="Object.keys(mumberInfo).length > 0 && mumberInfo.error === undefined"
-                class="ss-card"
-                :style="getPopPost()">
-                <img :src="'https://q1.qlogo.cn/g?b=qq&s=0&nk=' + mumberInfo.user_id">
-                <div>
-                    <span name="id">{{ mumberInfo.user_id }}</span>
-                    <div>
-                        <a>{{ mumberInfo.card == '' ? mumberInfo.nickname : mumberInfo.card }}</a>
-                        <div>
-                            <span v-if="mumberInfo.role !== 'member'">
-                                {{ $t('成员类型_' + mumberInfo.role) }}
-                            </span>
-                            <span>Lv {{ mumberInfo.level }}</span>
-                        </div>
-                    </div>
-                    <span v-if="mumberInfo.join_time">
-                        {{
-                            $t('{time} 加入群聊', {
-                                time: Intl.DateTimeFormat(trueLang, {
-                                    year: 'numeric',
-                                    month: 'short',
-                                    day: 'numeric',
-                                }).format(
-                                    new Date(mumberInfo.join_time * 1000),
-                                ),
-                            })
-                        }}
-                    </span>
-                </div>
-            </div>
-        </div>
+        <UserInfoPanComponent :data="userInfoPanData" />
         <!-- 消息右击菜单 -->
         <Menu ref="msgMenu" name="chat-menu">
             <div class="ss-card msg-menu-body">
-                <div v-if="runtimeData.chatInfo.show.type == 'group'"
+                <div v-if="chat instanceof GroupSession"
                     v-show="tags.menuDisplay.showRespond"
                     :class="'ss-card respond' + (tags.menuDisplay.respond ? ' open' : '')">
                     <template v-for="(num, index) in respondIds" :key="'respond-' + num">
                         <img v-if="getFace(num) != ''" loading="lazy"
                             :src="getFace(num) as any" @click="
-                            menuSelectedMsg ? 
-                            changeRespond(String(num), menuSelectedMsg): ''">
+                                menuSelectedMsg ?
+                                    changeRespond(String(num), menuSelectedMsg as Msg): ''">
                         <font-awesome-icon v-if="index == 4" :icon="['fas', 'angle-up']" @click="tags.menuDisplay.respond = true" />
                     </template>
                 </div>
@@ -411,7 +354,7 @@
                 <div v-show="tags.menuDisplay.at"
                     @click="menuSelectedUser ? addSpecialMsg({ msgObj: { type: 'at', qq: String(menuSelectedUser!.user_id) }, addText: true, }): '';
                             toMainInput();
-                            closeMsgMenu();">
+                            closeUserMenu();">
                     <div><font-awesome-icon :icon="['fas', 'at']" /></div>
                     <a>{{ $t('提及') }}</a>
                 </div>
@@ -423,20 +366,19 @@
                     <div><font-awesome-icon :icon="['fas', 'trash-can']" /></div>
                     <a>{{ $t('移出群聊') }}</a>
                 </div>
-                <div v-show="tags.menuDisplay.config"
-                    @click="openChatInfoPan();
-                            refs().infoRef?.openMoreConfig(menuSelectedUser!.user_id);
-                            closeMsgMenu();">
+                <div v-if="menuSelectedUser instanceof Member" v-show="tags.menuDisplay.config"
+                    @click="switchChatInfoPan();
+                            refs().infoRef?.openMoreConfig(menuSelectedUser);
+                            closeUserMenu();">
                     <div><font-awesome-icon :icon="['fas', 'cog']" /></div>
                     <a>{{ $t('成员设置') }}</a>
                 </div>
             </div>
         </Menu>
-        <!-- </div> -->
         <!-- 群 / 好友信息弹窗 -->
         <Transition>
-            <Info ref="infoRef" :chat="chat" :tags="tags"
-                @close="openChatInfoPan" />
+            <Info v-if="tags.openChatInfo" ref="infoRef" :chat="chat"
+                @close="switchChatInfoPan" />
         </Transition>
         <!-- 图片发送器 -->
         <Transition>
@@ -470,56 +412,87 @@
         </Transition>
         <!-- 转发面板 -->
         <ForwardPan ref="forwardPan" />
-        <div class="bg" :style=" runtimeData.sysConfig.option_view_background ?
-            `backdrop-filter: blur(${runtimeData.sysConfig .chat_background_blur}px);` : ''" />
+        <div class="bg" :style=" runtimeData.sysConfig.chat_background ?
+            `backdrop-filter: blur(${runtimeData.sysConfig.chat_background_blur}px);` : ''" />
     </div>
 </template>
 
+<script setup lang="ts">
+import UserInfoPanComponent from '@renderer/components/UserInfoPan.vue'
+import {
+    shallowReactive,
+    ShallowReactive,
+    Reactive
+} from 'vue'
+const userInfoPanData: ShallowReactive<{
+    user: undefined | IUser | number,
+    x: number,
+    y: number,
+}> = shallowReactive({
+    user: undefined,
+    x: 0,
+    y: 0,
+})
+const userInfoPanFunc: UserInfoPan = {
+    open: (user: IUser | number, x: number, y: number) => {
+        userInfoPanData.user = user
+        userInfoPanData.x = x
+        userInfoPanData.y = y
+    },
+    close: () => {
+        userInfoPanData.user = undefined
+    },
+}
+</script>
 <script lang="ts">
+// TODO: 改setup式，把as Reactive的变量改成ref
     import app from '@renderer/main'
     import SendUtil from '@renderer/function/sender'
     import Option, { get } from '@renderer/function/option'
     import Info from '@renderer/pages/Info.vue'
-    import FacePan from '@renderer/components/FacePan.vue'
     import MergePan from '@renderer/components/MergePan.vue'
     import ForwardPan from '@renderer/components/ForwardPan.vue'
     import MsgBar from '@renderer/components/MsgBar.vue'
-    import NoticeBody from '@renderer/components/NoticeBody.vue'
     import imageCompression from 'browser-image-compression'
+    import FacePan from '@renderer/components/FacePan.vue'
     import Menu from '@renderer/components/Menu.vue'
 
-    import { defineComponent, reactive, nextTick } from 'vue'
+    import { defineComponent, nextTick } from 'vue'
     import { v4 as uuid } from 'uuid'
-    import {
-        downloadFile,
-    } from '@renderer/function/utils/appUtil'
+    import { downloadFile, shouldAutoFocus } from '@renderer/function/utils/appUtil'
     import {
         addBackendListener,
+        delay,
         getTimeConfig,
         getTrueLang,
         getViewTime,
     } from '@renderer/function/utils/systemUtil'
     import {
-        getMsgRawTxt,
         sendMsgRaw,
         getFace,
+        closeSession,
     } from '@renderer/function/utils/msgUtil'
     import { scrollToMsg } from '@renderer/function/utils/appUtil'
     import { Logger, LogType, PopInfo, PopType } from '@renderer/function/base'
     import { Connector } from '@renderer/function/connect'
-    import { getMessageList, runtimeData } from '@renderer/function/msg'
+    import { runtimeData } from '@renderer/function/msg'
     import {
-        GroupMemberInfoElem,
-        ChatInfoElem,
         SQCodeElem,
         MenuEventData,
     } from '@renderer/function/elements/information'
     import { Msg, SelfMsg } from '@renderer/function/model/msg'
-    import { Message } from '@renderer/function/model/message'
-    import { Seg, FileSeg } from '@renderer/function/model/seg'
-    import { InfoNotice, SystemNotice } from '@renderer/function/model/notice'
+    import { Seg, FileSeg, TxtSeg, ImgSeg, FaceSeg } from '@renderer/function/model/seg'
+    import { SystemNotice } from '@renderer/function/model/notice'
     import { wheelMask } from '@renderer/function/utils/input'
-    import { Sender } from '@renderer/function/model/user'
+    import { BaseUser, Member, Role, IUser } from '@renderer/function/model/user'
+    import { GroupSession, Session, UserSession } from '@renderer/function/model/session'
+    import { Message } from '@renderer/function/model/message'
+    import { Time } from '@renderer/function/model/data'
+
+    export interface UserInfoPan {
+        open: (user: IUser|number, x: number, y: number) => void
+        close: () => void
+    }
 
     type ComponentRefs = {
         msgBar: InstanceType<typeof MsgBar>|undefined
@@ -532,37 +505,31 @@
 
     export default defineComponent({
         name: 'ViewChat',
-        components: { Info, FacePan, MergePan, MsgBar, NoticeBody, ForwardPan, Menu },
+        components: {
+            Info,
+            MsgBar,
+            FacePan,
+            MergePan,
+            ForwardPan,
+            Menu
+        },
         props: {
             chat: {
-                type: Object as () => ChatInfoElem,
+                type: Object as () => Session,
                 required: true,
-            },
-            list: {
-                type: Array as () => Message[],
-                required: true,
-            },
-            mumberInfo: {
-                type: Object as () => {[key: string]: any},
-                default: () => ({}),
             },
         },
         data() {
             return {
                 uuid,
-                fun: {
-                    getMsgRawTxt: getMsgRawTxt,
-                },
                 Option: Option,
                 getFace: getFace,
                 Connector: Connector,
                 runtimeData: runtimeData,
                 getTimeConfig: getTimeConfig,
-                forwardList: runtimeData.userList,
                 trueLang: getTrueLang(),
                 msgWhileReply: undefined as undefined | Msg,
                 tags: {
-                    nowGetHistroy: false,
                     showBottomButton: true,
                     showMoreDetail: false,
                     openChatInfo: false,
@@ -587,7 +554,7 @@
                     },
                     search: {
                         userId: -1,
-                        list: reactive(this.list),
+                        list: this.chat?.messageList ?? [],
                     },
                     chatMove: {
                         move: 0,
@@ -605,18 +572,24 @@
                     { open: false },
                 ],
                 msgMenus: [],
-                NewMsgNum: 0,
                 msg: '',
                 imgCache: [] as string[],
                 sendCache: [] as Seg[],
                 menuSelectedMsg: null as Msg | null,
-                menuSelectedUser: null as Sender | null,
+                menuSelectedUser: null as IUser | null,
                 selectCache: '',
-                atFindList: null as GroupMemberInfoElem[] | null,
+                atFindList: null as Member[] | null,
                 getImgList: [] as {
                     url: string,
                     id: string,
                 }[],
+                userInfoPan: {
+                    user: null as null | IUser | number,
+                    x: 0,
+                    y: 0,
+                },
+                Member,
+                Role,
                 respondIds: [
                     4, 5, 8, 9, 10, 12, 14, 16, 21, 23, 24, 25, 26, 27, 28, 29,
                     30, 32, 33, 34, 38, 39, 41, 42, 43, 49, 53, 60, 63, 66, 74,
@@ -628,47 +601,41 @@
                     281, 282, 284, 285, 287, 289, 290, 293, 294, 297, 298, 299,
                     305, 306, 307, 314, 315, 318, 319, 320, 322, 324, 326,
                 ],
-                getMsgRawTxt,
                 SystemNotice,
                 PopType,
                 PopInfo,
+                UserSession,
+                GroupSession,
+                TxtSeg,
+                ImgSeg,
+                FaceSeg,
+                Message,
             }
         },
         watch: {
             chat() {
-                // 重置部分状态数据
-                const data = (this as any).$options.data(this)
-                this.tags = data.tags
-                this.msgMenus = data.msgMenus
-                this.sendCache = []
-                this.imgCache = [] as string[]
-                this.initMenuDisplay()
+                this.init()
             },
         },
         async mounted() {
-            // 初始化菜单显示状态
-            this.loadHistory(true)
-            // 消息列表刷新
-            this.updateList(this.list.length, 0)
-            // PS：由于监听 list 本身返回的新旧值是一样，于是监听 length（反正也只要知道长度）
-            this.$watch(() => this.list.length, this.updateList)
-            //精华消息列表刷新
-            this.$watch(
-                () => this.chat.info.jin_info.list.length,
-                () => {
-                    this.tags.isJinLoading = false
-                },
-            )
+            // 初始化
+            this.init()
             // 为 viewer 绑定关闭事件
             const viewer = app.config.globalProperties.$viewer
             this.$watch(
                 () => viewer.hiding,
                 (newVall) => {
                     if (newVall) {
-                        runtimeData.chatInfo.info.image_list = this.getImgList
+                        runtimeData.img_list = this.getImgList
                     }
                 },
             )
+            // 图片列表
+            this.$watch(
+                () => this.chat.imgListUpdateTime,
+                this.reflashImgList,
+            )
+            this.reflashImgList()
             // Capacitor：系统返回操作（Android）
             if(runtimeData.tags.clientType == 'capacitor' &&
                 runtimeData.tags.platform === 'android') {
@@ -680,8 +647,50 @@
             this.$watch(() => runtimeData.watch.backTimes, () => {
                 this.exitWin()
             })
+            // 新消息滚动到底部
+            // eslint-disable-next-line
+            Session.newMessageHook.push(async (session, _msg)=>{
+                if (session !== this.chat) return
+
+                const pan = document.getElementById('msgPan')
+                if (!pan) return
+
+                // 计算当前滚动位置距离底部的距离
+                const distanceToBottom = pan.scrollHeight - pan.scrollTop - pan.clientHeight
+                // 计算vh的像素值
+                const vh = window.innerHeight / 100
+                // 如果距离底部大于20vh，则不自动滚动
+                if (distanceToBottom > 20 * vh) return
+
+                nextTick(() => {
+                    // 等待下一次 DOM 更新循环
+                    this.scrollBottom(true)
+                })
+            })
         },
         methods: {
+            /**
+             * 初始化自身
+             */
+            init() {
+                // 重置部分状态数据
+                const data = (this as any).$options.data(this)
+                this.tags = data.tags
+                this.msgMenus = data.msgMenus
+                this.sendCache = []
+                this.imgCache = [] as string[]
+                this.details = [
+                    { open: false },
+                    { open: false },
+                    { open: false },
+                    { open: false },
+                ]
+                this.initMenuDisplay()
+                this.reflashImgList()
+                // 聚焦输入框
+                // PS: 有虚拟键盘的设备会弹键盘,要做判断
+                if (shouldAutoFocus()) this.toMainInput()
+            },
             /**
              * 消息区滚动
              * @param event 滚动事件
@@ -690,12 +699,12 @@
                 const body = event.target as HTMLDivElement
                 const bar = document.getElementById('send-more')
                 // 顶部
-                if (body.scrollTop === 0 && this.list.length > 0) {
+                if (body.scrollTop === 0 && this.chat.messageList.length > 0) {
                     if (!this.details[3].open) this.loadHistory()
                 }
                 // 底部
                 if ((body.scrollTop + body.clientHeight + 10) >= body.scrollHeight) {
-                    this.NewMsgNum = 0
+                    this.chat.setRead()
                     this.tags.showBottomButton = false
                     // 去除阴影
                     if (bar) {
@@ -720,113 +729,6 @@
                         bar.style.transition = 'background 1s'
                         bar.classList.remove('btn')
                     }
-                }
-            },
-
-            /**
-             * 加载更多历史消息
-             * TODO 移动到会话里
-             */
-            async loadHistory(init: boolean = false) {
-                if (this.tags.nowGetHistroy) return
-                if (runtimeData.tags.canLoadHistory === false) return
-
-                // 锁定加载防止反复触发
-                this.tags.nowGetHistroy = true
-                // 移除上次的失败提示
-                const start = runtimeData.messageList[0]
-                if (
-                    start instanceof InfoNotice &&
-                    start.message === this.$t('获取历史记录失败')
-                ) {
-                    runtimeData.messageList.shift()
-                }
-                // 获取列表第一条消息
-                let startMsg: Msg | undefined
-                if (!init) {
-                    for (const msg of this.list) {
-                        // TODO 撤回消息有点问题, 重构会话时处理
-                        // 如果消息不是 Msg 实例，则跳过
-                        if (!(msg instanceof Msg)) continue
-                        // 如果消息没有 message_id，则跳过
-                        if (!msg.message_id) continue
-                        startMsg = msg
-                        break
-                    }
-                }
-                // 添加提示
-                const notice: SystemNotice[] = []
-                notice.push(SystemNotice.info(this.$t('获取历史记录ing')))
-                if (startMsg?.time) notice.push(
-                    SystemNotice.time(
-                        startMsg.time,
-                    ),
-                )
-                runtimeData.messageList = ([...notice] as Message[]).concat(
-                    runtimeData.messageList,
-                )
-                // 发起获取历史消息请求
-                const type = runtimeData.chatInfo.show.type
-                const id = runtimeData.chatInfo.show.id
-                const apiName = type == 'group' ? 'get_group_msg_history' : 'get_private_msg_history'
-                const data = await Connector.callApi(
-                    apiName,
-                    {
-                        group_id: type == 'group' ? id : undefined,
-                        user_id: type != 'group' ? id : undefined,
-                        message_id: startMsg?.message_id,
-                        count: 20,
-                    },
-                )
-
-                // 删除提示
-                for (const _ of notice) runtimeData.messageList.shift()
-
-                // 组装消息
-                let msgs: Message[]
-                if (!data) {
-                    msgs = [SystemNotice.info(this.$t('获取历史记录失败'))]
-                    new PopInfo().add(
-                        PopType.ERR,
-                        app.config.globalProperties.$t('获取历史记录失败'),
-                    )
-                }else {
-                    if (data.length === 0) {
-                        msgs = [SystemNotice.info(this.$t('没有更多历史消息'))]
-                        runtimeData.tags.canLoadHistory = false
-                    }else {
-                        msgs = getMessageList(data)
-                        // 如果最后一条消息和开始的消息相同，则删除最后一条消息
-                        if (msgs.at(-1)?.message_id === startMsg?.message_id) {
-                            msgs.pop()
-                        }
-                    }
-                }
-
-                const pan = document.getElementById('msgPan')
-                if (!pan) return
-
-                if (init) {
-                    // 重设消息列表
-                    runtimeData.messageList = msgs
-                    nextTick(()=>{
-                        this.scrollBottom(false)
-                        setTimeout(()=>this.tags.nowGetHistroy = false, 200)
-                    })
-                }else {
-                    runtimeData.messageList = msgs.concat(runtimeData.messageList)
-                    // 滚屏设置
-                    const oldScrollHeight = pan.scrollHeight
-                    nextTick(() => {
-                        setTimeout(() => {
-                            new Logger().debug(`滚动前高度：${oldScrollHeight}，当前高度：${pan.scrollHeight}，滚动位置：${pan.scrollHeight - oldScrollHeight}`)
-                            pan.style.scrollBehavior = 'unset'
-                            // 纠正滚动位置
-                            pan.scrollTop = pan.scrollHeight - oldScrollHeight
-                            pan.style.scrollBehavior = 'smooth'
-                            setTimeout(()=>this.tags.nowGetHistroy = false,200)
-                        }, 200)
-                    })
                 }
             },
 
@@ -861,7 +763,7 @@
             imgLoadedScroll(height: number) {
                 const pan = document.getElementById('msgPan')
                 if(pan) {
-                    if(this.list.length <= 20 && !this.tags.showBottomButton) {
+                    if(this.chat.messageList.length <= 20 && !this.tags.showBottomButton) {
                         this.scrollBottom()
                     } else {
                         // 纠正滚动位置
@@ -898,13 +800,13 @@
                     if (
                         !this.tags.onAtFind &&
                         lastInput == '@' &&
-                        runtimeData.chatInfo.info.group_members.length > 0 &&
-                        runtimeData.chatInfo.show.type == 'group'
+                        this.chat instanceof GroupSession
                     ) {
                         logger.add(LogType.UI, '开始匹配群成员列表 ……')
                         this.tags.onAtFind = true
                     }
                     if (this.tags.onAtFind) {
+                        if (!(this.chat instanceof GroupSession)) return
                         if (this.msg.lastIndexOf('@') < 0) {
                             logger.add(LogType.UI, '匹配群成员列表被打断 ……')
                             this.tags.onAtFind = false
@@ -914,14 +816,8 @@
                                 .substring(this.msg.lastIndexOf('@') + 1)
                                 .toLowerCase()
                             if (atInfo != '') {
-                                this.atFindList = runtimeData.chatInfo.info.group_members
-                                        .filter((item) => { return (
-                                                (item.card != '' && item.card != null && item.card.toLowerCase().indexOf(atInfo) >=0) ||
-                                                item.nickname.toLowerCase().indexOf(atInfo) >= 0 ||
-                                                atInfo ==item.user_id.toString()
-                                            )
-                                        },
-                                    )
+                                this.atFindList = this.chat.memberList
+                                        .filter((item) => { return item.match(atInfo) }) as Reactive<Member[]>
                             }
                         }
                     }
@@ -1008,7 +904,7 @@
                 if (!menu) return
                 if (menu.isShow()) return
 
-                this.menuSelectedMsg = msg
+                this.menuSelectedMsg = msg as Reactive<Msg>
 
                 // 检查消息，确认菜单显示状态
                 // 关闭回应功能
@@ -1017,13 +913,15 @@
                 }
 
                 // 判断能不能管理这个消息
-                let canAdmin = msg.sender.canBeAdmined(
-                    runtimeData.chatInfo.info.me_info.role,
-                )
-                if (msg.sender.user_id === runtimeData.loginInfo.uin) canAdmin = true
+                if (this.chat instanceof GroupSession) {
+                    let canAdmin = (msg.sender as Member | BaseUser).canBeAdmined(
+                        this.chat.getMe().role,
+                    )
+                    if (msg.sender.user_id === runtimeData.loginInfo.uin) canAdmin = true
 
-                if (canAdmin) {
-                    this.tags.menuDisplay.revoke = true
+                    if (canAdmin) {
+                        this.tags.menuDisplay.revoke = true
+                    }
                 }
 
                 // 消息不存在,但还可以多选和转发(x)
@@ -1043,7 +941,7 @@
                 }
                 const selection = document.getSelection()
                 const textBody = selection?.anchorNode?.parentElement
-                let textMsg = null as HTMLElement | null
+                const textMsg = null as HTMLElement | null
 
                 if (
                     textBody &&
@@ -1059,7 +957,7 @@
                     }
                 }
                 // 不能转发卡片消息
-                // TODO 有卡片签名的客户端适配
+                // TODO: 有卡片签名的客户端适配
                 if (msg.hasCard()) {
                     // 如果包含以上消息类型，不能转发
                     this.tags.menuDisplay.forward = false
@@ -1073,7 +971,7 @@
                 }
 
                 const promise = menu.showMenu(data.x, data.y) as Promise<void>
-                
+
                 // 初始化菜单显示状态
                 promise.then(() => {
                     setTimeout(() => {
@@ -1088,7 +986,7 @@
              * @param msg 用户
              * @returns 显示菜单的 Promise, 关闭菜单后完成委托
              */
-            showUserMenu(data: MenuEventData, user: Sender) {
+            showUserMenu(data: MenuEventData, user: IUser) {
                 const menu = this.refs().userMenu
                 if (!menu) return
                 if (menu.isShow()) return
@@ -1101,9 +999,10 @@
                 this.tags.menuDisplay.remove = true
 
                 let canAdmin: boolean
-                if (runtimeData.chatInfo.show.type !== 'group') canAdmin = false
+                if (!(this.chat instanceof GroupSession)) canAdmin = false
+                else if (!(user instanceof Member)) canAdmin = false
                 else if (user.user_id === runtimeData.loginInfo.uin) canAdmin = false
-                else if (user.canBeAdmined(runtimeData.chatInfo.info.me_info.role)) canAdmin = true
+                else if (user.canBeAdmined(this.chat.getMe().role)) canAdmin = true
                 else canAdmin = false
 
                 if (!canAdmin) {
@@ -1122,7 +1021,7 @@
 
                 // 显示用户菜单
                 const promise = menu.showMenu(data.x, data.y) as Promise<void>
-                
+
                 // 初始化菜单显示状态
                 promise.then(() => {
                     setTimeout(() => {
@@ -1163,7 +1062,7 @@
             replyMsg(msg: Msg) {
                 if (msg.message_id) {
                     // 显示回复指示器
-                    this.msgWhileReply = msg
+                    this.msgWhileReply = msg as Reactive<Msg>
                     // 聚焦输入框
                     this.toMainInput()
                 }else {
@@ -1196,13 +1095,13 @@
                 const param = { // OB是个神马玩意?得写两套参数...
                     message_id: msg.message_id,
                     emoji_id: id,
-                    group_id: runtimeData.chatInfo.show.id,
+                    group_id: this.chat.id,
                     code: id,
                     is_add: !hasSend,
                     set: !hasSend,
                 }
                 const re = await Connector.callApi('send_respond', param)
-                
+
                 if (!re && !hasSend) {
                     // 可能已经发送了,改成撤回
                     param.is_add = false
@@ -1232,14 +1131,12 @@
                                 Connector.send(
                                     'set_group_kick',
                                     {
-                                        group_id:
-                                            runtimeData.chatInfo.show
-                                                .id,
+                                        group_id: this.chat.id,
                                         user_id: user.user_id,
                                     },
                                     'setGroupKick',
                                 )
-                                this.closeMsgMenu()
+                                this.closeUserMenu()
                                 runtimeData.popBoxList.shift()
                             },
                         },
@@ -1253,17 +1150,6 @@
                     ],
                 }
                 runtimeData.popBoxList.push(popInfo)
-            },
-
-            /**
-             * 获取悬浮窗显示位置
-             */
-            getPopPost() {
-                const x =
-                    this.mumberInfo.x === undefined ? '0' : this.mumberInfo.x
-                const y =
-                    this.mumberInfo.y === undefined ? '0' : this.mumberInfo.y
-                return 'margin-left:' + x + 'px;margin-top:' + y + 'px;'
             },
 
             /**
@@ -1288,68 +1174,25 @@
             /**
              * 打开好友/群组信息页面
              */
-            openChatInfoPan() {
+            switchChatInfoPan() {
+                if (!this.chat.isActive) return undefined
                 this.tags.openChatInfo = !this.tags.openChatInfo
                 // 加载一些需要显示的消息，有部分判断是用来防止反复加载已存在内容的
-                if (this.tags.openChatInfo) {
-                    // 加载基础信息
-                    if (
-                        this.chat.show.type === 'group' &&
-                        this.chat.info.group_info.gc !== this.chat.show.id
-                    ) {
-                        const url = `https://qinfo.clt.qq.com/cgi-bin/qun_info/get_group_info_all?gc=${this.chat.show.id}&bkn=${runtimeData.loginInfo.bkn}`
-                        Connector.send(
-                            'http_proxy',
-                            { url: url },
-                            'getMoreGroupInfo',
-                        )
-                    } else if (
-                        this.chat.show.type === 'user' &&
-                        this.chat.info.user_info.uin !== this.chat.show.id
-                    ) {
-                        const userInfo = runtimeData.jsonMap.friend_info.name
-                        if(userInfo != undefined) {
-                            Connector.send(
-                                userInfo,
-                                { user_id: this.chat.show.id },
-                                'getMoreUserInfo',
-                            )
-                        }
-                    }
-                    // 加载群公告列表
-                    const noticeName = runtimeData.jsonMap.group_notices.name
-                    if (
-                        this.chat.show.type === 'group' &&
-                        (this.chat.info.group_notices === undefined ||
-                            Object.keys(this.chat.info.group_notices).length ===
-                                0)
-                    ) {
-                        if (noticeName && noticeName != 'http_proxy') {
-                            Connector.send(
-                                noticeName,
-                                { group_id: this.chat.show.id },
-                                'getGroupNotices',
-                            )
-                        } else {
-                            const url = `https://web.qun.qq.com/cgi-bin/announce/get_t_list?bkn=${runtimeData.loginInfo.bkn}&qid=${this.chat.show.id}&ft=23&s=-1&n=20`
-                            Connector.send(
-                                'http_proxy',
-                                { url: url },
-                                'getGroupNotices',
-                            )
-                        }
-                    }
-                    // 加载群文件列表
-                    if (this.chat.show.type === 'group' && Object.keys(this.chat.info.group_files).length === 0) {
-                        const name = runtimeData.jsonMap.group_files?.name
-                        console.log('加载群文件列表', name)
-                        if(name) {
-                            Connector.send(name, {
-                                group_id: this.chat.show.id
-                            }, 'getGroupFiles')
-                        }
-                    }
-                }
+                if (!this.tags.openChatInfo) return
+
+                // // 加载基础信息
+                // TODO:
+                // if (
+                //     this.chat.show.type === 'group' &&
+                //     this.chat.info.group_info.gc !== this.chat.show.id
+                // ) {
+                //     const url = `https://qinfo.clt.qq.com/cgi-bin/qun_info/get_group_info_all?gc=${this.chat.show.id}&bkn=${runtimeData.loginInfo.bkn}`
+                //     Connector.send(
+                //         'http_proxy',
+                //         { url: url },
+                //         'getMoreGroupInfo',
+                //     )
+                // }
             },
 
             /**
@@ -1372,7 +1215,7 @@
                         if (data.addTop === true) {
                             this.msg = '[SQ:' + index + ']' + this.msg
                         } else {
-                            this.msg += '[SQ:' + index + ']'
+                            this.msg += '[S@conQ:' + index + ']'
                         }
                     }
                     return index
@@ -1480,8 +1323,7 @@
 
                 const selfMsg = new SelfMsg(
                     message,
-                    this.chat.show.type,
-                    this.chat.show.id,
+                    this.chat,
                 )
                 runtimeData.messageList.push(selfMsg)
 
@@ -1599,176 +1441,46 @@
                     this.msg,
                     this.sendCache,
                     this.imgCache,
-                    this.msgWhileReply,
+                    this.msgWhileReply as Msg | undefined,
                 )
                 this.msgWhileReply = undefined
-                let preMsg: SelfMsg
-                if (this.chat.show.temp) {
-                    preMsg = sendMsgRaw(
-                        this.chat.show.id + '/' + this.chat.show.temp,
-                        this.chat.show.type,
-                        msg,
-                    )
-                } else {
-                    preMsg = sendMsgRaw(
-                        this.chat.show.id,
-                        this.chat.show.type,
-                        msg,
-                    )
-                }
-                runtimeData.messageList.push(preMsg)
+                sendMsgRaw(
+                    this.chat,
+                    msg,
+                )
                 // 发送后事务
                 this.msg = ''
                 this.sendCache = []
                 this.imgCache = []
-                this.scrollBottom()
                 this.cancelReply()
+                nextTick(async ()=>{
+                    await delay(100)
+                    this.scrollBottom(true)
+                })
             },
-
-            updateList(newLength: number, oldLength: number) {
-                // =================== 首次加载消息 ===================
-
-                if (oldLength == 0 && newLength > 0) {
-                    const name =
-                        runtimeData.jsonMap.set_message_read?.name ?? undefined
-                    let private_name =
-                        runtimeData.jsonMap.set_message_read?.private_name ??
-                        name
-                    if (!private_name) private_name = name
-                    // 设置最后一条消息以上都为已读
-                    if (runtimeData.chatInfo.show.type == 'group') {
-                        Connector.send(
-                            name,
-                            {
-                                group_id: this.chat.show.id,
-                                message_id:
-                                    this.list[this.list.length - 1].message_id,
-                            },
-                            'setMessageRead',
-                        )
-                    } else {
-                        Connector.send(
-                            private_name,
-                            {
-                                user_id: this.chat.show.id,
-                                message_id:
-                                    this.list[this.list.length - 1].message_id,
-                            },
-                            'setMessageRead',
-                        )
-                    }
-                    if(['electron', 'tauri'].includes(runtimeData.tags.clientType)) {
-                        // 将焦点移动到发送框
-                        this.toMainInput()
-                    }
-                }
-
-                // =================== 刷新统计数据 ===================
-
-                // 判断新消息数量（回到底部按钮显示、不在加载历史消息、不是首次加载消息）
-                if (
-                    this.tags.showBottomButton &&
-                    !this.tags.nowGetHistroy &&
-                    oldLength > 0
-                ) {
-                    if (this.NewMsgNum !== 0) {
-                        this.NewMsgNum =
-                            this.NewMsgNum + Math.abs(newLength - oldLength)
-                    } else {
-                        this.NewMsgNum = Math.abs(newLength - oldLength)
-                    }
-                }
-                // 清屏重新加载消息列表（超过 n 条消息、回到底部按钮不显示）
-                // PS：也就是说只在消息底部时才会触发，以防止你是在看历史消息攒满了刷掉
-                if (
-                    this.list.length > 200 &&
-                    !this.tags.nowGetHistroy &&
-                    !this.tags.showBottomButton
-                ) {
-                    this.loadHistory(false)
-                }
-
-                // =================== 渲染监听操作 ===================
-
-                const pan = document.getElementById('msgPan')
-                if (pan !== null) {
-                    // 渲染前的数据
-                    const height = pan.scrollHeight
-                    // const top = pan.scrollTop
-                    // 渲染后操作
-                    this.$nextTick(() => {
-                        const newPan = document.getElementById('msgPan')
-                        if (newPan !== null) {
-                            // 加载历史记录锁定滚动条位置
-                            if (this.tags.nowGetHistroy) {
-                                this.scrollTo(
-                                    newPan.scrollHeight - height,
-                                    false,
-                                )
-                            }
-                            // 新消息自动下滚（只要回到底部按钮没显示就算是在最底部、首次加载（不需要滚动动画））
-                            if (!this.tags.nowGetHistroy) {
-                                if (!this.tags.showBottomButton) {
-                                    this.scrollTo(newPan.scrollHeight)
-                                }
-                                if (oldLength <= 0) {
-                                    this.scrollTo(newPan.scrollHeight, false)
-                                }
-                            }
-                        }
-                        // 刷新图片列表
-                        // TODO: 需要优化性能
-                        let initMainList = false
-                        if (this.getImgList.length == 0) initMainList = true
-                        this.getImgList = []
-                        for (const msg of this.list) {
-                            if (!(msg instanceof Msg)) continue
-                            // 处理图片消息
-                            const imgDatas = msg.imgList
-                            this.getImgList = this.getImgList.concat(imgDatas)
-                        }
-                        const viewer = app.config.globalProperties.$viewer
-                        if (!viewer.isShown || initMainList) {
-                            runtimeData.chatInfo.info.image_list =
-                                this.getImgList
-                        }
-                        // 处理跳入跳转预设
-                        // 如果 jump 参数不是 undefined，则意味着这次加载历史记录的同时需要跳转到指定的消息
-                        if (
-                            runtimeData.chatInfo.show &&
-                            runtimeData.chatInfo.show.jump
-                        ) {
-                            new Logger().debug(
-                                '进入跳转至消息：' +
-                                    runtimeData.chatInfo.show.jump,
-                            )
-                            this.scrollToMsg(
-                                'chat-' + runtimeData.chatInfo.show.jump,
-                            )
-                            runtimeData.chatInfo.show.jump = undefined
-                        }
-                    })
-                }
-            },
+                // TODO: 虚拟列表优化
+                // // 清屏重新加载消息列表（超过 n 条消息、回到底部按钮不显示）
+                // // PS：也就是说只在消息底部时才会触发，以防止你是在看历史消息攒满了刷掉
+                // if (
+                //     this.list.length > 200 &&
+                //     !this.tags.nowGetHistroy &&
+                //     !this.tags.showBottomButton
+                // ) {
+                //     this.loadHistory(false)
+                // }
 
             /**
              * 获取显示群精华消息
              */
             showJin() {
                 this.details[2].open = !this.details[2].open
-                if (runtimeData.chatInfo.info.jin_info.list.length == 0) {
-                    // `https://qun.qq.com/cgi-bin/group_digest/digest_list?bkn=${runtimeData.loginInfo.bkn}&group_code=${this.chat.show.id}&page_start=0&page_limit=40`
-                    const name =
-                        runtimeData.jsonMap.group_essence.name ??
-                        'get_essence_msg_list'
-                    Connector.send(
-                        name,
-                        {
-                            group_id: this.chat.show.id,
-                            pages: 0,
-                        },
-                        'getJin',
-                    )
+                if (!(this.chat instanceof GroupSession)) return
+                if (this.chat.essenceList.length === 0 && !this.tags.isJinLoading) {
+                    this.tags.isJinLoading = true
+                    this.chat.reloadEssenceList()
+                        .then(()=>{
+                            this.tags.isJinLoading = false
+                            })
                 }
                 this.tags.showMoreDetail = !this.tags.showMoreDetail
             },
@@ -1777,14 +1489,14 @@
                 if (this.details[3].open) {
                     const value = (event.target as HTMLInputElement).value
                     if (value.length == 0) {
-                        this.tags.search.list = reactive(this.list)
+                        this.tags.search.list = this.chat.messageList as Reactive<Msg[]>
                     } else if (value.length > 0) {
-                        this.tags.search.list = this.list.filter(
+                        this.tags.search.list = this.chat.messageList.filter(
                             (item: any) => {
-                                const rawMessage = getMsgRawTxt(item)
+                                const rawMessage = item.plaintext
                                 return rawMessage.indexOf(value) !== -1
                             },
-                        )
+                        ) as Reactive<Msg[]>
                     }
                 }
             },
@@ -1795,7 +1507,7 @@
             closeSearch() {
                 this.details[3].open = !this.details[3].open
                 this.msg = ''
-                this.tags.search.list = reactive(this.list)
+                this.tags.search.list = this.chat.messageList as Reactive<Msg[]>
             },
 
             /**
@@ -1805,7 +1517,7 @@
                 if (runtimeData.jsonMap.poke) {
                     let name = runtimeData.jsonMap.poke.name
                     if (
-                        this.chat.show.type == 'user' &&
+                        this.chat.type == 'user' &&
                         runtimeData.jsonMap.poke.private_name
                     ) {
                         name = runtimeData.jsonMap.poke.private_name
@@ -1814,40 +1526,13 @@
                         name,
                         {
                             user_id: user_id,
-                            group_id: this.chat.show.id,
+                            group_id: this.chat.id,
                         },
                         'sendPoke',
                     )
                 }
                 this.tags.showMoreDetail = false
                 this.tags.menuDisplay.poke = false
-            },
-
-            /**
-             * 精华消息滚动事件
-             */
-            jinScroll(event: Event) {
-                const body = event.target as HTMLDivElement
-                // 滚动到底部，加载更多
-                if (
-                    body.scrollTop + body.clientHeight === body.scrollHeight &&
-                    !this.tags.isJinLoading
-                ) {
-                    if (this.chat.info.jin_info.is_end == false) {
-                        this.tags.isJinLoading = true
-                        const name =
-                            runtimeData.jsonMap.group_essence.name ??
-                            'get_essence_msg_list'
-                        Connector.send(
-                            name,
-                            {
-                                group_id: this.chat.show.id,
-                                pages: this.chat.info.jin_info.pages + 1,
-                            },
-                            'getJin',
-                        )
-                    }
-                }
             },
 
             /**
@@ -1880,18 +1565,24 @@
                 runtimeData.tags.openSideBar = !runtimeData.tags.openSideBar
             },
 
+            getMeBan(): Time | undefined {
+                if (!this.chat) return undefined
+                if (!this.chat.isActive) return undefined
+                if (!(this.chat instanceof GroupSession)) return
+                const me = this.chat.getMe()
+                return me.banTime
+            },
+
             //#region == 消息菜单相关 ==================================================
             /**
              * +1
              */
             forwardSelf() {
                 if (!this.menuSelectedMsg) return
-                const preMsg = sendMsgRaw(
-                    this.chat.show.id,
-                    this.chat.show.type,
+                sendMsgRaw(
+                    this.chat,
                     this.menuSelectedMsg.message,
                 )
-                runtimeData.messageList.push(preMsg)
                 this.closeMsgMenu()
             },
             /**
@@ -1900,7 +1591,7 @@
              */
             menuReplyMsg(closeMenu = true) {
                 if (!this.menuSelectedMsg) return
-                this.replyMsg(this.menuSelectedMsg)
+                this.replyMsg(this.menuSelectedMsg as Msg)
                 // 关闭消息菜单
                 if (closeMenu) {
                     this.closeMsgMenu()
@@ -1914,7 +1605,7 @@
                 if (!forwardPan) return
                 if (!this.menuSelectedMsg) return
 
-                forwardPan.singleForward([this.menuSelectedMsg])
+                forwardPan.singleForward([this.menuSelectedMsg as Msg])
                 this.closeMsgMenu()
             },
             /**
@@ -1925,7 +1616,7 @@
                 msgBar?.startMultiselect()
                 this.tags.isMultiselectMode = true
                 if (this.menuSelectedMsg) {
-                    msgBar?.forceAddToMultiselectList(this.menuSelectedMsg)
+                    msgBar?.forceAddToMultiselectList(this.menuSelectedMsg as Msg)
                 }
                 this.closeMsgMenu()
             },
@@ -2054,7 +1745,7 @@
                     let time: Date | undefined
                     // 去除 item.time 时间戳中的时间，只保留日期
                     if (item.time) {
-                        time = new Date(getViewTime(item.time))
+                        time = new Date(getViewTime(item.time.time))
                         const date =
                             time.getFullYear() +
                             '-' +
@@ -2067,7 +1758,7 @@
                         }
                     }
                     if (time) {
-                        msg += item.sender.nickname +
+                        msg += item.sender.name +
                         ' ' +
                         time.getHours() +
                         ':' +
@@ -2075,7 +1766,7 @@
                         ':' +
                         time.getSeconds() +
                         '\n' +
-                        getMsgRawTxt(item) +
+                        item.plaintext +
                         '\n\n'
                     }
                     else msg += item.preMsg + '\n\n'
@@ -2086,7 +1777,7 @@
                 app.config.globalProperties.$copyText(msg).then(
                     () => {
                         popInfo.add(PopType.INFO, this.$t('复制成功'), true)
-                        
+
                         this.closeMultiselect()
                     },
                     () => {
@@ -2103,7 +1794,7 @@
             //#endregion
 
             //#region == 窗口移动相关 ==================================================
-            // 滚轮滑动 
+            // 滚轮滑动
             chatWheelEvent(event: WheelEvent) {
                 const process = (event: WheelEvent) => {
                     // 正在触屏,不处理
@@ -2163,7 +1854,7 @@
                     // 斜度过大
                     if (absY === 0 || absX / absY > 2) {
                         this.dispenseMove('touch', deltaX)
-                    } 
+                    }
                 }
                 this.dispenseMove('touch', 0, true)
                 this.tags.chatMove.touchLast = null
@@ -2245,7 +1936,7 @@
                 // 末端速度法
                 // 防止误触
                 if (move < runtimeData.inch * 0.5) return
-                let endSpeedList = speedList.reverse().slice(0, 10)
+                const endSpeedList = speedList.reverse().slice(0, 10)
                 let endSpeed = 0
                 for (const speed of endSpeedList) {
                     endSpeed += speed
@@ -2280,7 +1971,7 @@
              */
             exitWin() {
                 if(this.tags.openChatInfo) {
-                    this.openChatInfoPan()
+                    this.switchChatInfoPan()
                 } else if(this.refs().mergePan?.isMergeOpen()) {
                     this.refs().mergePan?.closeMergeMsg()
                     setTimeout(() => {
@@ -2291,11 +1982,44 @@
                         }
                     }, 500)
                 } else {
-                    runtimeData.chatInfo.show.id = 0
                     runtimeData.tags.openSideBar = true
+                    closeSession()
                     new Logger().add(LogType.UI, '右滑打开侧边栏触发完成')
                 }
             },
+
+            /**
+             * 加载更多历史消息
+             */
+            async loadHistory() {
+                if (this.chat.isLoadingHistory) return
+
+                const pan = document.getElementById('msgPan')
+                if (!pan) return
+                const oldScrollHeight = pan.scrollHeight
+
+                if (!await this.chat.loadHistory()) return
+
+                nextTick(() => {
+                    new Logger().debug(`滚动前高度：${oldScrollHeight}，当前高度：${pan.scrollHeight}，滚动位置：${pan.scrollHeight - oldScrollHeight}`)
+                    pan.style.scrollBehavior = 'unset'
+                    // 纠正滚动位置
+                    pan.scrollTop += pan.scrollHeight - oldScrollHeight
+                    pan.style.scrollBehavior = 'smooth'
+                })
+            },
+
+            /**
+             * 刷新图片列表
+             */
+            reflashImgList() {
+                const viewer = app.config.globalProperties.$viewer
+                this.getImgList = this.chat.imgList
+                // 更新viewer图片
+                if (!viewer.hiding)
+                    runtimeData.img_list = this.getImgList
+            },
+
             /**
              * 带类型的$refs
              */

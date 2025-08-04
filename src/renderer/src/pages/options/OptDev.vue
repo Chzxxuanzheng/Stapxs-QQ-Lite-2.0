@@ -51,6 +51,46 @@
                     </option>
                 </select>
             </div>
+            <div v-if="!runtimeData.tags.proxyPort" class="opt-item" :class="checkDefault('proxyUrl')">
+                <font-awesome-icon :icon="['fas', 'route']" />
+                <div>
+                    <span>{{ $t('自定义跨域服务') }}</span>
+                    <span>{{ $t('如果你需要使用跨域服务，请在这里输入服务地址') }}</span>
+                </div>
+            </div>
+            <div v-if="!runtimeData.tags.proxyPort" class="tip cors">
+                <input
+                    v-model="runtimeData.sysConfig.proxyUrl"
+                    class="ss-input"
+                    type="text"
+                    name="proxyUrl"
+                    @keyup="save">
+                <br>
+                {{ $t('当应用需要获取腾讯的数据时，可能会被浏览器当作恶意操作阻止。为了访问这些资源，你可以使用桌面端，它自带跨域功能。') }}
+                <br>
+                {{ $t('如果你要在web端使用跨域，请填写跨域服务器地址，格式如下：') }}
+                <br>
+                <span>
+                    https://cors-proxy.example.com/proxy?url={url}
+                </span>
+                <br>
+                <br>
+                {{ $t('其中{url}会被替换为实际url。') }}
+                <br>
+                {{ $t('跨域服务器你可以在网上寻找公益跨域服务器，但可能存在安全隐患。强烈建议你自己搭建跨域服务器，问问AI就能解决。') }}
+                <br>
+                <div>
+                    <div>
+                        <font-awesome-icon
+                            :icon="['fas', 'fa-circle']"
+                            :style="{color: corsTestRe.iconColor}" />
+                        {{ corsTestRe.status }}
+                    </div>
+                    <button class="ss-button" @click="testCors">
+                        {{ $t('重新测试') }}
+                    </button>
+                </div>
+            </div>
         </div>
 
         <div class="ss-card">
@@ -214,27 +254,76 @@
     </div>
 </template>
 
+<script setup lang="ts">
+import VConsole from 'vconsole'
+import app, { i18n } from '@renderer/main'
+import packageInfo from '../../../../../package.json'
+
+import {
+    run,
+    runASWEvent as save,
+    saveAll,
+    checkDefault,
+} from '@renderer/function/option'
+import { Connector } from '@renderer/function/connect'
+import { PopInfo, PopType } from '@renderer/function/base'
+import { runtimeData, dispatch } from '@renderer/function/msg'
+import { BrowserInfo, detect } from 'detect-browser'
+import { BotMsgType } from '@renderer/function/elements/information'
+import { uptime } from '@renderer/main'
+import { loadJsonMap, useBaseDebounced } from '@renderer/function/utils/appUtil'
+import { callBackend, stdUrl } from '@renderer/function/utils/systemUtil'
+import {
+    shallowReactive,
+    ShallowReactive,
+    watch,
+    defineComponent,
+} from 'vue'
+
+const $t = i18n.global.t
+const testUrl = 'https://api.douban.com/v2/movie/top250'
+const proxyUrl = useBaseDebounced(()=>runtimeData.sysConfig.proxyUrl, 500)
+const corsTestRe: ShallowReactive<{
+    status: string,
+    iconColor: string,
+}> = shallowReactive({
+    status: $t('测试ing'),
+    iconColor: 'var(--color-font-2)',
+})
+let currentAbortController: AbortController | undefined
+
+// 跨域测试函数
+function testCors() {
+    if (currentAbortController) {
+        currentAbortController.abort()
+    }
+    corsTestRe.status = $t('测试ing')
+    corsTestRe.iconColor = 'var(--color-font-2)'
+    currentAbortController = new AbortController()
+    const url = stdUrl(testUrl)
+    fetch(url, { method: 'GET', signal: currentAbortController.signal })
+        .then((res) => res.json())
+        .then((data) => {
+            // 请求参数不对，跨域成功的话会错误信息，判断返回代码就勾勒
+            if (data.code === undefined) throw new Error('Invalid response')
+            corsTestRe.status = $t('测试成功')
+            corsTestRe.iconColor = 'var(--color-green)'
+        })
+        .catch(() => {
+            corsTestRe.status = $t('测试失败')
+            corsTestRe.iconColor = 'var(--color-red)'
+        })
+        .finally(() => {
+            currentAbortController = undefined
+        })
+}
+// 监听地址变化
+watch(() => proxyUrl.value, () => {
+    testCors()
+})
+</script>
+
 <script lang="ts">
-    import VConsole from 'vconsole'
-    import app from '@renderer/main'
-    import packageInfo from '../../../../../package.json'
-
-    import { defineComponent } from 'vue'
-    import {
-        run,
-        runASWEvent as save,
-        saveAll,
-        checkDefault,
-    } from '@renderer/function/option'
-    import { Connector } from '@renderer/function/connect'
-    import { PopInfo, PopType } from '@renderer/function/base'
-    import { runtimeData, dispatch } from '@renderer/function/msg'
-    import { BrowserInfo, detect } from 'detect-browser'
-    import { BotMsgType } from '@renderer/function/elements/information'
-    import { uptime } from '@renderer/main'
-    import { loadJsonMap } from '@renderer/function/utils/appUtil'
-import { callBackend } from '@renderer/function/utils/systemUtil'
-
     export default defineComponent({
         name: 'ViewOptDev',
         data() {

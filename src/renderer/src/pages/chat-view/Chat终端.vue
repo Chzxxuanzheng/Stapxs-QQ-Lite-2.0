@@ -25,54 +25,35 @@
             class="shell-pan">
             <div>
                 <template
-                    v-for="(msgItem, index) in runtimeData.messageList"
-                    :key="msgItem.message_id">
+                    v-for="(msgItem, index) in cmdLines"
+                    :key="msgItem.uuid">
                     <div
-                        v-if="msgItem.post_type == 'message'
-                            || msgItem.post_type == 'message_sent'"
+                        v-if="msgItem instanceof Msg"
                         :class="{
                             'shell-msg': true,
-                            'revoke': msgItem.revoke,
+                            'revoke': msgItem.exist,
                             'reply': replyMsg === msgItem,
                         }"
                         style="cursor: pointer">
                         <span
-                            :class="
-                                'sname s' +
-                                    msgItem.sender.role +
-                                    (runtimeData.loginInfo.uin == msgItem.sender.user_id
-                                        ? ' smine'
-                                        : '')
-                            "
-                            @click="copy(msgItem.sender.user_id)">
-                            {{
-                                msgItem.sender.card
-                                    ? msgItem.sender.card
-                                    : msgItem.sender.nickname
-                            }}{{ hasReply(msg) ?? ''
-                            }}{{
-                                msgItem.sub_type == 'friend'
-                                    ? runtimeData.loginInfo.uin ==
-                                        msgItem.sender.user_id
-                                        ? runtimeData.loginInfo.nickname
-                                        : runtimeData.chatInfo.show.name
-                                    : ''
-                            }}{{ msgItem.sender.user_id == 0 ? '' : ': ' }}
+                            :class="getCss(msgItem)"
+                            @click="copy(String(msgItem.sender.user_id))">
+                            {{ msgItem.sender.name }}
+                            {{ hasReply(msgItem) ?? '' }}
+                            {{ msgItem.sender.user_id == 0 ? '' : ': ' }}
                         </span>
                         <span
                             class="smsg"
-                            @click="copy(msgItem.message_id)">{{
-                            getMsgRawTxt(msgItem)
+                            @click="copy(msgItem.message_id as string)">{{
+                            msgItem.plaintext
                         }}</span>
                         <br>
                     </div>
-                    <div v-else-if="msgItem.post_type == 'notice'">
+                    <div v-else-if="msgItem instanceof Notice">
                         <span
-                            v-if="msgItem.sub_type == 'recall'"
+                            v-if="msgItem instanceof RevokeNotice"
                             style="color: yellow">::
-                            <span style="color: yellow; opacity: 0.7">{{
-                                getRecallName(msgItem.operator_id)
-                            }}</span>
+                            <span style="color: yellow; opacity: 0.7">{{ msgItem.operator_name }}</span>
                             recalled a message.</span>
                     </div>
                     <div v-else-if="msgItem.commandLine">
@@ -83,7 +64,7 @@
                                 <span>
                                     <font-awesome-icon
                                         :icon="['fas', 'folder-open']" />
-                                    {{ runtimeData.chatInfo.show.name }}
+                                    {{ chat.showName }}
                                 </span>
                                 <span style="color: var(--color-main-0)">
                                     <font-awesome-icon
@@ -99,8 +80,7 @@
                                         :icon="['fas', 'code-branch']" />
                                 </span>
                                 <span>
-                                    {{ msgItem.time.time
-                                    }}<font-awesome-icon
+                                    {{ msgItem.time.time }}<font-awesome-icon
                                         :icon="['fas', 'clock']" />
                                 </span>
                             </div>
@@ -124,7 +104,7 @@
                         <span>
                             <font-awesome-icon
                                 :icon="['fas', 'folder-open']" />
-                            {{ runtimeData.chatInfo.show.name }}
+                            {{ chat.showName }}
                             {{ replyMsg?.sender.name ? ' -> ' + replyMsg.sender.name : '' }}
                         </span>
                         <span style="color: var(--color-main-0)">
@@ -170,15 +150,11 @@
     import Option from '@renderer/function/option'
 
     import { nextTick } from 'vue'
-    import { Connector } from '@renderer/function/connect'
     import { defineComponent, markRaw } from 'vue'
     import { runtimeData } from '@renderer/function/msg'
     import { getTrueLang } from '@renderer/function/utils/systemUtil'
     import {
-        ChatInfoElem,
         SQCodeElem,
-        UserFriendElem,
-        UserGroupElem,
     } from '@renderer/function/elements/information'
     import {
         Logger,
@@ -187,25 +163,21 @@
         popList,
         PopType,
     } from '@renderer/function/base'
-    import { sendMsgRaw, getMsgRawTxt } from '@renderer/function/utils/msgUtil'
+    import { changeSession, closeSession, sendMsgRaw } from '@renderer/function/utils/msgUtil'
     import { uptime } from '@renderer/main'
-    import { Message, Msg } from '@renderer/function/model/msg'
-import { Seg } from '@renderer/function/model/seg'
+    import { Msg } from '@renderer/function/model/msg'
+    import { ReplySeg, Seg } from '@renderer/function/model/seg'
+    import { Session } from '@renderer/function/model/session'
+    import { Notice, RevokeNotice } from '@renderer/function/model/notice'
+    import { Message } from '@renderer/function/model/message'
+import SystemNotice from './SystemNotice.vue'
 
     export default defineComponent({
         name: 'ChatShell',
         props: {
             chat: {
-                type: Object as () => ChatInfoElem,
+                type: Object as () => Session,
                 required: true,
-            },
-            list: {
-                type: Array as () => Message[],
-                required: true,
-            },
-            mumberInfo: {
-                type: Object as () => {[key: string]: any},
-                default: () => ({}),
             },
         },
         data() {
@@ -216,7 +188,6 @@ import { Seg } from '@renderer/function/model/seg'
                     cmdTags: {} as { [key: string]: any },
                     newMsg: 0,
                 },
-                getMsgRawTxt: getMsgRawTxt,
                 popInfo: new PopInfo(),
                 packageInfo: packageInfo,
                 runMode: import.meta.env.DEV,
@@ -230,13 +201,19 @@ import { Seg } from '@renderer/function/model/seg'
                 runtimeData: runtimeData,
                 trueLang: getTrueLang(),
                 timeShow: '',
-                timeSetter: undefined as unknown,
+                timeSetter: null as unknown,
                 msg: '',
                 supportCmd: {} as { [key: string]: any },
                 imgCache: [] as string[],
                 sendCache: [] as Seg[],
-                searchListCache: [] as (UserFriendElem & UserGroupElem)[],
-                replyMsg: undefined as Msg | undefined,
+                searchListCache: [] as Session[],
+                replyMsg: null as Msg | null,
+                cmdLines: [] as (Message | any)[],
+                headMsg: null as null | Message,      // 头部消息,用来和chat.messageList比对来更新cmdLines
+                endMsg: null as null | Message,       // 尾部消息,用来和chat.messageList比对来更新cmdLines
+                Msg,
+                Notice,
+                RevokeNotice,
             }
         },
         watch: {
@@ -266,21 +243,21 @@ import { Seg } from '@renderer/function/model/seg'
                 ls: {
                     info: 'List all contacts in the current message queue.',
                     fun: () => {
-                        this.searchListCache = [...runtimeData.baseOnMsgList.values()]
+                        this.searchListCache = [...Session.activeSessions]
                         let str =
                             '  total ' + this.searchListCache.length + '\n'
                         let hasMsg = false
-                        runtimeData.baseOnMsgList.forEach((item, index) => {
-                            if (item.new_msg == true) {
+                        this.searchListCache.forEach((item, index) => {
+                            if (item.newMsg > 0) {
                                 str += '• '
                                 hasMsg = true
                             } else str += '  '
                             str += index.toString() + '     '
                             str +=
-                                (item.group_id ? item.group_id : item.user_id) +
+                                (item.id) +
                                 '     '
                             str +=
-                                (item.group_name? item.group_name: item.nickname) + '     '
+                                (item.showName) + '     '
                             str += '\n'
                         })
                         if (hasMsg)
@@ -301,52 +278,26 @@ import { Seg } from '@renderer/function/model/seg'
                                     rawMsg,
                                     this.sendCache,
                                     this.imgCache,
-                                    this.replyMsg,
+                                    this.replyMsg as Msg ?? undefined,
                                 )
-                                if (this.chat.show.temp) {
-                                    sendMsgRaw(
-                                        this.chat.show.id +
-                                            '/' +
-                                            this.chat.show.temp,
-                                        this.chat.show.type,
-                                        msg,
-                                    )
-                                } else {
-                                    sendMsgRaw(
-                                        this.chat.show.id,
-                                        this.chat.show.type,
-                                        msg,
-                                    )
-                                }
+                                sendMsgRaw(
+                                    this.chat,
+                                    msg,
+                                )
                                 // 发送后处理
                                 this.sendCache = []
                                 this.imgCache = []
 
-                                this.replyMsg = undefined
+                                this.replyMsg = null
                                 break
                             }
                             // 寻找联系人
                             case 'list': {
                                 const value = item[2]
                                 this.searchListCache =
-                                    runtimeData.userList.filter(
-                                        (
-                                            item: UserFriendElem &
-                                                UserGroupElem,
-                                        ) => {
-                                            const name = (
-                                                item.user_id? item.nickname +
-                                                      item.remark: item.group_name
-                                            ).toLowerCase()
-                                            const id = item.user_id? item.user_id: item.group_id
-                                            return (
-                                                name.indexOf(
-                                                    value.toLowerCase(),
-                                                ) !== -1 ||
-                                                id.toString() === value
-                                            )
-                                        },
-                                    ) as (UserFriendElem & UserGroupElem)[]
+                                    Session.sessionList.filter(
+                                        session => session.match(value),
+                                    )
                                 let str =
                                     '  total ' +
                                     this.searchListCache.length +
@@ -354,9 +305,9 @@ import { Seg } from '@renderer/function/model/seg'
                                 this.searchListCache.forEach((item, index) => {
                                     str += index.toString() + '     '
                                     str +=
-                                        (item.group_id? item.group_id: item.user_id) + '     '
+                                        (item.id) + '     '
                                     str +=
-                                        (item.group_name? item.group_name: item.nickname) + '     '
+                                        (item.showName) + '     '
                                     str += '\n'
                                 })
                                 this.addCommandOut(str)
@@ -365,21 +316,17 @@ import { Seg } from '@renderer/function/model/seg'
                             // 回复消息
                             case 'reply': {
                                 // 去除回复消息缓存
-                                this.sendCache = this.sendCache.filter(
-                                    (item) => {
-                                        return item.type !== 'reply'
-                                    },
-                                )
+                                this.replyMsg = null
                                 if (item[2] && item[2] != 'clear') {
                                     // 根据 item[2] 寻找这条消息 的名字
-                                    const msg = this.list.filter(
+                                    const msg = this.chat.messageList.filter(
                                         (msg) => {
                                             return msg.message_id == item[2]
                                         },
-                                    ) 
+                                    )
                                     this.replyMsg = msg[0] as Msg
                                 } else if (item[2] && item[2] == 'clear') {
-                                    this.replyMsg = undefined
+                                    this.replyMsg = null
                                 }
                                 if (item[3]) {
                                     this.supportCmd['sql'].fun(
@@ -393,46 +340,13 @@ import { Seg } from '@renderer/function/model/seg'
                             // 加载历史记录
                             case 'history': {
                                 // 移除顶部的首次加载提示
-                                if (runtimeData.messageList[0].commandOut) {
-                                    runtimeData.messageList.shift()
-                                    runtimeData.messageList.shift()
-                                    runtimeData.messageList.shift()
-                                    runtimeData.messageList.shift()
+                                if (this.cmdLines[0].commandOut) {
+                                    this.cmdLines.shift()
+                                    this.cmdLines.shift()
+                                    this.cmdLines.shift()
+                                    this.cmdLines.shift()
                                 }
-                                // 加载历史消息
-                                // 获取列表第一条消息 ID
-                                const firstMsgId =
-                                    runtimeData.messageList[0].message_id ?? 0
-                                // 发起获取历史消息请求
-                                const type = runtimeData.chatInfo.show.type
-                                const id = runtimeData.chatInfo.show.id
-                                let name
-                                const fullPage =
-                                    runtimeData.jsonMap.message_list
-                                        ?.pagerType == 'full'
-                                if (
-                                    runtimeData.jsonMap.message_list &&
-                                    type != 'group'
-                                ) {
-                                    name =
-                                        runtimeData.jsonMap.message_list
-                                            .private_name
-                                } else {
-                                    name = runtimeData.jsonMap.message_list.name
-                                }
-                                Connector.send(
-                                    name ?? 'get_chat_history',
-                                    {
-                                        group_id:
-                                            type == 'group' ? id : undefined,
-                                        user_id:
-                                            type != 'group' ? id : undefined,
-                                        message_id: firstMsgId,
-                                        count: fullPage? runtimeData.messageList.length +
-                                              20: 20,
-                                    },
-                                    'getChatHistory',
-                                )
+                                this.chat.loadHistory()
                                 break
                             }
                             default: {
@@ -508,9 +422,7 @@ import { Seg } from '@renderer/function/model/seg'
                             itemInfo.length == 1 &&
                             this.searchListCache.length == 1
                         ) {
-                            id = (
-                                this.searchListCache[0].user_id? this.searchListCache[0].user_id: this.searchListCache[0].group_id
-                            ).toString()
+                            id = this.searchListCache[0].id.toString()
                         } else {
                             id = itemInfo[1]
                             if (itemInfo[1] == '../') {
@@ -518,18 +430,14 @@ import { Seg } from '@renderer/function/model/seg'
                                 if (pan) {
                                     this.tags.fullscreen = false
                                     pan.classList.remove('full')
-                                    runtimeData.chatInfo.show.id = 0
+                                    closeSession()
                                 }
                                 return
                             }
                             if (itemInfo[1].startsWith('#')) {
                                 const index = Number(itemInfo[1].substring(1))
                                 if (this.searchListCache[index]) {
-                                    id = (
-                                        this.searchListCache[index].user_id? this.searchListCache[index]
-                                                  .user_id: this.searchListCache[index]
-                                                  .group_id
-                                    ).toString()
+                                    id = this.searchListCache[index].id.toString()
                                 } else {
                                     this.addCommandOut(
                                         ':: Search cache id does not exist',
@@ -540,41 +448,26 @@ import { Seg } from '@renderer/function/model/seg'
                             }
                         }
                         // 从缓存列表里寻找这个 ID
-                        for (let i = 0; i < runtimeData.userList.length; i++) {
-                            const item = runtimeData.userList[i]
-                            const gid =
-                                item.user_id !== undefined? item.user_id: item.group_id
+                        for (const session of Session.sessionList) {
+                            const gid = session.id
                             if (String(gid) === id) {
-                                // 检查显示列表里有没有它
-                                if (!document.getElementById('user-' + id)) {
-                                    // 把它插入到显示列表
-                                    runtimeData.baseOnMsgList?.set(Number(id), item)
-                                }
+                                // 看看该会话是否激活
+                                if (!session.isActive)
+                                    session.activate()
                                 nextTick(() => {
-                                    const bodyNext = document.getElementById(
-                                        'user-' + id,
-                                    )
-                                    if (bodyNext !== null) {
-                                        // 然后点一下它触发聊天框切换
-                                        bodyNext.click()
-                                    } else {
-                                        this.addCommandOut(
-                                            ':: No valid contacts found',
-                                            'red',
-                                        )
-                                    }
+                                    changeSession(session)
                                 })
                                 return
                             }
                         }
                         this.addCommandOut(':: No valid contacts found', 'red')
 
-                        this.replyMsg = undefined
+                        this.replyMsg = null
                     },
                 },
             }
 
-            this.$watch(() => this.list.length, this.updateList)
+            this.$watch(() => this.chat.messageList.length, this.updateList)
             this.$watch(() => popList.length, this.showPop)
             this.timeSetter = setInterval(() => {
                 this.timeShow = Intl.DateTimeFormat(this.trueLang, {
@@ -583,8 +476,8 @@ import { Seg } from '@renderer/function/model/seg'
                     second: 'numeric',
                 }).format(new Date())
                 // 刷新新消息数
-                this.tags.newMsg = [...runtimeData.baseOnMsgList.values()].filter((item) => {
-                    return item.new_msg == true
+                this.tags.newMsg = [...Session.activeSessions].filter((item) => {
+                    return item.newMsg > 0
                 }).length
             }, 1000)
             const pan = document.getElementById('chat-pan')
@@ -594,23 +487,23 @@ import { Seg } from '@renderer/function/model/seg'
             }
         },
         methods: {
-            hasReply(msg: any) {
+            hasReply(msg: Msg) {
                 if (msg.message) {
-                    const repItem = msg.message.filter((item: any) => {
-                        return item.type == 'reply'
+                    const repItem = msg.message.filter((item: Seg) => {
+                        return item.type === 'reply'
                     })
-                    if (repItem[0]) {
-                        const repMsg = runtimeData.messageList.filter(
-                            (item) => {
-                                return item.message_id == repItem[0].id
-                            },
+                    if (repItem.length === 0) return
+                    const replySeg: ReplySeg = repItem[0] as ReplySeg
+                    const repMsg: Msg[] = this.chat.messageList.filter(
+                        (item) => {
+                            return item.message_id === replySeg.id
+                        },
+                    ) as Msg[]
+                    if (repMsg[0]) {
+                        return (
+                            '->' +
+                            (repMsg[0].sender.name)
                         )
-                        if (repMsg[0]) {
-                            return (
-                                '->' +
-                                (repMsg[0].sender.card? repMsg[0].sender.card: repMsg[0].sender.nickname)
-                            )
-                        }
                     }
                 }
                 return null
@@ -645,8 +538,8 @@ import { Seg } from '@renderer/function/model/seg'
                     this.tags.fistget = false
                     this.addCommandOutF(':: joining chat ..', 'yellow')
                     this.addCommandLineF(
-                        'cd ' + runtimeData.chatInfo.show.id,
-                        runtimeData.chatInfo.show.type,
+                        'cd ' + runtimeData.nowChat?.id,
+                        runtimeData.nowChat?.type,
                     )
                     this.addCommandOutF(
                         '* Stapxs QQ Lite 2.0 Shell requires "FiraCode Nerd Font" to display complete command line symbols, please ensure the device has installed this font.\n\n* Use the command "fullscreen" or return to the parent directory to exit the full screen mode.\n\n* 使用 "help" 命令查看所有可用命令。\n\n\n',
@@ -656,8 +549,43 @@ import { Seg } from '@renderer/function/model/seg'
                         `Welcome to Stapxs QQ Lite ${packageInfo.version} (Vue ${packageInfo.devDependencies.vue}-${this.runMode})\n\n`,
                         'var(--color-font)',
                     )
+                    this.cmdLines.push(...this.chat.messageList)
+                    this.headMsg = this.chat.messageList.at(0) ?? null
+                    this.endMsg = this.chat.messageList.at(-1) ?? null
                 }
                 this.scrollBottom(true)
+                // 由于一些原因没有加载的话...
+                if (!this.headMsg) {
+                    this.headMsg = this.chat.messageList.at(0) as Message
+                    this.endMsg = this.chat.messageList.at(-1) as Message
+                } else {
+                    const head = this.chat.messageList.at(0) as Message
+                    const end = this.chat.messageList.at(-1) as Message
+                    if (end !== this.endMsg) {
+                        // 尾部消息更新
+                        this.cmdLines.push(
+                            ...this.chat.messageList.slice(
+                                this.chat.messageList.indexOf(this.endMsg as Message) + 1,
+                            ),
+                        )
+                        this.endMsg = end
+                    }
+                    else if (head !== this.headMsg) {
+                        // 系统通知跳过
+                        if (head instanceof SystemNotice) return
+                        const originId = this.chat.messageList.indexOf(this.headMsg as Message)
+                        // 查询失败
+                        if (originId < 0) {
+                            this.headMsg = head
+                        } else {
+                            // 头部消息更新
+                            this.cmdLines.unshift(
+                                ...this.chat.messageList.slice(0, originId),
+                            )
+                            this.headMsg = head
+                        }
+                    }
+                }
             },
 
             showPop(newLength: number, oldLength: number) {
@@ -676,7 +604,7 @@ import { Seg } from '@renderer/function/model/seg'
                 color = 'var(--color-font-2)',
                 html = undefined as unknown,
             ) {
-                runtimeData.messageList.push({
+                this.cmdLines.push({
                     commandOut: true,
                     color: color,
                     str: raw,
@@ -688,7 +616,7 @@ import { Seg } from '@renderer/function/model/seg'
                 color = 'var(--color-font-2)',
                 html = undefined as unknown,
             ) {
-                runtimeData.messageList.unshift({
+                this.cmdLines.unshift({
                     commandOut: true,
                     color: color,
                     str: raw,
@@ -698,10 +626,10 @@ import { Seg } from '@renderer/function/model/seg'
 
             addCommandLine(
                 str: string,
-                dir = runtimeData.chatInfo.show.name,
+                dir = runtimeData.nowChat?.showName,
                 appendData: { [key: string]: any } = {},
             ) {
-                runtimeData.messageList.push({
+                this.cmdLines.push({
                     dir: dir,
                     commandLine: true,
                     str: str,
@@ -715,8 +643,8 @@ import { Seg } from '@renderer/function/model/seg'
                     data: appendData,
                 })
             },
-            addCommandLineF(str: string, dir = runtimeData.chatInfo.show.name) {
-                runtimeData.messageList.unshift({
+            addCommandLineF(str: string, dir = runtimeData.nowChat?.showName) {
+                this.cmdLines.unshift({
                     dir: dir,
                     commandLine: true,
                     str: str,
@@ -736,7 +664,7 @@ import { Seg } from '@renderer/function/model/seg'
                 if (event.keyCode === 13) {
                     this.addCommandLine(
                         this.msg,
-                        runtimeData.chatInfo.show.name,
+                        runtimeData.nowChat?.showName,
                         this.tags.cmdTags,
                     )
                     if (this.msg == '') return
@@ -813,28 +741,6 @@ import { Seg } from '@renderer/function/model/seg'
                 }
                 return -1
             },
-            getRecallName(id: number) {
-                let backName = id.toString()
-                // 补全撤回者信息
-                if (runtimeData.chatInfo.show.type === 'group') {
-                    // 寻找群成员信息
-                    if (runtimeData.chatInfo.info.group_members !== undefined) {
-                        const back =
-                            runtimeData.chatInfo.info.group_members.filter(
-                                (item) => {
-                                    return item.user_id === Number(id)
-                                },
-                            )
-                        if (back.length === 1) {
-                            backName =
-                                back[0].card === ''? back[0].nickname: back[0].card
-                        }
-                    }
-                } else {
-                    backName = runtimeData.chatInfo.show.name
-                }
-                return backName
-            },
 
             addImg(event: ClipboardEvent) {
                 // 判断粘贴类型
@@ -898,6 +804,13 @@ import { Seg } from '@renderer/function/model/seg'
                     }
                 }
             },
+            getCss(msg: Msg) {
+                let css = 'sname'
+                if (msg.sender?.role === 'admin') css += ' sadmin'
+                else if (msg.sender?.role === 'owner') css += ' sowner'
+                if (runtimeData.loginInfo.uin == msg.sender.user_id) css += ' smine'
+                return css
+            }
         },
     })
 </script>

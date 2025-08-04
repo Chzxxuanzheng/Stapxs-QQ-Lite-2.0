@@ -13,20 +13,23 @@ login_info:
     bkn: ''
     nickname: $.data.nickname
 # 群、好友列表
-user_list:
-    name: get_friend_list|get_group_list
+friend_list:
+    name: get_friend_list
+    source: $.data[*]
+    list:
+        class_id: group.group_id
+        class_name: group.group_name
+        nickname: /nickname
+        remark: /remark
+        user_id: /user_id
+group_list:
+    name: get_group_list
     source: $.data[*]
     list:
         group_id: /group_id
         group_name: /group_name
         member_count: /member_count
         admin_flag: null
-
-        class_id: $.group.group_id
-        class_name: $.group.group_name
-        user_id: /user_id
-        nickname: /nickname
-        remark: /remark
 # 收藏表情
 roaming_stamp:
     name: fetch_custom_face
@@ -147,6 +150,22 @@ group_files:
 # 获取群文件夹内文件
 group_folder_files:
     name: get_group_files_by_folder
+    source: $.data.*[*]
+    list:
+        # 文件类型
+        file_id: /file_id                        # 文件 ID
+        file_name: /file_name                    # 文件名
+        size: /file_size                         # 文件大小
+        download_times: /download_times          # 下载次数
+        dead_time: /dead_time                    # 过期时间
+        upload_time: /modify_time                # 上传时间
+        uploader_name: /uploader_name            # 上传者
+        # 文件夹类型
+        folder_id: /folder_id                    # 文件夹 ID
+        folder_name: /folder_name                # 文件夹名
+        count: /total_file_count                 # 文件数量
+        create_time: /create_time                # 创建时间
+        creater_name: /create_name               # 创建者
 get_file_url:
     file_url: $.data.url
 get_group_file_url:
@@ -155,3 +174,39 @@ get_group_file_url:
 get_private_file_url:
     name: get_private_file_url
     file_url: $.data.url
+
+# 群/好友信息
+friend_info:
+    name: get_stranger_info
+    source: $.data
+    list:
+        longNick: /sign                 # 签名
+        qid: /q_id                      # 个性 QQ 账号
+        country: null                   # 国家
+        province: null                  # 省份
+        city: null                      # 城市
+        regTime: /RegisterTime          # 注册时间
+        qqLevel: /level                 # QQ 等级
+        birthday_year: null             # 生日年份
+        birthday_month: null            # 生日月份
+        birthday_day: null              # 生日日期
+        age: /age                       # 年龄
+        sex: /sex                       # 性别
+# 这玩意好像没人用...增删就不做了
+# 获取群精华消息
+group_essence:
+    name: get_essence_msg_list
+    source: $.data[*]
+    list:
+        sender_id: /sender_id
+        sender_nick: /sender_nick
+        sender_time: /sender_time
+        content: /content
+        operator_id: /operator_id
+        operator_nick: /operator_nick
+        operator_time: /operator_time
+# 设置消息已读
+set_group_message_read:
+    name: mark_msg_as_read
+set_user_message_read:
+    name: mark_msg_as_read

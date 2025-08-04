@@ -7,64 +7,36 @@
  */
 
 import app from '@renderer/main';
-import { GroupMemberInfoElem } from '../elements/information';
 import { runtimeData } from '../msg';
 import { Message } from './message';
-import { Session } from './session';
+import { GroupSession, Session } from './session';
 import { autoReactive, formatTime } from './utils';
 import { getViewTime, stdUrl } from '../utils/systemUtil';
+import { BaseUser, IUser } from './user';
 
 /**
  * 通知类消息
  */
 export abstract class Notice extends Message {
     abstract readonly type: string
-    override session?: Session | undefined
+    override session?: Session
+    users: IUser[] = []
     static matchType: string[]
     static matchSubType?: string[]
 
     constructor(data: object) {
         super(data)
-        if (data['group_id']) this.session = new Session('group', data['group_id'])
-        else if (data['user_id']) this.session = new Session('user', data['user_id'])
+        if (data['group_id']) this.session = Session.getSession('group', Number(data['group_id']))
+        else if (data['user_id']) this.session = Session.getSession('user', Number(data['user_id']))
     }
 
-    /**
-     * 初始化用户信息
-     * 写的比较抽象...先这样把.那天给chat哪里重构了,支持多会话系统后自己去自己的会话查找
-     */
-    protected users: number[] = []
-    protected userInfos?: Map<number,string>
-    initUserInfo(username: string, userId: number): void
-    initUserInfo(userList: GroupMemberInfoElem[]): void
-    initUserInfo(arg1: string|GroupMemberInfoElem[], arg2?: number): void {
-        if (typeof arg1 === 'string') {
-            // initUserInfo(username: string, userId: number): void
-            const selfName = runtimeData.loginInfo.nickname
-            const selfId = runtimeData.loginInfo.uin
-            const name = arg1
-            const id = arg2 as number
-            this.userInfos = new Map()
-            for (const userId of this.users) {
-                if (userId === id) this.userInfos.set(userId, name)
-                else if (userId === selfId) this.userInfos.set(userId, selfName)
-                else this.userInfos.set(userId, `未知用户(${userId})`)
-            }
-        } else {
-            // initUserInfo(userList: GroupMemberInfoElem[]): void
-            const userList = arg1 as GroupMemberInfoElem[]
-            this.userInfos = new Map()
-            for (const user of userList) {
-                if (this.users.includes(user.user_id)) {
-                    this.userInfos.set(user.user_id, user.nickname)
-                }
-            }
-            for (const userId of this.users) {
-                if (!this.userInfos.has(userId)) {
-                    this.userInfos.set(userId, `未知用户(${userId})`)
-                }
-            }
-        }
+    get tome(): boolean {
+        return false
+    }
+
+    protected getUser(id: number | string): IUser {
+        if (!this.session) return BaseUser.createById(Number(id))
+        return this.session.getUserByIdWithBu(Number(id))
     }
 }
 
@@ -72,52 +44,43 @@ export abstract class Notice extends Message {
 export class RevokeNotice extends Notice {
     override readonly type: string = 'revoke'
     message_id: string
-    operator_id: number
-    user_id: number
+    user: IUser
+    operator: IUser
 
     constructor(data: { message_id: string, user_id: number, operator_id?: number }) {
         super(data)
         this.message_id = data.message_id
-        this.user_id = data.user_id
-        this.operator_id = data.operator_id ?? data.user_id
-        this.users.push(this.user_id)
-        this.users.push(this.operator_id)
-    }
-
-    get operator(): string {
-        return this.userInfos?.get(this.operator_id) ?? `未知用户(${this.operator_id})`
-    }
-
-    get user(): string {
-        return this.userInfos?.get(this.user_id) ?? `未知用户(${this.user_id})`
+        const user_id = data.user_id
+        const operator_id = data.operator_id ?? data.user_id
+        this.user = this.getUser(user_id)
+        this.operator = this.getUser(operator_id)
+        this.users.push(this.user, this.operator)
     }
 
     get selfRevoke(): boolean {
-        return this.user_id === this.operator_id
+        return this.user === this.operator
+    }
+
+    override get preMsg(): string {
+        const { $t } = app.config.globalProperties
+        if (this.selfRevoke) return this.user.name + $t('撤回了一条消息')
+        return this.operator.name + $t('撤回了') + this.user.name + $t('的消息')
     }
 }
 
 @autoReactive
 export class BanNotice extends Notice {
     override readonly type: string = 'ban'
-    user_id: number
-    operator_id: number
+    declare session?: GroupSession
     duration: number
+    user: IUser
+    operator: IUser
     constructor(data: { user_id: number, operator_id: number, duration: number }) {
         super(data)
         this.duration = getViewTime(data.duration)
-        this.user_id = data.user_id
-        this.operator_id = data.operator_id
-        this.users.push(this.user_id)
-        this.users.push(this.operator_id)
-    }
-
-    get operator(): string {
-        return this.userInfos?.get(this.operator_id) ?? `未知用户(${this.operator_id})`
-    }
-
-    get user(): string {
-        return this.userInfos?.get(this.user_id) ?? `未知用户(${this.user_id})`
+        this.user = this.getUser(data.user_id)
+        this.operator = this.getUser(data.operator_id)
+        this.users.push(this.user, this.operator)
     }
 
     get fTime(): string {
@@ -137,50 +100,54 @@ export class BanNotice extends Notice {
         return back
     }
 
-    get tome(): boolean {
-        return this.user_id === runtimeData.loginInfo.uin
+    override get tome(): boolean {
+        return this.user.user_id === runtimeData.loginInfo.uin
     }
 
     get formatDuration(): string {
         return formatTime(this.duration * 1000, 'auto')
+    }
+
+    override get preMsg(): string {
+        const { $t } = app.config.globalProperties
+        if (this.tome) return this.operator.name + $t('禁言了') + $t('你') + this.fTime
+        return this.operator.name + $t('禁言了') + this.user.name + this.fTime
     }
 }
 
 @autoReactive
 export class BanLiftNotice extends Notice {
     override readonly type: string = 'lift_ban'
-    user_id: number
-    operator_id: number
+    declare session?: GroupSession
+    user: IUser
+    operator: IUser
     constructor(data: { user_id: number, operator_id: number }) {
         super(data)
-        this.user_id = data.user_id
-        this.operator_id = data.operator_id
-        this.users.push(this.user_id)
-        this.users.push(this.operator_id)
+        this.user = this.getUser(data.user_id)
+        this.operator = this.getUser(data.operator_id)
+        this.users.push(this.user, this.operator)
     }
 
-    get operator(): string {
-        return this.userInfos?.get(this.operator_id) ?? `未知用户(${this.operator_id})`
+    override get tome(): boolean {
+        return this.user.user_id === runtimeData.loginInfo.uin
     }
 
-    get user(): string {
-        return this.userInfos?.get(this.user_id) ?? `未知用户(${this.user_id})`
-    }
-
-    get tome(): boolean {
-        return this.user_id === runtimeData.loginInfo.uin
+    override get preMsg(): string {
+        const { $t } = app.config.globalProperties
+        if (this.tome) return this.operator.name + $t('解除了你的禁言')
+        return this.operator + $t('解除了') + this.user.name + $t('的禁言')
     }
 }
 
 @autoReactive
 export class PokeNotice extends Notice {
     override readonly type: string = 'poke'
-    user_id: number
-    target_id: number
     action!: string
     suffix!: string
     img!: string
-    constructor(data: { 
+    user: IUser
+    target: IUser
+    constructor(data: {
         user_id: number,
         target_id: number,
         raw_info?: any[],
@@ -189,10 +156,10 @@ export class PokeNotice extends Notice {
         action_img_url?: string,
     }) {
         super(data)
-        this.user_id = data.user_id
-        this.target_id = data.target_id
-        this.users.push(this.user_id)
-        this.users.push(this.target_id)
+        this.user = this.getUser(data.user_id)
+        this.target = this.getUser(data.target_id)
+
+        this.users.push(this.user, this.target)
 
         if (data.raw_info) {
             let getTxt = 0
@@ -221,74 +188,79 @@ export class PokeNotice extends Notice {
         } else throw new Error('缺少必要的 poke 信息')
     }
 
-    get tome(): boolean {
-        return this.target_id === runtimeData.loginInfo.uin
+    override get tome(): boolean {
+        return this.target.user_id === runtimeData.loginInfo.uin
     }
 
-    get user(): string {
-        return this.userInfos?.get(this.user_id) ?? `未知用户(${this.user_id})`
-    }
-
-    get target(): string {
-        return this.userInfos?.get(this.target_id) ?? `未知用户(${this.target_id})`
+    override get preMsg(): string {
+        const { $t } = app.config.globalProperties
+        if (this.tome) return this.user.name + $t('戳了你')
+        return this.user.name + this.action + this.target.name + this.suffix
     }
 }
 
 export class JoinNotice extends Notice {
     override readonly type: string = 'join'
+    declare session?: GroupSession
     join_type: 'approve' | 'invite' | 'self'
-    user_id: number
-    operator_id: number
+    user!: IUser
+    operator!: IUser
+    private user_id: number
+    private operator_id: number
     constructor(data: { user_id: number, operator_id: number, sub_type: 'approve' | 'invite' }) {
         super(data)
         this.join_type = data.sub_type
         this.user_id = data.user_id
-        this.operator_id = data.operator_id
-        if (this.operator_id === 0) {
-            this.operator_id = this.user_id
+        this.operator_id = data.operator_id || data.user_id
+    }
+
+    /**
+     * 刷新自身数据
+     * 因为刚加群时没他的信息
+     */
+    refreshUserData(){
+        this.user = this.getUser(this.user_id)
+        this.operator = this.getUser(this.operator_id)
+        this.users.push(this.user, this.operator)
+        if (this.operator.user_id === 0) {
+            this.operator.user_id = this.user.user_id
             this.join_type = 'self'
         }
-        this.users.push(this.user_id)
-        this.users.push(this.operator_id)
     }
 
-    get operator(): string {
-        return this.userInfos?.get(this.operator_id) ?? `未知用户(${this.operator_id})`
-    }
-
-    get user(): string {
-        return this.userInfos?.get(this.user_id) ?? `未知用户(${this.user_id})`
+    override get preMsg(): string {
+        const { $t } = app.config.globalProperties
+        if (this.join_type === 'self') return this.user.name + $t('加入了群聊')
+        if (this.join_type === 'approve') return this.operator.name + $t('通过了') + this.user.name + $t('的入群申请')
+        return this.operator.name + $t('邀请') + this.user.name + $t('加入了群聊')
     }
 }
 
 export class LeaveNotice extends Notice {
     override readonly type: string = 'leave'
-    user_id: number
-    operator_id: number
-
+    declare session?: GroupSession
+    user: IUser
+    operator: IUser
     constructor(data: { user_id: number, operator_id: number }) {
         super(data)
-        this.user_id = data.user_id
-        this.operator_id = data.operator_id
-        if (this.operator_id === 0) this.operator_id = this.user_id
-        this.users.push(this.user_id)
-        this.users.push(this.operator_id)
+        if (data.operator_id === 0) data.operator_id = data.user_id
+        this.user = this.getUser(data.user_id)
+        this.operator = this.getUser(data.operator_id)
+        this.users.push(this.user, this.operator)
     }
 
-    get operator(): string {
-        return this.userInfos?.get(this.operator_id) ?? `未知用户(${this.operator_id})`
-    }
-
-    get user(): string {
-        return this.userInfos?.get(this.user_id) ?? `未知用户(${this.user_id})`
-    }
-
-    get tome(): boolean {
-        return this.user_id === runtimeData.loginInfo.uin
+    override get tome(): boolean {
+        return this.user.user_id === runtimeData.loginInfo.uin
     }
 
     get kick(): boolean {
-        return this.operator_id !== this.user_id
+        return this.operator !== this.user
+    }
+
+    override get preMsg(): string {
+        const { $t } = app.config.globalProperties
+        if (this.kick) return this.operator.name + $t('将') + this.user.name + $t('移出群聊')
+        return this.user + $t('离开了群聊')
     }
 }
 
@@ -305,6 +277,11 @@ export class UnknownNotice extends Notice {
     static get type() :string {
         return 'unknown'
     }
+
+    override get preMsg(): string {
+        const { $t } = app.config.globalProperties
+        return $t('未知通知类型') + this.type
+    }
 }
 
 /**
@@ -319,13 +296,17 @@ export abstract class SystemNotice extends Notice {
     static time(time: number): TimeNotice {
         return new TimeNotice({ time })
     }
-    
+
     static delete(): DeleteNotice {
         return new DeleteNotice()
     }
 
     static info(message: string): InfoNotice {
         return new InfoNotice({ message })
+    }
+
+    override get preMsg(): string {
+        throw new Error('SystemNotice 不支持 preMsg')
     }
 }
 
@@ -348,7 +329,7 @@ export class DeleteNotice extends SystemNotice {
 export class InfoNotice extends SystemNotice {
     override readonly type: string = 'error'
     message: string
-    
+
     constructor(data: { message: string }) {
         super(data)
         this.message = data.message

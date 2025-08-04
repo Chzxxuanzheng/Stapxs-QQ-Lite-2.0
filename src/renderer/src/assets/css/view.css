@@ -458,6 +458,7 @@ textarea:focus {
     flex: 1;
 }
 .friend-list > div:first-child > div > svg {
+    margin-left: 0.5rem;
     color: var(--color-font);
     cursor: pointer;
     opacity: 0.7;
@@ -530,10 +531,10 @@ textarea:focus {
     opacity: 1;
 }
 
+.box-body,
 .friend-body {
     cursor: pointer;
     display: flex;
-    flex-direction: row;
     color: var(--color-font);
     margin: 10px;
     padding: 10px;
@@ -544,18 +545,41 @@ textarea:focus {
         color 0.2s,
         transform 0.2s;
 }
+.box-body.unmounted > div:nth-child(1) > svg,
+.box-body.unmounted > div:nth-child(1) > div,
+.friend-body.unmounted > img,
+.friend-body.unmounted > div {
+    opacity: 0.6;
+}
+.box-body > div:nth-child(2){
+    height: 0px;
+    transition: height 0.3s ease-in;
+}
+.box-body.open > div:nth-child(2){
+    height: 10px;
+}
+.box-body > div:nth-child(1),
+.friend-body {
+    display: flex;
+    flex-direction: row;
+    transform: margin 0.2s;
+}
+.box-body.active,
 .friend-body.active {
     background: var(--color-main);
     color: var(--color-font-r);
 }
-.friend-body.active > svg {
-    background: var(--color-card-2);
+.box-body.active > div:nth-child(1) > svg {
+    /* TODO: 配色方案改hsl，调整亮度 */
     color: var(--color-main);
 }
+.box-body.onmenu,
+.box-body:hover,
 .friend-body.onmenu,
 .friend-body:hover {
     background: var(--color-card-2) !important;
 }
+.box-body.active:hover,
 .friend-body.active:hover {
     background: var(--color-main) !important;
 }
@@ -566,7 +590,8 @@ textarea:focus {
     height: 50px;
     width: 50px;
 }
-.friend-body > svg {
+
+.box-body > div:nth-child(1) > svg {
     transition:
         background 0.3s,
         color 0.3s;
@@ -578,11 +603,13 @@ textarea:focus {
     height: 25px;
     width: 25px;
 }
+.box-body > div:nth-child(1) > div,
 .friend-body > div {
     flex: 1;
     margin-left: 10px;
     overflow: hidden;
 }
+.box-body > div:nth-child(1) > div:nth-child(1),
 .friend-body > div:nth-child(1) {
     flex: unset;
     width: 4px;
@@ -596,13 +623,19 @@ textarea:focus {
         margin 0.3s;
     margin-left: -13px;
 }
+.box-body.active > div:nth-child(1) > div:nth-child(1),
 .friend-body.active > div:nth-child(1) {
     background: var(--color-font);
 }
+.box-body > div:nth-child(1) > div:nth-child(1).new,
 .friend-body > div:nth-child(1).new {
     transform: scaleY(0.5);
     margin-left: 3px;
 }
+.box-body.active > div:nth-child(1) > div:nth-child(1).new{
+    background: var(--color-font-r);
+}
+.box-body > div:nth-child(1) > div p,
 .friend-body > div p {
     font-weight: bold;
     margin: 0;
@@ -611,10 +644,13 @@ textarea:focus {
     text-overflow: ellipsis;
     overflow: hidden;
 }
+.box-body > div:nth-child(1) > div > div,
 .friend-body > div > div {
     align-items: center;
     display: flex;
 }
+.box-body > div:nth-child(1) > div > div a,
+.friend-body .boxs-bar,
 .friend-body > div > div a {
     color: var(--color-font-1);
     text-overflow: ellipsis;
@@ -623,14 +659,50 @@ textarea:focus {
     font-size: 0.9rem;
     flex: 1;
 }
+.box-body > div:nth-child(1) > div > div a.highlight,
 .friend-body > div > div a.highlight {
-    color: #f20000dd;
+    color: var(--color-red);
+    flex: none;
+    width: auto;
+    overflow: visible;
 }
-/* .friend-body > div > div a.nick {
-} */
+.friend-body .boxs-bar {
+    display: flex;
+}
+.friend-body .boxs-bar > span.box {
+    background-color: var(--color);
+    font-size: 0.7rem;
+    height: 1rem;
+    border-radius: 1rem;
+    padding: 0.15rem 0.3rem;
+    display: flex;
+    align-items: center;
+    margin-right: 5px;
+}
+.friend-body.active .boxs-bar > span.box {
+    color: var(--color-font);
+}
+.friend-body .boxs-bar > span.box > svg {
+    width: 0.7rem;
+    height: 0.7rem;
+    transform: none;
+    opacity: 1.0;
+    color: var(--color-card-1);
+}
+.friend-body:hover .boxs-bar > span.box > svg {
+    color: var(--color-card-2);
+}
+.friend-body.onmenu .boxs-bar > span.box > svg {
+    color: var(--color-card-2);
+}
+.friend-body.active .boxs-bar > span.box > svg {
+    color: var(--color-main);
+}
+
 .friend-body.active > div > div a {
     color: var(--color-font-1-r);
 }
+.box-body > div:nth-child(1) > div > div a.time,
 .friend-body > div > div a.time {
     flex: unset;
     margin-left: 15px;
@@ -638,6 +710,7 @@ textarea:focus {
     opacity: 0.7;
     overflow: unset;
 }
+.box-body > div:nth-child(1) > div > div svg,
 .friend-body > div > div svg {
     width: 0.6rem;
     color: var(--color-font);
@@ -645,6 +718,7 @@ textarea:focus {
     transform: rotate(45deg);
     margin-right: 5px;
 }
+.box-body.active > div:nth-child(1) > div > div svg,
 .friend-body.active > div > div svg {
     color: var(--color-font-r);
 }
@@ -652,8 +726,27 @@ textarea:focus {
     font-size: 0.9rem;
     color: var(--color-font-2);
 }
+.box-body.active > div:nth-child(1) a,
 .friend-body.active > a {
     color: var(--color-font-1-r);
+}
+.box-body {
+    display: flex;
+    flex-direction: column;
+}
+.box-body > div:nth-child(2) {
+    display: flex;
+}
+.box-body > div:nth-child(1) > svg {
+    background-color: var(--box-color);
+}
+.box-content {
+    overflow-y: hidden;
+    transition: height 0.2s ease-out;
+    /* 这个自容器高度是在自己电脑上测的...添40不知道为啥偏大，明明(padding(10) + margin(10)) * 2 = 40的 */
+    height: calc(var(--content-num) * (50px + 34.5px ));
+    background-color: var(--color-card-1);
+    border-radius: 5px;
 }
 
 .msg-menu-body {
@@ -1198,6 +1291,184 @@ textarea:focus {
     border: none;
 }
 
+.config-box {
+    display: flex;
+    max-height: 60vh;
+}
+
+.config-box input {
+    max-width: unset;
+    min-width: unset;
+    background-color: var(--color-card-1);
+    margin: 10px;
+    border: none;
+    border-radius: 5px;
+    padding: 7px 20px;
+    flex: 1;
+}
+
+.config-box-base {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    width: 350px;
+    flex: 1;
+}
+.config-box-base > div:nth-child(1) {
+    pointer-events: none;
+    background-color: var(--color-card-1);
+}
+.color-select {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+.color-select > div {
+    height: 2rem;
+    margin: 0 10px;
+    border-radius: 5px;
+}
+.color-select > div:nth-child(1) {
+    position: absolute;
+    z-index: 1;
+    width: calc(100% - 20px);
+    background-color: var(--color);
+    transition: all 0.2s;
+}
+.color-select > div:nth-child(1):hover{
+    opacity: 0;
+}
+.color-select > div:nth-child(2) {
+    background: linear-gradient(
+        to right,
+        hsl(0, 50%, 50%),
+        hsl(60, 50%, 50%),
+        hsl(120, 50%, 50%),
+        hsl(180, 50%, 50%),
+        hsl(240, 50%, 50%),
+        hsl(300, 50%, 50%),
+        hsl(360, 50%, 50%)
+    );
+}
+.icon-select {
+    padding: 0 20px;
+    display: flex;
+    flex-wrap: wrap;
+    gap:6px;
+    justify-content: center;
+    overflow-y: auto;
+    max-height: 50vh;
+    align-content: flex-start;
+}
+.icon-select > svg {
+    width: 2rem;
+    height: 2rem;
+    padding: 3px;
+    margin: 3px;
+    border-radius: 5px;
+}
+
+.icon-select > svg:hover {
+    background-color: var(--color-card-2);
+}
+
+.icon-select > svg.selected {
+    background-color: var(--color-main);
+    transition: all 0.3s;
+    color: var(--color-font-r);
+}
+
+.box-search {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    width: 350px;
+}
+
+.box-search > div:nth-child(1) {
+    display: flex;
+}
+
+.box-search > div:nth-child(2) {
+    flex: 1;
+    overflow-y: auto;
+}
+
+@media (max-width: 900px) {
+    /* emm...好难写啊...开摆，直接不写了 */
+    .box-search {
+        display: none;
+    }
+}
+
+.session-body-container {
+    container-type: inline-size;
+    container-name: session-body;
+}
+
+@container session-body (max-width: 10rem) {
+    .friend-body {
+        background: transparent !important;
+        justify-content: center;
+        padding: 10px 0;
+        margin: 0;
+    }
+    .box-body {
+        background: transparent !important;
+        padding: 10px 10px;
+    }
+    .box-body > div:nth-child(1) {
+        justify-content: center;
+    }
+    .box-body > div:nth-child(1) > div,
+    .friend-body > div {
+        display: none;
+    }
+    .friend-body img {
+        height: 45px;
+        width: 45px;
+    }
+    .box-body > div:nth-child(1) > svg{
+        height: 20px;
+        width: 20px;
+    }
+    .box-body.active > div:nth-child(1):hover,
+    .friend-body.active:hover {
+        background: var(--color-card-2) !important;
+    }
+    .friend-body.active img {
+        border: 2px solid var(--color-main);
+    }
+    .box-body > div:nth-child(1) > div:nth-child(1),
+    .friend-body > div:nth-child(1) {
+        transform: scaleY(1) !important;
+        position: absolute;
+        display: none !important;
+    }
+    .box-body > div:nth-child(1) > div:nth-child(1).new,
+    .friend-body > div:nth-child(1).new {
+        border-radius: 100%;
+        display: block !important;
+        height: 15px;
+        width: 15px;
+        right: -3px;
+        top: 4px;
+    }
+    .box-content {
+        height: calc(var(--content-num) * (50px + 19.3px));
+        padding: 5px;
+    }
+}
+
+.box-content-enter-active,
+.box-content-leave-active {
+    animation: none 0.3s;
+}
+.box-content-enter-from div.box-content,
+.box-content-leave-to div.box-content {
+    height: 0;
+}
+
 @media (max-width: 700px) {
     /* 侧栏及主布局自适应 */
     .main-body {
@@ -1291,7 +1562,7 @@ textarea:focus {
     }
     .friend-list > div:last-child.open > div > div,
     .friend-list > div:last-child.open > div.list > div > div > div {
-        display: block;
+        /* display: block; */
     }
     .friend-list > div:first-child > div.small > span {
         display: none;
@@ -1308,42 +1579,6 @@ textarea:focus {
         margin-right: 0;
     }
 
-    .friend-body {
-        background: transparent !important;
-        justify-content: center;
-        padding: 10px 0;
-        margin: 0;
-    }
-    .friend-body > div {
-        display: none;
-    }
-    .friend-body img {
-        height: 45px;
-        width: 45px;
-    }
-    .friend-body > svg {
-        height: 20px;
-        width: 20px;
-    }
-    .friend-body.active:hover {
-        background: var(--color-card-2) !important;
-    }
-    .friend-body.active img {
-        border: 2px solid var(--color-main);
-    }
-    .friend-body > div:nth-child(1) {
-        transform: scaleY(1) !important;
-        position: absolute;
-        display: none !important;
-    }
-    .friend-body > div:nth-child(1).new {
-        border-radius: 100%;
-        display: block !important;
-        height: 15px;
-        width: 15px;
-        right: -3px;
-        top: 4px;
-    }
     /* 应用消息 */
     .app-msg {
         height: calc(100% - 90px - var(--safe-area-bottom));

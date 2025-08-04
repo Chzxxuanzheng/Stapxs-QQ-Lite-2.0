@@ -4,30 +4,30 @@
  * @Date:
  *      2022/08/14
  *      2022/12/14
+ *      2025/08/02
  * @Version:
  *      1.0 - 初始版本
  *      1.5 - 重构为 ts 版本，代码格式优化
+ *      2.0 - 重构为 setup 语法，将右键菜单栏拆分出去
 -->
 
 <template>
     <div class="friend-view">
         <div id="message-list"
-            :class="'friend-list' +
-                (runtimeData.tags.openSideBar ? ' open' : '') +
-                (showGroupAssist ? ' show' : '')">
+            class="session-body-container friend-list"
+            :class="{
+                open: runtimeData.tags.openSideBar,
+            }">
             <div>
                 <div class="base only">
                     <span>{{ $t('消息') }}</span>
                     <div style="flex: 1" />
+                    <font-awesome-icon :icon="['fas', 'compress-arrows-alt']"
+                        @click="foldAllBox" />
                     <font-awesome-icon :icon="['fas', 'trash-can']" @click="cleanList" />
                 </div>
                 <div class="small">
                     <span>{{ $t('消息') }}</span>
-                    <div v-if="showGroupAssist"
-                        style="margin-right: -5px;margin-left: 5px;"
-                        @click="showGroupAssist = !showGroupAssist">
-                        <font-awesome-icon :icon="['fas', 'angle-left']" />
-                    </div>
                     <div @click="openLeftBar">
                         <font-awesome-icon :icon="['fas', 'bars-staggered']" />
                     </div>
@@ -40,7 +40,7 @@
                 :class="runtimeData.tags.openSideBar ? ' open' : ''"
                 style="overflow-x: hidden">
                 <!-- 系统信息 -->
-                <FriendBody v-if="!showGroupAssist &&
+                <!-- <FriendBody v-if="!showGroupAssist &&
                                 runtimeData.systemNoticesList &&
                                 Object.keys(runtimeData.systemNoticesList).length > 0"
                     key="inMessage--10000"
@@ -51,110 +51,40 @@
                         nickname: $t('系统通知'),
                         remark: $t('系统通知'),
                     }"
-                    @click="systemNoticeClick" />
+                    @click="systemNoticeClick" /> -->
                 <!--- 群组消息 -->
-                <FriendBody
-                    v-if="runtimeData.groupAssistList && runtimeData.groupAssistList.length > 0"
-                    key="inMessage--10001"
-                    :select="chat.show.id === -10001"
-                    :data="{
-                        user_id: -10001,
-                        always_top: true,
-                        nickname: $t('群收纳盒'),
-                        remark: $t('群收纳盒'),
-                        time: runtimeData.groupAssistList[0].time,
-                        raw_msg: runtimeData.groupAssistList[0].group_name + ': ' +
-                            (runtimeData.groupAssistList[0].raw_msg_base ?? '')
-                    }"
-                    @click="showGroupAssistCheck" />
-                <!-- 其他消息 -->
-                <FriendBody
-                    v-for="item in runtimeData.onMsgList"
-                    :key="'inMessage-' + (item.user_id ? item.user_id : item.group_id)"
-                    :select="chat.show.id === item.user_id || (chat.show.id === item.group_id && chat.group_name != '')"
-                    :menu="menu.select && menu.select == item"
-                    :data="item"
+                <!-- 群收纳盒 -->
+                <BoxBody
+                    v-if="runtimeData.sysConfig.bubble_sort_user"
+                    v-menu.prevent="event => menu?.open('message', BubbleBox.instance, event)"
+                    :data="markRaw(BubbleBox.instance)"
                     from="message"
-                    @contextmenu.prevent="listMenuShow($event, item)"
-                    @click="userClick(item)"
-                    @touchstart="showMenuStart($event, item)"
-                    @touchend="showMenuEnd" />
+                    @user-click="
+                        (session)=>userClick(session, BubbleBox.instance)" />
+                <!-- 其他消息 -->
+                <template v-for="item in showSessionList">
+                    <FriendBody
+                        v-if="item instanceof Session"
+                        :key="'inMessage-' + item.id"
+                        v-menu.prevent="event => menu?.open('message', item, event)"
+                        :data="item"
+                        from="message"
+                        @click="userClick(item)" />
+                    <BoxBody
+                        v-else-if="item instanceof SessionBox"
+                        :key="'box-' + item.id"
+                        ref="sessionBoxs"
+                        v-menu.prevent="event => menu?.open('message', item, event)"
+                        :data="item"
+                        from="message"
+                        @user-click="
+                            (session)=>userClick(session, item)
+                        " />
+                </template>
             </TransitionGroup>
         </div>
-        <div id="group-assist-message-list"
-            :class="'friend-list group-assist-message-list' +
-                (runtimeData.tags.openSideBar ? ' open' : '') +
-                (showGroupAssist ? ' show' : '')">
-            <div>
-                <div class="base only">
-                    <span style="cursor: pointer;"
-                        @click="showGroupAssist = !showGroupAssist">
-                        <font-awesome-icon style="margin-right: 5px;" :icon="['fas', 'angle-left']" />
-                        {{ $t('群收纳盒') }}
-                    </span>
-                </div>
-                <div class="small">
-                    <span style="cursor: pointer;">
-                        {{ $t('群收纳盒') }}
-                    </span>
-                    <div v-if="showGroupAssist"
-                        style="margin-right: -5px;margin-left: 5px;"
-                        @click="showGroupAssist = !showGroupAssist">
-                        <font-awesome-icon :icon="['fas', 'angle-left']" />
-                    </div>
-                    <div @click="openLeftBar">
-                        <font-awesome-icon :icon="['fas', 'bars-staggered']" />
-                    </div>
-                </div>
-            </div>
-            <TransitionGroup
-                id="group-assist-message-list-body"
-                name="onmsg"
-                tag="div"
-                :class="runtimeData.tags.openSideBar ? ' open' : ''"
-                style="overflow-x: hidden">
-                <!-- 其他消息 -->
-                <FriendBody
-                    v-for="item in runtimeData.groupAssistList"
-                    :key="'inMessage-' + (item.user_id ? item.user_id : item.group_id)"
-                    :select="chat.show.id === item.user_id || (chat.show.id === item.group_id && chat.group_name != '')"
-                    :menu="menu.select && menu.select == item"
-                    :data="item"
-                    from="message"
-                    @contextmenu.prevent="listMenuShow($event, item)"
-                    @click="userClick(item)"
-                    @touchstart="showMenuStart($event, item)"
-                    @touchend="showMenuEnd" />
-            </TransitionGroup>
-        </div>
-        <BcMenu :data="listMenu" name="messages-menu"
-            @close="listMenuClose">
-            <ul>
-                <li id="top" icon="fa-solid fa-thumbtack">
-                    {{ $t('置顶') }}
-                </li>
-                <li id="canceltop" icon="fa-solid fa-grip-lines">
-                    {{ $t('取消置顶') }}
-                </li>
-                <li id="remove" icon="fa-solid fa-trash-can">
-                    {{ $t('删除') }}
-                </li>
-                <li id="readed" icon="fa-solid fa-check-to-slot">
-                    {{ $t('标记已读') }}
-                </li>
-                <li id="read" icon="fa-solid fa-flag">
-                    {{ $t('标记未读') }}
-                </li>
-                <li id="notice_open" icon="fa-solid fa-volume-high">
-                    {{ $t('开启通知') }}
-                </li>
-                <li id="notice_close" icon="fa-solid fa-volume-xmark">
-                    {{ $t('关闭通知') }}
-                </li>
-            </ul>
-        </BcMenu>
         <div :class="'friend-list-space' + (runtimeData.tags.openSideBar ? ' open' : '')">
-            <div v-if="!loginInfo.status || runtimeData.chatInfo.show.id == 0" class="ss-card">
+            <div v-if="!loginInfo.status || !runtimeData.nowChat" class="ss-card">
                 <font-awesome-icon :icon="['fas', 'inbox']" />
                 <span>{{ $t('选择联系人开始聊天') }}</span>
             </div>
@@ -167,366 +97,203 @@
     </div>
 </template>
 
-<script lang="ts">
-    import app from '@renderer/main'
-    import FriendBody from '@renderer/components/FriendBody.vue'
-    import BcMenu from 'vue3-bcui/packages/bc-menu'
-    import Menu from 'vue3-bcui/packages/bc-menu/index'
-    import Option from '@renderer/function/option'
+<script setup lang="ts">
+import FriendBody from '@renderer/components/FriendBody.vue'
+import FriendMenu from '@renderer/components/FriendMenu.vue'
 
-    import { defineComponent } from 'vue'
-    import { runtimeData } from '@renderer/function/msg'
-    import {
-        UserFriendElem,
-        UserGroupElem,
-    } from '@renderer/function/elements/information'
-    import { getRaw as getOpt, run as runOpt } from '@renderer/function/option'
-    import { changeGroupNotice, loadHistoryMessage } from '@renderer/function/utils/appUtil'
-    import { PopInfo, PopType } from '@renderer/function/base'
-    import { MenuStatue } from 'vue3-bcui/packages/dist/types'
-    import { library } from '@fortawesome/fontawesome-svg-core'
-    import { login as loginInfo } from '@renderer/function/connect'
-    import { canGroupNotice, getShowName } from '@renderer/function/utils/msgUtil'
+import {
+    onMounted,
+    watch,
+    shallowRef,
+    inject,
+    markRaw,
+    useTemplateRef,
+} from 'vue'
+import { runtimeData } from '@renderer/function/msg'
+import { getRaw as getOpt, run as runOpt } from '@renderer/function/option'
+import { library } from '@fortawesome/fontawesome-svg-core'
+import { login as loginInfo } from '@renderer/function/connect'
 
-    import {
-        faThumbTack,
-        faTrashCan,
-        faCheckToSlot,
-        faGripLines,
-    } from '@fortawesome/free-solid-svg-icons'
-    import { Notify } from '@renderer/function/notify'
+import {
+    faThumbTack,
+    faTrashCan,
+    faCheckToSlot,
+    faGripLines,
+} from '@fortawesome/free-solid-svg-icons'
+import { Notify } from '@renderer/function/notify'
+import { Session } from '@renderer/function/model/session'
+import { Message } from '@renderer/function/model/message'
+import { vMenu } from '@renderer/function/utils/appUtil'
+import { SessionBox, BubbleBox } from '@renderer/function/model/box'
+import BoxBody from '@renderer/components/BoxBody.vue'
 
-    export default defineComponent({
-        name: 'VueMessages',
-        components: { FriendBody, BcMenu },
-        props: ['chat'],
-        emits: ['userClick', 'loadHistory'],
-        data() {
-            return {
-                runtimeData: runtimeData,
-                trRead: false,
-                listMenu: {
-                    show: false,
-                    point: { x: 0, y: 0 },
-                } as MenuStatue,
-                menu: Menu.append,
-                showMenu: false,
-                loginInfo: loginInfo,
-                showGroupAssist: false,
-            }
-        },
-        mounted() {
-            library.add(faCheckToSlot, faThumbTack, faTrashCan, faGripLines)
-        },
-        methods: {
-            /**
-             * 联系人点击事件
-             * @param data 联系人对象
-             */
-            userClick(data: UserFriendElem & UserGroupElem) {
-                const id = data.user_id ? data.user_id : data.group_id
-                if (!this.trRead && id != this.chat.show.id) {
-                    if (this.runtimeData.tags.openSideBar) {
-                        this.openLeftBar()
-                    }
-                    const back = {
-                        // 临时会话标志
-                        temp: data.group_name == '' ? data.group_id : undefined,
-                        type: data.user_id ? 'user' : 'group',
-                        id: id,
-                        name: getShowName(data.group_name || data.nickname, data.remark),
-                        avatar: data.user_id? 'https://q1.qlogo.cn/g?b=qq&s=0&nk=' +
-                              data.user_id: 'https://p.qlogo.cn/gh/' +
-                              data.group_id + '/' + data.group_id + '/0',
-                    }
-                    if (this.chat.id != back.id) {
-                        // 更新聊天框
-                        this.$emit('userClick', back)
-                        // 重置消息面板
-                        // PS：这儿的作用是在运行时如果切换到了特殊面板，在点击联系人的时候可以切回来
-                        if (
-                            runtimeData.sysConfig.chatview_name != '' &&
-                            runtimeData.sysConfig.chatview_name !=
-                                decodeURIComponent(getOpt('chatview_name') ?? '')
-                        ) {
-                            runtimeData.sysConfig.chatview_name =
-                                decodeURIComponent(getOpt('chatview_name') ?? '')
-                            runOpt('chatview_name', decodeURIComponent(getOpt('chatview_name') ?? ''))
-                        }
-                    }
-                    // 清除新消息标记
-                    const item = runtimeData.baseOnMsgList.get(id)
-                    if(item) {
-                        item.new_msg = false
-                        item.highlight = undefined
-                        runtimeData.baseOnMsgList.set(id, item)
-                        // 关闭所有通知
-                        new Notify().closeAll((item.group_id ?? item.user_id).toString())
-                    }
-                }
-            },
+const emit = defineEmits<{
+    userClick: [session: Session, fromBox?: SessionBox]
+}>()
 
-            /**
-             * 系统通知点击事件
-             */
-            systemNoticeClick() {
-                if (this.runtimeData.tags.openSideBar) {
-                    this.openLeftBar()
-                }
-                const back = {
-                    type: 'user',
-                    id: -10000,
-                    name: '系统消息',
-                }
-                this.$emit('userClick', back)
-                runtimeData.sysConfig.chatview_name = 'SystemNotice'
-                runOpt('chatview_name', 'SystemNotice')
-            },
+const showSessionList = shallowRef<(Session | SessionBox)[]>([])
+// 旧群收纳盒的东西
+const menu: undefined | InstanceType<typeof FriendMenu> = inject('friendMenu')
+const sessionBoxs = useTemplateRef('sessionBoxs')
 
-            /**
-             * 侧边栏操作
-             */
-            openLeftBar() {
-                runtimeData.tags.openSideBar = !runtimeData.tags.openSideBar
-            },
-
-            /**
-             *  标记群组消息为已读
-             */
-            readMsg(data: UserFriendElem & UserGroupElem) {
-                const id = data.group_id ? data.group_id : data.user_id
-                const item = runtimeData.baseOnMsgList.get(id)
-                if(item) {
-                    item.new_msg = false
-                    item.highlight = undefined
-                    runtimeData.baseOnMsgList.set(id, item)
-                }
-                // 标记消息已读
-                const type = data.group_id ? 'group' : 'user'
-                loadHistoryMessage(id, type, 1, 'readMemberMessage')
-                // pop
-                new PopInfo().add(
-                    PopType.INFO,
-                    app.config.globalProperties.$t('已标记为已读'),
-                )
-            },
-
-            /**
-             * 清空消息列表
-             */
-            cleanList() {
-                // 刷新置顶列表
-                const info = runtimeData.sysConfig.top_info as {
-                    [key: string]: number[]
-                } | null
-                runtimeData.baseOnMsgList = new Map()
-                if (info != null) {
-                    const topList = info[runtimeData.loginInfo.uin]
-                    if (topList !== undefined) {
-                        runtimeData.userList.forEach((item) => {
-                            const id = Number(
-                                item.user_id ? item.user_id : item.group_id,
-                            )
-                            if (topList.indexOf(id) >= 0) {
-                                item.always_top = true
-                                runtimeData.baseOnMsgList.set(id, item)
-                            }
-                        })
-                    }
-                }
-            },
-
-            /**
-             * 列表菜单关闭事件
-             * @param id 选择的菜单 ID
-             */
-            listMenuClose(id: string) {
-                const menu = document.getElementById(
-                    'msg-menu-view-messages-menu',
-                )?.children[1] as HTMLDivElement
-                if (menu) {
-                    setTimeout(() => {
-                        menu.style.transition = 'transform .1s'
-                    }, 200)
-                }
-                this.listMenu.show = false
-                const item = this.menu.select
-                if (id) {
-                    switch (id) {
-                        case 'read': {
-                            item.new_msg = true
-                            break
-                        }
-                        case 'readed':
-                            this.readMsg(item)
-                            break
-                        case 'remove': {
-                            const id = item.user_id ? item.user_id : item.group_id
-                            runtimeData.baseOnMsgList.delete(id)
-                            break
-                        }
-                        case 'top':
-                            this.saveTop(item, true)
-                            break
-                        case 'canceltop':
-                            this.saveTop(item, false)
-                            break
-                        case 'notice_open': {
-                            changeGroupNotice(item.group_id, true)
-                            break
-                        }
-                        case 'notice_close': {
-                            changeGroupNotice(item.group_id, false)
-                            break
-                        }
-                    }
-                }
-                this.menu.select = undefined
-            },
-
-            /**
-             * 保存置顶信息
-             * @param event 点击事件
-             */
-            saveTop(item: any, value: boolean) {
-                const id = runtimeData.loginInfo.uin
-                const upId = item.user_id ? item.user_id : item.group_id
-                // 完整的设置 JSON
-                let topInfo = runtimeData.sysConfig.top_info as {
-                    [key: string]: number[]
-                }
-                if (topInfo == null) {
-                    topInfo = {}
-                }
-                // 本人的置顶信息
-                let topList = topInfo[id]
-                // 操作
-                if (value) {
-                    if (topList) {
-                        if (topList.indexOf(this.chat.show.id) < 0) {
-                            topList.push(upId)
-                        }
-                    } else {
-                        topList = [upId]
-                    }
-                } else {
-                    if (topList) {
-                        topList.splice(topList.indexOf(upId), 1)
-                    }
-                }
-                // 刷新设置
-                if (topList) {
-                    topInfo[id] = topList
-                    Option.save('top_info', topInfo)
-                }
-                // 为消息列表内的对象刷新置顶标志
-                item.always_top = value
-                // 刷新群收纳盒
-                if(item.group_id && runtimeData.sysConfig.bubble_sort_user) {
-                    if(value) {
-                        this.showGroupAssist = false
-                    } else {
-                        this.showGroupAssist = true
-                    }
-                }
-            },
-
-            /**
-             * 显示列表菜单
-             * @param item 菜单内容
-             */
-            listMenuShow(event: Event, item: UserFriendElem & UserGroupElem) {
-                const info = this.menu.set('messages-menu', event as MouseEvent)
-                this.listMenuShowRun(info, item)
-            },
-            listMenuShowRun(info: any, item: UserFriendElem & UserGroupElem) {
-                // PS：这是触屏触发的标志，如果优先触发了 contextmenu 就不用触发触屏了
-                this.showMenu = false
-                info.list = ['top', 'remove']
-                // 置顶的不显示移除
-                if (item.always_top) {
-                    info.list = ['canceltop']
-                }
-                if (item.new_msg) {
-                    info.list.push('readed')
-                } else {
-                    info.list.push('read')
-                }
-                // 是群的话显示通知设置
-                if (item.group_id) {
-                    if (canGroupNotice(item.group_id)) {
-                        info.list.push('notice_close')
-                    } else {
-                        info.list.push('notice_open')
-                    }
-                }
-                this.listMenu = info
-                this.menu.select = item
-                // 出界处理
-                setTimeout(() => {
-                    const menu = document.getElementById(
-                        'msg-menu-view-messages-menu',
-                    )?.children[1] as HTMLDivElement
-                    if (menu) {
-                        menu.style.transition = 'margin .2s, transform .1s'
-                        const hight = menu.clientHeight
-                        const top = menu.getBoundingClientRect().top
-                        const docHight = document.documentElement.clientHeight
-                        // 出界高度
-                        const dtHight = hight + top - docHight + 20
-                        if (dtHight > 0) {
-                            menu.style.marginTop = docHight - hight - 30 + 'px'
-                        }
-                    }
-                }, 100)
-            },
-
-            /**
-             * 显示群收纳盒
-             */
-            showGroupAssistCheck() {
-                if(!this.showGroupAssist && runtimeData.chatInfo.show.id == 0) {
-                    // 如果没有打开聊天框，打开收纳盒中的第一个群；这么做主要是为了防止动画穿帮 😭
-                    const assistGroup = document.getElementById('group-assist-message-list-body')
-                    if(assistGroup && assistGroup.children.length > 0) {
-                        (assistGroup.children[0] as HTMLDivElement).click()
-                        setTimeout(() => {
-                            this.showGroupAssist = !this.showGroupAssist
-                        }, 500)
-                    } else {
-                        this.showGroupAssist = !this.showGroupAssist
-                    }
-                } else {
-                    this.showGroupAssist = !this.showGroupAssist
-                }
-            },
-
-            showMenuStart(
-                event: TouchEvent,
-                item: UserFriendElem & UserGroupElem,
-            ) {
-                const info = {
-                    show: true,
-                    point: {
-                        x: event.targetTouches[0].pageX,
-                        y: event.targetTouches[0].pageY,
-                    },
-                }
-                this.showMenu = true
-                setTimeout(() => {
-                    if (this.showMenu) {
-                        this.listMenuShowRun(info, item)
-                        this.showMenu = false
-                    }
-                }, 500)
-            },
-            showMenuEnd() {
-                this.showMenu = false
-            },
-        },
+onMounted(()=>{
+    library.add(faCheckToSlot, faThumbTack, faTrashCan, faGripLines)
+    reflashSessionList()
+    // 刷新会话列表时用
+    watch(
+        () => Session.sessionList.length,
+        reflashSessionList,
+    )
+    watch(
+        () => SessionBox.alwaysTopBoxs.size,
+        reflashSessionList,
+    )
+    watch(
+        () => Session.alwaysTopSessions.size,
+        reflashSessionList,
+    )
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    Session.newMessageHook.push((_: Session, _1: Message)=>{
+        // 等到会话列表更新后再刷新
+        // TODO: 更好的钩子系统,支持before, on, after等
+        setTimeout(reflashSessionList, 100)
     })
-</script>
+})
 
+/**
+ * 刷新会话列表
+ */
+function reflashSessionList() {
+    // 时间排序算法
+    const sort = (
+        a: Session | SessionBox,
+        b: Session | SessionBox,
+    ) => {
+        // 置顶最优先
+        if (a.alwaysTop && !b.alwaysTop) return -1
+        if (!a.alwaysTop && b.alwaysTop) return 1
+        // 按照时间戳降序
+        if (a.preMessage?.time && !b.preMessage?.time) return -1
+        if (!a.preMessage?.time && b.preMessage?.time) return 1
+        if (a.preMessage?.time && b.preMessage?.time) {
+            return b.preMessage.time.time - a.preMessage.time.time
+        }
+        // 按照名称首字母排序
+        return a.showNamePy.localeCompare(b.showNamePy)
+    }
+
+    // 拼装置顶列表和主列表
+    const mainList: (Session | SessionBox)[] = []
+    const alwaysTop = [
+        ...Session.alwaysTopSessions,
+        ...SessionBox.alwaysTopBoxs
+    ]
+    // 过滤走群收纳盒
+    const putBox: Set<SessionBox> = new Set([BubbleBox.instance])
+
+    for (const session of Session.activeSessions) {
+        // 过滤掉已经置顶的会话
+        if (session.alwaysTop) continue
+
+        // 查询收纳盒
+        if (session.boxs.length > 0) {
+            // 如果有收纳盒，把收纳盒塞进列表里
+            for (const box of session.boxs) {
+                // 如果收纳盒是置顶的，就放到置顶列表里
+
+                // 过滤已经有的收纳盒
+                if (box.alwaysTop) continue
+                if (putBox.has(box)) continue
+
+                putBox.add(box)
+                mainList.push(box)
+            }
+        }else {
+            // 如果没有收纳盒，直接放入主列表
+            mainList.push(session)
+        }
+    }
+    showSessionList.value = [...alwaysTop.sort(sort), ...mainList.sort(sort)]
+}
+/**
+ * 会话点击事件
+ * @param data 会话对象
+ */
+function userClick(data: Session, fromBox?: SessionBox) {
+    const id = data.id
+    if (id != runtimeData.nowChat?.id) {
+        if (runtimeData.tags.openSideBar) {
+            openLeftBar()
+        }
+        if (runtimeData.nowChat === data) return
+
+        // 清除新消息标记
+        data.setRead()
+        // 关闭所有通知
+        new Notify().closeAll((data.id).toString())
+
+        // 更新聊天框
+        emit('userClick', data, fromBox)
+        // 重置消息面板
+        // PS：这儿的作用是在运行时如果切换到了特殊面板，在点击联系人的时候可以切回来
+        if (
+            runtimeData.sysConfig.chatview_name != '' &&
+            runtimeData.sysConfig.chatview_name !=
+                decodeURIComponent(getOpt('chatview_name') ?? '')
+        ) {
+            runtimeData.sysConfig.chatview_name =
+                decodeURIComponent(getOpt('chatview_name') ?? '')
+            runOpt('chatview_name', decodeURIComponent(getOpt('chatview_name') ?? ''))
+        }
+    }
+}
+
+/**
+ * 折叠全部收纳盒
+ */
+function foldAllBox(){
+    if (!sessionBoxs.value) return
+    for (const item of sessionBoxs.value) {
+        if (!item) continue
+        item.closeBox()
+    }
+}
+
+// /**
+//  * TODO:系统通知点击事件
+//  */
+// function systemNoticeClick() {
+//     if (runtimeData.tags.openSideBar) {
+//         openLeftBar()
+//     }
+//     const back = {
+//         type: 'user',
+//         id: -10000,
+//         name: '系统消息',
+//     }
+//     emit('userClick', back)
+//     runtimeData.sysConfig.chatview_name = 'SystemNotice'
+//     runOpt('chatview_name', 'SystemNotice')
+// }
+
+/**
+ * 侧边栏操作
+ */
+function openLeftBar() {
+    runtimeData.tags.openSideBar = !runtimeData.tags.openSideBar
+}
+
+/**
+ * 清空消息列表
+ */
+function cleanList() {
+    // 卸载非置顶会话
+    for (const item of Session.activeSessions) {
+        if (item.id === runtimeData.nowChat?.id) continue
+        item.unactive()
+    }
+}
+</script>
 <style>
     .onmsg-enter-active,
     .onmsg-leave-active,

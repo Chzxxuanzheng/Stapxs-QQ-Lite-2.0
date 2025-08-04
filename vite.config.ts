@@ -20,8 +20,8 @@ export default defineConfig({
                 target: 'http://localhost:3000',
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/api/, '')
-            }
-        }
+            },
+        },
     },
     plugins: [
         vue(),
@@ -55,6 +55,7 @@ export default defineConfig({
                         // 让每个插件都打包成独立的文件
                         return id.toString().split('node_modules/')[1].split('/')[0].toString()
                     }
+                    return
                 }
             }
         }

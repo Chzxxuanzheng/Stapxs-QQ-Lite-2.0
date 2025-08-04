@@ -2,61 +2,105 @@
  * @FileDescription: 联系人 / 消息列表项模板
  * @Author: Stapxs
  * @Date: 2022/08/14
+ *        2025/07/27
  * @Version: 1.0
+ *           2.0 - 将会话重构为类 和 setup式（Mr.Lee）
 -->
 
 <template>
-    <div :id="'user-' + (data.user_id ?? data.group_id)"
-        :class="'friend-body' + (select ? ' active' : menu ? ' onmenu' : '')"
-        :data-name="data.user_id ? data.nickname : data.group_name"
-        :data-nickname="data.user_id ? data.nickname : ''"
-        :data-type="data.user_id ? 'friend' : 'group'">
-        <div :class="data.new_msg === true ? 'new' : ''" />
-        <font-awesome-icon v-if="data.user_id == -10000" :icon="['fas', 'bell']" />
-        <font-awesome-icon v-else-if="data.user_id == -10001" :icon="['fas', 'user-group']" />
-        <img v-else loading="lazy" :title="getShowName(data.group_name || data.nickname, data.remark)"
-            :src="data.user_id ? 'https://q1.qlogo.cn/g?b=qq&s=0&nk=' + data.user_id :
-                'https://p.qlogo.cn/gh/' + data.group_id + '/' + data.group_id + '/0'">
+    <div :id="'user-' + data.id"
+        class="friend-body"
+        :class="{
+            'active': active,
+            'onmenu': onmenu,
+            'unmounted': from === 'message' && !data.isActive
+        }"
+        :data-name="data.name"
+        :data-nickname="data instanceof UserSession ? data.name : ''"
+        :data-type="data.type">
+        <div :class="{'new': data.showNotice && from==='message'}" />
+        <font-awesome-icon v-if="data.id == -10000" :icon="['fas', 'bell']" />
+        <font-awesome-icon v-else-if="data.id == -10001" :icon="['fas', 'user-group']" />
+        <img v-else loading="lazy" :title="data.showName"
+            :src="data.face">
         <div>
             <div>
-                <p>{{ getShowName(data.group_name || data.nickname, data.remark) }}</p>
+                <p>{{ data.showName }}</p>
                 <div style="flex: 1" />
-                <a class="time">{{
-                    data.time !== undefined && !Number.isNaN(data.time)
-                        ? Intl.DateTimeFormat(trueLang, {
-                            hour: 'numeric',
-                            minute: 'numeric',
-                        }).format(new Date(data.time)) : ''
+                <a v-if="data.preMessage?.time" class="time">{{
+                    data.preMessage?.time.format('hour')
                 }}</a>
             </div>
             <div>
-                <a v-if="data.highlight" class="highlight">
-                    {{ data.highlight }}
-                </a>
-                <a :class="from == 'friend' ? 'nick' : ''">{{
-                    from == 'friend' ? (data.longNick ?? '') : data.raw_msg
-                }}</a>
-                <div v-if="from == 'message'" style="margin-left: 10px; display: flex">
-                    <font-awesome-icon v-if="data.always_top === true" :icon="['fas', 'thumbtack']" />
+                <template v-if="from === 'message'">
+                    <a v-for="(item, index) in data.highlightInfo.slice(0, 2)"
+                        :key="index"
+                        class="highlight">
+                        [{{ item }}]
+                    </a>
+                    <a>{{ data.preMessage?.preMsg }}</a>
+                </template>
+                <template v-else>
+                    <div class="boxs-bar">
+                        <template
+                            v-for="belongBox in data.boxs"
+                            :key="belongBox.id">
+                            <span
+                                v-if="belongBox.id !== BubbleBox.instance.id"
+                                v-overflow-hide
+                                class="box"
+                                :style="{'--color': belongBox.color}">
+                                <font-awesome-icon :icon="['fas', 'circle']" />
+                                {{ belongBox.showName }}
+                            </span>
+                        </template>
+                    </div>
+                </template>
+                <div style="margin-left: 10px; display: flex">
+                    <font-awesome-icon v-if="data.alwaysTop" :icon="['fas', 'thumbtack']" />
+                    <font-awesome-icon v-if="shouldShowNotice()" :icon="['fas', 'bell']" />
                 </div>
             </div>
         </div>
     </div>
 </template>
 
-<script lang="ts">
-    import { defineComponent } from 'vue'
-    import { getTrueLang } from '@renderer/function/utils/systemUtil'
-    import { getShowName } from '@renderer/function/utils/msgUtil'
+<script setup lang="ts">
+import FriendMenu from './FriendMenu.vue';
+import { GroupSession, Session, UserSession } from '@renderer/function/model/session'
+import { runtimeData } from '@renderer/function/msg'
+import { inject, computed } from 'vue'
 
-    export default defineComponent({
-        name: 'FriendBody',
-        props: ['data', 'select', 'menu', 'from'],
-        data() {
-            return {
-                getShowName: getShowName,
-                trueLang: getTrueLang(),
-            }
-        }
-    })
+import { vOverflowHide } from '@renderer/function/utils/appUtil';
+import { BubbleBox, SessionBox } from '@renderer/function/model/box';
+
+const {
+    data,
+    from='message',
+    box,
+} = defineProps<{
+    data: Session,
+    from?: 'message' | 'friend'
+    box?: SessionBox
+}>()
+
+const menu = inject<Ref<InstanceType<typeof FriendMenu> | undefined>>('friendMenu')
+
+function shouldShowNotice(): boolean {
+    if (!(data instanceof GroupSession)) return false
+    if (runtimeData.sysConfig.group_notice_type === 'all')  return false
+    return data.notice
+}
+const active = computed(()=>{
+    if (from !== 'message') return false
+    if (runtimeData.nowChat?.id !== data.id) return false
+    return runtimeData.nowBox?.id === box?.id
+})
+const onmenu = computed(() => {
+    if (active.value) return false
+    if (!menu?.value) return false
+    if (!menu.value.selectSession) return false
+    if (menu.value.selectSession.id !== data.id) return false
+    return menu.value.selectBox?.id === box?.id
+})
 </script>
