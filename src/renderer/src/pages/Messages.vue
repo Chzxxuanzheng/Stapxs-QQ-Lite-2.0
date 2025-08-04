@@ -14,22 +14,20 @@
 <template>
     <div class="friend-view">
         <div id="message-list"
-            :class="'session-body-container friend-list' +
-                (runtimeData.tags.openSideBar ? ' open' : '') +
-                (showGroupAssist ? ' show' : '')">
+            class="session-body-container friend-list"
+            :class="{
+                open: runtimeData.tags.openSideBar,
+            }">
             <div>
                 <div class="base only">
                     <span>{{ $t('消息') }}</span>
                     <div style="flex: 1" />
+                    <font-awesome-icon :icon="['fas', 'compress-arrows-alt']"
+                    @click="foldAllBox" />
                     <font-awesome-icon :icon="['fas', 'trash-can']" @click="cleanList" />
                 </div>
                 <div class="small">
                     <span>{{ $t('消息') }}</span>
-                    <!-- <div v-if="showGroupAssist"
-                        style="margin-right: -5px;margin-left: 5px;"
-                        @click="showGroupAssist = !showGroupAssist">
-                        <font-awesome-icon :icon="['fas', 'angle-left']" />
-                    </div> -->
                     <div @click="openLeftBar">
                         <font-awesome-icon :icon="['fas', 'bars-staggered']" />
                     </div>
@@ -75,6 +73,7 @@
                     <BoxBody
                         v-else-if="item instanceof SessionBox"
                         :key="'box-' + item.id"
+                        ref="sessionBoxs"
                         v-menu.prevent="event => menu?.open('message', item, event)"
                         :data="item"
                         from="message"
@@ -83,33 +82,6 @@
                         " />
                 </template>
             </TransitionGroup>
-        </div>
-        <div id="group-assist-message-list"
-            :class="'friend-list group-assist-message-list' +
-                (runtimeData.tags.openSideBar ? ' open' : '') +
-                (showGroupAssist ? ' show' : '')">
-            <div>
-                <div class="base only">
-                    <!-- <span style="cursor: pointer;"
-                        @click="showGroupAssist = !showGroupAssist">
-                        <font-awesome-icon style="margin-right: 5px;" :icon="['fas', 'angle-left']" />
-                        {{ $t('群收纳盒') }}
-                    </span> -->
-                </div>
-                <div class="small">
-                    <span style="cursor: pointer;">
-                        {{ $t('群收纳盒') }}
-                    </span>
-                    <!-- <div v-if="showGroupAssist"
-                        style="margin-right: -5px;margin-left: 5px;"
-                        @click="showGroupAssist = !showGroupAssist">
-                        <font-awesome-icon :icon="['fas', 'angle-left']" />
-                    </div> -->
-                    <div @click="openLeftBar">
-                        <font-awesome-icon :icon="['fas', 'bars-staggered']" />
-                    </div>
-                </div>
-            </div>
         </div>
         <div :class="'friend-list-space' + (runtimeData.tags.openSideBar ? ' open' : '')">
             <div v-if="!loginInfo.status || !runtimeData.nowChat" class="ss-card">
@@ -135,6 +107,7 @@ import {
     shallowRef,
     inject,
     markRaw,
+    useTemplateRef,
 } from 'vue'
 import { runtimeData } from '@renderer/function/msg'
 import { getRaw as getOpt, run as runOpt } from '@renderer/function/option'
@@ -160,8 +133,8 @@ const emit = defineEmits<{
 
 const showSessionList = shallowRef<(Session | SessionBox)[]>([])
 // 旧群收纳盒的东西
-const showGroupAssist = false
 const menu: undefined | InstanceType<typeof FriendMenu> = inject('friendMenu')
+const sessionBoxs = useTemplateRef('sessionBoxs')
 
 onMounted(()=>{
     library.add(faCheckToSlot, faThumbTack, faTrashCan, faGripLines)
@@ -272,6 +245,17 @@ function userClick(data: Session, fromBox?: SessionBox) {
                 decodeURIComponent(getOpt('chatview_name') ?? '')
             runOpt('chatview_name', decodeURIComponent(getOpt('chatview_name') ?? ''))
         }
+    }
+}
+
+/**
+ * 折叠全部收纳盒
+ */
+function foldAllBox(){
+    if (!sessionBoxs.value) return
+    for (const item of sessionBoxs.value) {
+        if (!item) continue
+        item.closeBox()
     }
 }
 

@@ -173,4 +173,31 @@ const onmenu = computed(()=>{
 const active = computed(() => {
     return runtimeData.nowBox?.id === data.id
 })
+
+/**
+ * 判断当前收纳盒是否打开
+ */
+function isOpen() {
+    return open.value
+}
+
+/**
+ * 关闭收纳盒
+ */
+function closeBox() {
+    open.value = false
+}
+
+/**
+ * 打开收纳盒
+ */
+function openBox() {
+    open.value = true
+}
+
+defineExpose({
+    isOpen,
+    closeBox,
+    openBox,
+})
 </script>
