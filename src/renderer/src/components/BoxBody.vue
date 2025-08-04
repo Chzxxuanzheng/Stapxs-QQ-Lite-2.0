@@ -148,11 +148,19 @@ const open = ref(false)
 const menu = inject<Ref<InstanceType<typeof FriendMenu> | undefined>>('friendMenu')
 //#endregion
 
+// 元素被打开时自动展开
 watch(()=>runtimeData.nowBox?.id, ()=>{
     if (!runtimeData.nowBox) return
     if(runtimeData.nowBox.id === data.id) {
         open.value = true
     } else {
+        open.value = false
+    }
+})
+
+// 无元素时强制关闭
+watch(()=>data.length, (newVal)=>{
+    if (newVal === 0) {
         open.value = false
     }
 })

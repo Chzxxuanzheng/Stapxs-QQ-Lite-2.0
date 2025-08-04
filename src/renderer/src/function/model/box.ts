@@ -18,7 +18,7 @@ import {
     ComputedRef
 } from 'vue'
 import { Message } from './message'
-import { Session } from './session'
+import { GroupSession, Session } from './session'
 import { runtimeData } from '../msg'
 import option from '../option'
 import { Msg } from './msg'
@@ -257,9 +257,18 @@ export class SessionBox {
      * @param session 放入的会话
      */
     putSession(session: Session): void {
+        if (this._content.has(session)) return
         // 加入到收纳盒
         this._content.add(session)
         session.addBox(this)
+        // 更新预览消息
+        if (this.preMessage === undefined)
+            this.preMessage = session.preMessage
+
+        // 自动离开群收纳盒
+        if (runtimeData.sysConfig.bubble_sort_user &&
+            session.type === 'group')
+            BubbleBox.instance.removeSession(session)
     }
     /**
      * 将会话从收纳盒中移除
@@ -271,6 +280,14 @@ export class SessionBox {
         if (!this._content.has(session)) return
         this._content.delete(session)
         session.leaveBox(this)
+        // 更新预览消息
+        if (this.preMessage?.session?.id === session.id)
+            this.preMessage = undefined
+
+        if (runtimeData.sysConfig.bubble_sort_user &&
+            session.type === 'group' &&
+            session.boxs.length === 0)
+            BubbleBox.instance.putSession(session)
     }
     /**
      * 会话上报自身新消息
@@ -430,16 +447,47 @@ export class SessionBox {
     }
 }
 
-/**
- * 群收纳盒
- * 这名字有点...gpt起的,我也想不到更好的名字,即可以表达装多余的消息且和group无太多关系的名字...
- */
-export class TrashBox extends SessionBox {
-    static instance: TrashBox = new TrashBox()
+export class BubbleBox extends SessionBox {
+    static instance: BubbleBox = new BubbleBox()
+    // 这玩意里的元素都是激活的，按照里面有没有元素算就行了
+    override _isActive: ComputedRef<boolean> = computed(()=>{
+        return this._content.size > 0
+    })
 
     protected constructor() {
         super('群收纳盒', 'user-group', 0)
         SessionBox.sessionBoxs.pop() // 给自己删了
+    }
+
+    /**
+     * 将会话加入到收纳盒
+     * @param session 放入的会话
+     */
+    override putSession(session: Session): void {
+        if (this._content.has(session)) return
+        // 加入到收纳盒
+        this._content.add(session)
+        session.addBox(this)
+
+        // 更新预览消息
+        if (this.preMessage === undefined)
+            this.preMessage = session.preMessage
+    }
+
+    /**
+     * 将会话从收纳盒中移除
+     * @param session 会话
+     * @returns
+     */
+    override removeSession(session: Session): void {
+        // 离开收纳盒
+        if (!this._content.has(session)) return
+        this._content.delete(session)
+        session.leaveBox(this)
+
+        // 更新预览消息
+        if (this.preMessage?.session?.id === session.id)
+            this.preMessage = undefined
     }
 
     override get color(): string {
@@ -451,3 +499,18 @@ export class TrashBox extends SessionBox {
         throw new Error('群收纳盒禁止修改颜色')
     }
 }
+
+// 添加到群收纳盒
+Session.prepareActiveHook.push((session: Session)=>{
+    if (!runtimeData.sysConfig.bubble_sort_user) return
+    if (session.alwaysTop) return
+    if (session.boxs.length > 0) return
+    if (!(session instanceof GroupSession)) return
+    BubbleBox.instance.putSession(session)
+})
+
+// 卸载时移除
+Session.unactiveHook.push((session: Session)=>{
+    if (BubbleBox.instance._content.has(session))
+        BubbleBox.instance.removeSession(session)
+})

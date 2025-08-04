@@ -28,6 +28,8 @@ import {
     getPortableFileLang,
     getTrueLang,
 } from '@renderer/function/utils/systemUtil'
+import { GroupSession, Session } from './model/session'
+import { BubbleBox } from './model/box'
 
 let cacheConfigs: { [key: string]: any }
 
@@ -95,7 +97,7 @@ const configFunction: { [key: string]: (value: any) => void } = {
     opt_revolve: viewRevolve,
     opt_always_top: viewAlwaysTop,
     opt_fast_animation: updateFarstAnimation,
-    bubble_sort_user: clearGroupAssist,
+    bubble_sort_user: switchBubbleBox,
     merge_forward_width_type: setMergeForwardWidth,
 }
 
@@ -115,8 +117,24 @@ function setMergeForwardWidth(value: boolean | null) {
     )
 }
 
-function clearGroupAssist() {
-    // TODO: 消息盒子相关函数
+function switchBubbleBox() {
+    if (runtimeData.sysConfig.bubble_sort_user) {
+        // 开启群收纳盒
+        for (const session of Session.activeSessions) {
+            // 过滤置顶
+            if (session.alwaysTop) continue
+            // 过滤非群聊
+            if (!(session instanceof GroupSession)) continue
+            // 过滤已经有收纳盒的
+            if (session.boxs.length > 0) continue
+            BubbleBox.instance.putSession(session)
+        }
+    }else {
+        // 关闭群收纳盒
+        for (const session of BubbleBox.instance._content) {
+            BubbleBox.instance.removeSession(session)
+        }
+    }
 }
 
 function updateFarstAnimation(value: boolean) {
@@ -419,7 +437,7 @@ export async function load(): Promise<Record<keyof typeof optDefault,any|null>> 
             }
         }
     }
-    return loadOptData(data)
+    return loadOptData(data) as any
 }
 
 function loadOptData(data: { [key: string]: any }) {

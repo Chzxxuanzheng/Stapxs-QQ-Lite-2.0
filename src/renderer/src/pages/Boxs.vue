@@ -45,9 +45,9 @@
             <div class="session-body-container" :class="runtimeData.tags.openSideBar ? 'open' : ''">
                 <template v-if="!searchInfo.isSearch">
                     <BoxBody
-                        :data="TrashBox.instance"
+                        :data="BubbleBox.instance"
                         from="friend"
-                        @user-click="session=>userClick(session, TrashBox.instance)" />
+                        @user-click="session=>userClick(session, BubbleBox.instance)" />
                     <BoxBody
                         v-for="box in SessionBox.sessionBoxs"
                         :key="box.id"
@@ -96,7 +96,7 @@ import { login as loginInfo } from '@renderer/function/connect'
 import { Session } from '@renderer/function/model/session'
 import { vAutoFocus, vSearch } from '@renderer/function/utils/appUtil'
 import { i18n } from '@renderer/main'
-import { SessionBox, TrashBox } from '@renderer/function/model/box'
+import { SessionBox, BubbleBox } from '@renderer/function/model/box'
 
 const $t = i18n.global.t
 

@@ -56,20 +56,12 @@
                     @click="systemNoticeClick" /> -->
                 <!--- 群组消息 -->
                 <!-- 群收纳盒 -->
-                <!-- <FriendBody
-                    v-if="runtimeData.groupAssistList && runtimeData.groupAssistList.length > 0"
-                    key="inMessage--10001"
-                    :select="chat.show.id === -10001"
-                    :data="{
-                        user_id: -10001,
-                        always_top: true,
-                        nickname: $t('群收纳盒'),
-                        remark: $t('群收纳盒'),
-                        time: runtimeData.groupAssistList[0].time,
-                        raw_msg: runtimeData.groupAssistList[0].group_name + ': ' +
-                            (runtimeData.groupAssistList[0].raw_msg_base ?? '')
-                    }"
-                    @click="showGroupAssistCheck" /> -->
+                <BoxBody
+                    v-if="runtimeData.sysConfig.bubble_sort_user"
+                    :data="markRaw(BubbleBox.instance)"
+                    from="message"
+                    @user-click="
+                        (session)=>userClick(session, BubbleBox.instance)" />
                 <!-- 其他消息 -->
                 <template v-for="item in showSessionList">
                     <FriendBody
@@ -141,6 +133,7 @@ import {
     watch,
     shallowRef,
     inject,
+    markRaw,
 } from 'vue'
 import { runtimeData } from '@renderer/function/msg'
 import { getRaw as getOpt, run as runOpt } from '@renderer/function/option'
@@ -157,7 +150,7 @@ import { Notify } from '@renderer/function/notify'
 import { Session } from '@renderer/function/model/session'
 import { Message } from '@renderer/function/model/message'
 import { vMenu } from '@renderer/function/utils/appUtil'
-import { SessionBox } from '@renderer/function/model/box'
+import { SessionBox, BubbleBox } from '@renderer/function/model/box'
 import BoxBody from '@renderer/components/BoxBody.vue'
 
 const emit = defineEmits<{
@@ -221,7 +214,8 @@ function reflashSessionList() {
         ...Session.alwaysTopSessions,
         ...SessionBox.alwaysTopBoxs
     ]
-    const putBox: Set<SessionBox> = new Set()
+    // 过滤走群收纳盒
+    const putBox: Set<SessionBox> = new Set([BubbleBox.instance])
 
     for (const session of Session.activeSessions) {
         // 过滤掉已经置顶的会话

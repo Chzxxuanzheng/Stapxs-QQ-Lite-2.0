@@ -42,14 +42,18 @@
                 </template>
                 <template v-else>
                     <div class="boxs-bar">
-                        <span v-for="belongBox in data.boxs"
-                            :key="belongBox.id"
-                            v-overflow-hide
-                            class="box"
-                            :style="{'--color': belongBox.color}">
-                            <font-awesome-icon :icon="['fas', 'circle']" />
-                            {{ belongBox.showName }}
-                        </span>
+                        <template
+                            v-for="belongBox in data.boxs"
+                            :key="belongBox.id">
+                            <span
+                                v-if="belongBox.id !== BubbleBox.instance.id"
+                                v-overflow-hide
+                                class="box"
+                                :style="{'--color': belongBox.color}">
+                                <font-awesome-icon :icon="['fas', 'circle']" />
+                                {{ belongBox.showName }}
+                            </span>
+                        </template>
                     </div>
                 </template>
                 <div style="margin-left: 10px; display: flex">
@@ -68,7 +72,7 @@ import { runtimeData } from '@renderer/function/msg'
 import { inject, computed } from 'vue'
 
 import { vOverflowHide } from '@renderer/function/utils/appUtil';
-import { SessionBox } from '@renderer/function/model/box';
+import { BubbleBox, SessionBox } from '@renderer/function/model/box';
 
 const {
     data,
