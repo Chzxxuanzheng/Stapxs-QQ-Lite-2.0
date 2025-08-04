@@ -1558,7 +1558,7 @@ textarea:focus {
     }
     .friend-list > div:last-child.open > div > div,
     .friend-list > div:last-child.open > div.list > div > div > div {
-        display: block;
+        /* display: block; */
     }
     .friend-list > div:first-child > div.small > span {
         display: none;
