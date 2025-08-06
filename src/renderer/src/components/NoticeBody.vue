@@ -91,7 +91,7 @@
         <!-- 时间 -->
         <div v-else-if="data instanceof TimeNotice && data.time != undefined"
             class="note-time note-base">
-            <span>{{ data.time.format() }}</span>
+            <span>{{ pastTime }}</span>
         </div>
         <!-- 通知 -->
         <div v-else-if="data instanceof InfoNotice" class="note-base">
@@ -101,7 +101,7 @@
     </div>
 </template>
 
-<script setup lang="tsx">
+<script setup lang="ts">
 import {
     Notice,
     BanNotice,
@@ -114,12 +114,15 @@ import {
     JoinNotice,
     InfoNotice
 } from '@renderer/function/model/notice'
-import { IUser } from '@renderer/function/model/user';
-import { runtimeData } from '@renderer/function/msg';
-import { useStayEvent } from '@renderer/function/utils/appUtil';
-import app from '@renderer/main';
-import { UserInfoPan } from '@renderer/pages/Chat.vue';
-import { Directive } from 'vue';
+import { IUser } from '@renderer/function/model/user'
+import { runtimeData } from '@renderer/function/msg'
+import { usePasttime, useStayEvent } from '@renderer/function/utils/appUtil'
+import app from '@renderer/main'
+import { UserInfoPan } from '@renderer/pages/Chat.vue'
+import {
+    Directive,
+    ComputedRef
+} from 'vue'
 const { data, id, userInfoPan } = defineProps<{
     data: Notice
     id?: string
@@ -142,6 +145,11 @@ const {
         }
     }, 495
 )
+
+let pastTime: ComputedRef<string> | undefined
+if (data instanceof TimeNotice && data.time != undefined) {
+    pastTime = usePasttime(data.time.time)
+}
 
 const vUser: Directive<HTMLAnchorElement, IUser> = {
     mounted(el, binding: {value: IUser}) {
