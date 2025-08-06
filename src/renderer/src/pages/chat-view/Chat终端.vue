@@ -53,7 +53,7 @@
                         <span
                             v-if="msgItem instanceof RevokeNotice"
                             style="color: yellow">::
-                            <span style="color: yellow; opacity: 0.7">{{ msgItem.operator_name }}</span>
+                            <span style="color: yellow; opacity: 0.7">{{ msgItem.operator.name }}</span>
                             recalled a message.</span>
                     </div>
                     <div v-else-if="msgItem.commandLine">
@@ -149,8 +149,12 @@
     import packageInfo from '../../../../../package.json'
     import Option from '@renderer/function/option'
 
-    import { nextTick } from 'vue'
-    import { defineComponent, markRaw } from 'vue'
+    import {
+        defineComponent,
+        markRaw,
+        nextTick,
+        Reactive,
+    } from 'vue'
     import { runtimeData } from '@renderer/function/msg'
     import { getTrueLang } from '@renderer/function/utils/systemUtil'
     import {
@@ -243,7 +247,7 @@ import SystemNotice from './SystemNotice.vue'
                 ls: {
                     info: 'List all contacts in the current message queue.',
                     fun: () => {
-                        this.searchListCache = [...Session.activeSessions]
+                        this.searchListCache = [...Session.activeSessions] as unknown as Reactive<Session[]>
                         let str =
                             '  total ' + this.searchListCache.length + '\n'
                         let hasMsg = false
@@ -297,7 +301,7 @@ import SystemNotice from './SystemNotice.vue'
                                 this.searchListCache =
                                     Session.sessionList.filter(
                                         session => session.match(value),
-                                    )
+                                    ) as unknown as Reactive<Session[]>
                                 let str =
                                     '  total ' +
                                     this.searchListCache.length +
@@ -324,7 +328,7 @@ import SystemNotice from './SystemNotice.vue'
                                             return msg.message_id == item[2]
                                         },
                                     )
-                                    this.replyMsg = msg[0] as Msg
+                                    this.replyMsg = msg[0] as Reactive<Msg>
                                 } else if (item[2] && item[2] == 'clear') {
                                     this.replyMsg = null
                                 }
@@ -409,7 +413,6 @@ import SystemNotice from './SystemNotice.vue'
                 clear: {
                     info: 'clear message list.',
                     fun: () => {
-                        runtimeData.messageList = []
                         // PS：让消息列表不是空的防止输出首次进入信息
                         this.addCommandOut('')
                     },
@@ -550,14 +553,14 @@ import SystemNotice from './SystemNotice.vue'
                         'var(--color-font)',
                     )
                     this.cmdLines.push(...this.chat.messageList)
-                    this.headMsg = this.chat.messageList.at(0) ?? null
-                    this.endMsg = this.chat.messageList.at(-1) ?? null
+                    this.headMsg = this.chat.messageList.at(0) as Reactive<Message> ?? null
+                    this.endMsg = this.chat.messageList.at(-1) as Reactive<Message> ?? null
                 }
                 this.scrollBottom(true)
                 // 由于一些原因没有加载的话...
                 if (!this.headMsg) {
-                    this.headMsg = this.chat.messageList.at(0) as Message
-                    this.endMsg = this.chat.messageList.at(-1) as Message
+                    this.headMsg = this.chat.messageList.at(0) as Reactive<Message>
+                    this.endMsg = this.chat.messageList.at(-1) as Reactive<Message>
                 } else {
                     const head = this.chat.messageList.at(0) as Message
                     const end = this.chat.messageList.at(-1) as Message
@@ -568,7 +571,7 @@ import SystemNotice from './SystemNotice.vue'
                                 this.chat.messageList.indexOf(this.endMsg as Message) + 1,
                             ),
                         )
-                        this.endMsg = end
+                        this.endMsg = end as Reactive<Message>
                     }
                     else if (head !== this.headMsg) {
                         // 系统通知跳过
@@ -576,13 +579,13 @@ import SystemNotice from './SystemNotice.vue'
                         const originId = this.chat.messageList.indexOf(this.headMsg as Message)
                         // 查询失败
                         if (originId < 0) {
-                            this.headMsg = head
+                            this.headMsg = head as Reactive<Message>
                         } else {
                             // 头部消息更新
                             this.cmdLines.unshift(
                                 ...this.chat.messageList.slice(0, originId),
                             )
-                            this.headMsg = head
+                            this.headMsg = head as Reactive<Message>
                         }
                     }
                 }

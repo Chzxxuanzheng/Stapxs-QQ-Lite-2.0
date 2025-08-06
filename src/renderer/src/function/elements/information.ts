@@ -1,5 +1,4 @@
 import { SessionBox } from '../model/box'
-import  type { Message } from '../model/message'
 import { ForwardSeg } from '../model/seg'
 import { Session } from '../model/session'
 import { optDefault } from '../option'
@@ -64,7 +63,6 @@ export interface RunTimeDataElem {
         lastHeartbeatTime?: number
         backTimes: number
     }
-    messageList: Message[]
     mergeMsgStack: ForwardSeg[]
     mergeMessageImgList?: any[] | undefined
     stickerCache?: any[]
