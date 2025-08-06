@@ -1325,7 +1325,6 @@ const userInfoPanFunc: UserInfoPan = {
                     message,
                     this.chat,
                 )
-                runtimeData.messageList.push(selfMsg)
 
                 // 提示
                 const popInfo = {

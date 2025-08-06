@@ -192,13 +192,15 @@ const noticeFunctions = {
         const msgId = msg.message_id
         const emojiList = msg.likes
         // 寻找消息
-        runtimeData.messageList.forEach((item) => {
-            if (item.message_id === msgId) {
-                if (item instanceof Msg) {
-                    item.emojis = emojiList
+        for (const session of Session.activeSessions) {
+            for (const msg of session.messageList) {
+                if (msg.message_id === msgId) {
+                    if (msg instanceof Msg) {
+                        msg.emojis = emojiList
+                    }
                 }
             }
-        })
+        }
     },
 
     /**
@@ -552,7 +554,6 @@ const baseRuntime = {
     loginInfo: {} as unknown as {nickname: string, uin: number},
     botInfo: {},
     sysConfig: {} as Record<keyof typeof optDefault, any | null>,
-    messageList: [],
     popBoxList: [],
     mergeMsgStack: [],
     inch: getInch(),
@@ -576,6 +577,5 @@ export function resetRimtime(resetAll = false) {
         runtimeData.onMsgList = reactive([])
         runtimeData.groupAssistList = reactive([])
         runtimeData.loginInfo = reactive({} as unknown as {nickname: string, uin: number})
-        runtimeData.messageList = reactive([])
     }
 }

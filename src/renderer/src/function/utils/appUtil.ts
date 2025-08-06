@@ -17,7 +17,8 @@ import {
     hslToRgb,
     callBackend,
     rgbToHsl,
-    addBackendListener
+    addBackendListener,
+    pastTimeFormat
 } from '@renderer/function/utils/systemUtil'
 import { changeSession, sendMsgRaw } from './msgUtil'
 import { parseMsg } from '../sender'
@@ -32,6 +33,9 @@ import {
     toRaw,
     Directive,
     watchEffect,
+    onUnmounted,
+    ComputedRef,
+    computed,
 } from 'vue'
 
 const popInfo = new PopInfo()
@@ -1261,6 +1265,34 @@ export function useBaseDebounced<T>(getValue: () => T, delay: number = 500): Sha
     })
     return result
 }
+
+/**
+ * 自动卸载的定时器
+ * @param callback 回调
+ * @param interval 计时
+ * @returns
+ */
+export function useInterval(
+    callback: () => void,
+    interval: number
+): ReturnType<typeof setInterval> {
+    const timer = setInterval(callback, interval)
+    onUnmounted(() => {
+        clearInterval(timer)
+    })
+    return timer
+}
+
+export function usePasttime(time: number): ComputedRef<string> {
+    const trigger = ref(0)
+    useInterval(() => {
+        trigger.value++
+    }, 1000 * 10)
+    return computed(() => {
+        trigger.value
+        return pastTimeFormat(time)
+    })
+}
 //#endregion
 
 //#region == v命令封装 ======================================
@@ -1493,4 +1525,4 @@ export const vOverflowHide: Directive<HTMLElement, undefined> = {
         delete (el as any)._vOverflowHideController
     }
 }
-//#endregion`
+//#endregion

@@ -7,7 +7,11 @@
  */
 
 import pinyin from 'tiny-pinyin'
-import { getTimeConfig, getTrueLang, getViewTime } from '../utils/systemUtil'
+import {
+    getTimeConfig,
+    getTrueLang,
+    getViewTime
+} from '../utils/systemUtil'
 
 export class TimeoutSet<T> {
     private data: Map<T, number> = new Map()

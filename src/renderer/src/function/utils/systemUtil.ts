@@ -381,7 +381,7 @@ const year = day * 365
  */
 export function getTimeConfig(date: Date) {
     // 倒计时型
-    if (date.getTime() < 100 * 365 * 24 * 3600 * 1000) {
+    if (date.getTime() < 50 * year) {
         const base = {} as Intl.DateTimeFormatOptions
         const time = date.getTime()
         if (true && time < hour) base.second = 'numeric'
@@ -417,6 +417,19 @@ export function getTimeConfig(date: Date) {
         }
     }
     return base
+}
+
+export function pastTimeFormat(time: number): string {
+    const pastTime = Date.now() - time
+    if (pastTime <= 30 * second) return i18n.global.t('刚刚')
+    else if (pastTime <= minute) return i18n.global.t('1分钟前')
+    else if (pastTime <= 10 * minute) return (
+        Math.floor(pastTime / minute) + i18n.global.t('分钟前')
+    )
+
+    const config = getTimeConfig(new Date(time))
+    const lang = getTrueLang()
+    return Intl.DateTimeFormat(lang, config).format(time)
 }
 
 /**

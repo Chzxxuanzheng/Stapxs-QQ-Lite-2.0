@@ -1424,3 +1424,12 @@ msgstr ""
 
 msgid "移除盒子"
 msgstr ""
+
+msgid "刚刚"
+msgstr ""
+
+msgid "1分钟前"
+msgstr ""
+
+msgid "分钟前"
+msgstr ""

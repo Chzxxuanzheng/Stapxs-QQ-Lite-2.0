@@ -904,7 +904,7 @@ defineExpose({
 
             async showPock() {
                 // 如果是最后一条消息并且在最近发送
-                if (this.data.uuid != runtimeData.messageList.at(-1)?.uuid) return
+                if (this.data.uuid != runtimeData.nowChat?.messageList.at(-1)?.uuid) return
                 if (!this.data.time) return
                 if ((new Date().getTime() - getViewTime(this.data.time.time)) / 1000 < 5) return
 
