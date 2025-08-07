@@ -662,9 +662,11 @@ const userInfoPanFunc: UserInfoPan = {
                 // 如果距离底部大于20vh，则不自动滚动
                 if (distanceToBottom > 20 * vh) return
 
-                nextTick(() => {
-                    // 等待下一次 DOM 更新循环
-                    this.scrollBottom(true)
+                nextTick(()=>{
+                    // 等待渲染完成
+                    setTimeout(() => {
+                        this.scrollBottom(true)
+                    }, 100)
                 })
             })
         },
@@ -690,6 +692,10 @@ const userInfoPanFunc: UserInfoPan = {
                 // 聚焦输入框
                 // PS: 有虚拟键盘的设备会弹键盘,要做判断
                 if (shouldAutoFocus()) this.toMainInput()
+                // 滑动到底部
+                nextTick(() => {
+                    this.scrollBottom(false)
+                })
             },
             /**
              * 消息区滚动
