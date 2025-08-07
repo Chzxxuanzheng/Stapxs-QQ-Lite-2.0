@@ -148,9 +148,7 @@ export async function reloadUsers(useCache: boolean = true) {
     // 保存当前会话信息
     const nowChatId = runtimeData.nowChat?.id
 
-    // 清除旧数据
-    Session.clear()
-
+    // 拉取新数据
     const task: Promise<void>[] = []
     const friendData: any[] = []
     const groupData: any[] = []
@@ -197,6 +195,12 @@ export async function reloadUsers(useCache: boolean = true) {
         }
     })())
     await Promise.all(task)
+
+    // 清除旧数据
+    Session.clear()
+    SessionBox.clear()
+
+    // 生成新会话
     for (const item of groupData) {
         if (!GroupSession.getSessionById(item.group_id)) {
             new GroupSession(item.group_id, item.group_name, item.member_count)
@@ -250,27 +254,15 @@ export async function reloadUsers(useCache: boolean = true) {
         }
     }
 
+    // 加载收纳盒
+    SessionBox.load()
+
     // 更新当前会话
     if (nowChatId) {
         const session = Session.getSessionById(nowChatId)
         if (!session?.isActive) await session?.activate()
         runtimeData.nowChat = session
     }
-}
-
-/**
- * 刷新收纳盒列表
- */
-export function reloadSessionBoxs() {
-    // 加载用户列表
-    if (!login.status) return
-
-    // 清除旧数据
-    SessionBox.clear()
-
-
-    // 加载
-    SessionBox.load()
 }
 
 /**

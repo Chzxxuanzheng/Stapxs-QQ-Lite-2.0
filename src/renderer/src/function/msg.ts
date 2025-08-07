@@ -34,7 +34,6 @@ import {
     updateMenu,
     loadJsonMap,
     sendStatEvent,
-    reloadSessionBoxs,
 } from '@renderer/function/utils/appUtil'
 import { reactive, markRaw, defineAsyncComponent } from 'vue'
 import { PopInfo, PopType, Logger, LogType } from './base'
@@ -324,7 +323,6 @@ const msgFunctions = {
             if (barMsg != null) barMsg.click()
             // 加载列表消息
             await reloadUsers()
-            reloadSessionBoxs()
         }
     },
 
