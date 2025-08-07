@@ -36,6 +36,7 @@ import {
     onUnmounted,
     ComputedRef,
     computed,
+    WatchHandle,
 } from 'vue'
 
 const popInfo = new PopInfo()
@@ -1437,7 +1438,7 @@ export function createVSearch<T extends { match(query: string): boolean }>()
                 queryTxt.value = el.value.trim()
             }, {signal: controller.signal})
 
-            watchEffect(() => {
+            const stopWatchEffect = watchEffect(() => {
                 binding.value.forceUpdate
                 if (!queryTxt.value) {
                     binding.value.isSearch = false
@@ -1448,14 +1449,26 @@ export function createVSearch<T extends { match(query: string): boolean }>()
                         .filter(item => item.match(queryTxt.value)))
                 }
             })
+			const stopWatch = watch(()=>binding.value.isSearch, (isSearch) => {
+				if (!isSearch) {
+					binding.value.query = []
+				}
+			})
             ;(el as any)._vSearchController = controller
+            ;(el as any)._vStopWatch = { stopWatch, stopWatchEffect }
         },
         unmounted(el) {
             const controller = (el as any)._vSearchController
-            if (!controller) return
-
-            controller.abort()
-            delete (el as any)._vSearchController
+            const stopWatch = (el as any)._vStopWatch
+            if (controller) {
+                controller.abort()
+                delete (el as any)._vSearchController
+            }
+            if (stopWatch) {
+                (stopWatch.stopWatch as WatchHandle).stop();
+                (stopWatch.stopWatchEffect as WatchHandle).stop();
+                delete (el as any)._vStopWatch
+            }
         }
     }
 }
