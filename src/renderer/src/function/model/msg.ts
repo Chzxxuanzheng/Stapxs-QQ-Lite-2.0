@@ -62,8 +62,8 @@ export class Msg extends Message {
             else this.raw_message = this.generateRawMsg()
             this.message.forEach(seg => {
                 if (!(seg instanceof AtSeg)) return
-                if (seg.qq === 'all') this.atall = true
-                else if (seg.qq === String(runtimeData.loginInfo.uin)) this.atme = true
+                if (seg.user_id === 'all') this.atall = true
+                else if (seg.user_id === String(runtimeData.loginInfo.uin)) this.atme = true
             })
             if (data['message_type'] === 'group') {
                 this.session = Session.getSession('group', data['group_id'])
@@ -125,7 +125,7 @@ export class Msg extends Message {
             if (seg.text) return seg.text
             if (!(this.session instanceof GroupSession)) return seg.plaintext
 
-            const member = this.session.getUserById(Number(seg.qq))
+            const member = this.session.getUserById(Number(seg.user_id))
             if (member) return '@' + member.name
             return seg.plaintext
         }).join('')

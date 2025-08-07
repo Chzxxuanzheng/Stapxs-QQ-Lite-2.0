@@ -184,21 +184,21 @@ export class FaceSeg extends Seg {
 @registerSegType
 export class AtSeg extends Seg {
     static readonly type = 'at'
-    qq: string
+    user_id: string
     text?: string
     constructor(data: { qq: string, text?: string }) {
         super()
-        this.qq = data.qq
+        this.user_id = data.qq
         this.text = data.text
     }
 
     get plaintext(): string {
-        return `@${this.text ?? this.qq}`
+        return `@${this.text ?? this.user_id}`
     }
 
     serializeData() {
         return {
-            qq: this.qq
+            qq: this.user_id
         }
     }
 }

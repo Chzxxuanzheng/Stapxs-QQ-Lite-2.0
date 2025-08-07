@@ -121,11 +121,11 @@
                                 }" :icon="['fas', 'face-grin-wide']" />
                             </template>
                             <div v-else-if="item instanceof AtSeg"
-                                :class="getAtClass(item.qq)">
-                                <a :data-id="item.qq"
+                                :class="getAtClass(item.user_id)">
+                                <a :data-id="item.user_id"
                                     :data-group="data.session?.id"
-                                    @mouseenter="userInfoHoverHandle($event, getAtMember(item.qq))"
-                                    @mousemove="userInfoHoverHandle($event, getAtMember(item.qq))"
+                                    @mouseenter="userInfoHoverHandle($event, getAtMember(item.user_id))"
+                                    @mousemove="userInfoHoverHandle($event, getAtMember(item.user_id))"
                                     @mouseleave="userInfoHoverEnd($event)">{{ getAtName(item) }}</a>
                             </div>
                             <div v-else-if="item instanceof FileSeg" :class="{
@@ -554,7 +554,7 @@ defineExpose({
                 if (seg.text) return seg.text
                 if (!(this.data.session instanceof GroupSession)) return seg.plaintext
 
-                const member = this.data.session.getUserById(Number(seg.qq))
+                const member = this.data.session.getUserById(Number(seg.user_id))
                 if (member) return '@' + member.name
                 return seg.plaintext
             },
