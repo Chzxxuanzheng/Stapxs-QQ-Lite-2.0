@@ -156,6 +156,43 @@ export class ImgSeg extends Seg {
 }
 
 @registerSegType
+export class MfaceSeg extends Seg {
+    static readonly type = 'mface'
+    url: string
+    summary: string
+    packageId: number
+    id: string
+    key: string
+
+    constructor(data: { url: string, summary: string, packageId: number, id: string, key: string }) {
+        super()
+        this.url = stdUrl(data.url)
+        this.summary = data.summary
+        this.packageId = data.packageId
+        this.id = data.id
+        this.key = data.key
+    }
+
+    get plaintext(): string {
+        const { $t } = app.config.globalProperties
+        return this.summary ?? '[' + $t('表情') + ']'
+    }
+
+    get src(): string {
+        return this.url
+    }
+
+    serializeData() {
+        return {
+            url: this.url,
+            summary: this.summary,
+            emoji_package_id: this.packageId,
+            emoji_id: this.id,
+            key: this.key
+        }
+    }
+}
+@registerSegType
 export class FaceSeg extends Seg {
     static readonly type = 'face'
     text?: string

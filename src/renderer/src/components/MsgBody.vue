@@ -96,8 +96,8 @@
                             <div v-else-if="item instanceof MdSeg" v-once
                                 :id="getMdHTML(item.content, 'msg-md-' + data.uuid)"
                                 class="msg-md" />
-                            <img v-else-if="item instanceof ImgSeg && item.file == 'marketface'"
-                                :class=" imgStyle(data.message.length, index, item.asface) + ' msg-mface'"
+                            <img v-else-if="item instanceof MfaceSeg"
+                                :class=" imgStyle(data.message.length, index, true) + ' msg-mface'"
                                 :src="item.src"
                                 @load="imageLoaded"
                                 @error="imgLoadFail">
@@ -409,6 +409,7 @@ import {
     ImgSeg,
     JsonSeg,
     MdSeg,
+    MfaceSeg,
     ReplySeg,
     TxtSeg,
     VideoSeg,
