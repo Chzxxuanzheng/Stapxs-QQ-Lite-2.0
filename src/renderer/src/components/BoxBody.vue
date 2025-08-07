@@ -13,13 +13,13 @@
             'box-body': true,
             'open': open,
             'active': active,
-            'onmenu': !active && (onmenu || open),
+            'onmenu': !active && (onmenu || _open),
             'unmounted': from === 'message' && !data.isActive
         }"
         :style="{'--box-color': data.color}"
-        @click="data.length ? open = !open : undefined">
+        @click="data.length ? _open = !_open : undefined">
         <div>
-            <div :class="{'new': data.showNotice}" />
+            <div :class="{'new': showNotice}" />
             <font-awesome-icon :icon="['fas', data.icon]" />
             <div>
                 <div>
@@ -144,26 +144,14 @@ const emit = defineEmits<{
     userClick: [session: Session],
 }>()
 
-const open = ref(false)
+const _open = ref(false)
 const menu = inject<Ref<InstanceType<typeof FriendMenu> | undefined>>('friendMenu')
 //#endregion
 
 // 元素被打开时自动展开
-watch(()=>runtimeData.nowBox?.id, ()=>{
-    if (!runtimeData.nowBox) return
-    if(runtimeData.nowBox.id === data.id) {
-        open.value = true
-    } else {
-        open.value = false
-    }
-})
-
-// 无元素时强制关闭
-watch(()=>data.length, (newVal)=>{
-    if (newVal === 0) {
-        open.value = false
-    }
-})
+watch(()=>runtimeData.nowBox?.id, autoOpenClose)
+// 初次加载时自动展开
+autoOpenClose()
 
 const onmenu = computed(()=>{
     if (!menu?.value) return false
@@ -171,28 +159,47 @@ const onmenu = computed(()=>{
     return menu.value.selectBox.id === data.id
 })
 const active = computed(() => {
+    if (from !== 'message') return false
     return runtimeData.nowBox?.id === data.id
 })
+const open = computed(() => {
+    if (data.length === 0) return false
+    return _open.value
+})
+const showNotice = computed(() => {
+    if (from !== 'message') return false
+    return data.showNotice
+})
+
+function autoOpenClose() {
+    if (from !== 'message') return
+    if (!runtimeData.nowBox) return
+    if(runtimeData.nowBox.id === data.id) {
+        _open.value = true
+    } else {
+        _open.value = false
+    }
+}
 
 /**
  * 判断当前收纳盒是否打开
  */
 function isOpen() {
-    return open.value
+    return _open.value
 }
 
 /**
  * 关闭收纳盒
  */
 function closeBox() {
-    open.value = false
+    _open.value = false
 }
 
 /**
  * 打开收纳盒
  */
 function openBox() {
-    open.value = true
+    _open.value = true
 }
 
 defineExpose({

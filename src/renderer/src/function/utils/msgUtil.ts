@@ -9,9 +9,9 @@ import { callBackend } from './systemUtil'
 import { Msg, SelfMsg } from '../model/msg'
 import { Message } from '../model/message'
 import { Seg } from '../model/seg'
-import { Session, UserSession } from '../model/session'
+import { GroupSession, Session, UserSession } from '../model/session'
 import { IUser } from '../model/user'
-import { SessionBox } from '../model/box'
+import { BubbleBox, SessionBox } from '../model/box'
 
 const logger = new Logger()
 
@@ -464,6 +464,21 @@ export function changeSession(session: Session, fromBox?: SessionBox) {
     if (!session.isActive) session.activate()
     runtimeData.nowChat = session
 
+    // 补加列表没有的会话时,盒子切换
+    if (!fromBox && !session.alwaysTop) {
+        const box = session.boxs.at(0)
+
+        // 自己有收纳盒,应当会自己出现在自己的收纳盒中
+        if (box) {
+            runtimeData.nowBox = box
+        }else if (
+            session instanceof GroupSession && runtimeData.sysConfig.bubble_sort_user
+        ) {
+            // 群收纳盒特殊适配
+            runtimeData.nowBox = BubbleBox.instance
+        }
+    }
+
     // 清理通知
     callBackend(undefined, 'sys:closeAllNotice', false, session.id)
 }
@@ -473,6 +488,7 @@ export function changeSession(session: Session, fromBox?: SessionBox) {
  */
 export function closeSession() {
     runtimeData.nowChat = undefined
+    runtimeData.nowBox = undefined
 }
 
 /**

@@ -58,6 +58,7 @@
                     v-if="runtimeData.sysConfig.bubble_sort_user"
                     v-menu.prevent="event => menu?.open('message', BubbleBox.instance, event)"
                     :data="markRaw(BubbleBox.instance)"
+                    key="inMessage-bubble-box"
                     from="message"
                     @user-click="
                         (session)=>userClick(session, BubbleBox.instance)" />
@@ -72,7 +73,7 @@
                         @click="userClick(item)" />
                     <BoxBody
                         v-else-if="item instanceof SessionBox"
-                        :key="'box-' + item.id"
+                        :key="'inMessage-box-' + item.id"
                         ref="sessionBoxs"
                         v-menu.prevent="event => menu?.open('message', item, event)"
                         :data="item"
@@ -220,31 +221,27 @@ function reflashSessionList() {
  * @param data 会话对象
  */
 function userClick(data: Session, fromBox?: SessionBox) {
-    const id = data.id
-    if (id != runtimeData.nowChat?.id) {
-        if (runtimeData.tags.openSideBar) {
-            openLeftBar()
-        }
-        if (runtimeData.nowChat === data) return
+    if (runtimeData.tags.openSideBar) {
+        openLeftBar()
+    }
 
-        // 清除新消息标记
-        data.setRead()
-        // 关闭所有通知
-        new Notify().closeAll((data.id).toString())
+    // 清除新消息标记
+    data.setRead()
+    // 关闭该会话所有通知
+    new Notify().closeAll((data.id).toString())
 
-        // 更新聊天框
-        emit('userClick', data, fromBox)
-        // 重置消息面板
-        // PS：这儿的作用是在运行时如果切换到了特殊面板，在点击联系人的时候可以切回来
-        if (
-            runtimeData.sysConfig.chatview_name != '' &&
-            runtimeData.sysConfig.chatview_name !=
-                decodeURIComponent(getOpt('chatview_name') ?? '')
-        ) {
-            runtimeData.sysConfig.chatview_name =
-                decodeURIComponent(getOpt('chatview_name') ?? '')
-            runOpt('chatview_name', decodeURIComponent(getOpt('chatview_name') ?? ''))
-        }
+    // 更新聊天框
+    emit('userClick', data, fromBox)
+    // 重置消息面板
+    // PS：这儿的作用是在运行时如果切换到了特殊面板，在点击联系人的时候可以切回来
+    if (
+        runtimeData.sysConfig.chatview_name != '' &&
+        runtimeData.sysConfig.chatview_name !=
+            decodeURIComponent(getOpt('chatview_name') ?? '')
+    ) {
+        runtimeData.sysConfig.chatview_name =
+            decodeURIComponent(getOpt('chatview_name') ?? '')
+        runOpt('chatview_name', decodeURIComponent(getOpt('chatview_name') ?? ''))
     }
 }
 

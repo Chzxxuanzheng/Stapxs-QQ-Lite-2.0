@@ -1970,8 +1970,10 @@ const userInfoPanFunc: UserInfoPan = {
              */
             exitWin() {
                 if(this.tags.openChatInfo) {
+                    // 会话信息栏
                     this.switchChatInfoPan()
                 } else if(this.refs().mergePan?.isMergeOpen()) {
+                    // 合并转发栏
                     this.refs().mergePan?.closeMergeMsg()
                     setTimeout(() => {
                         const chatPan = document.getElementById('chat-pan')
@@ -1981,6 +1983,7 @@ const userInfoPanFunc: UserInfoPan = {
                         }
                     }, 500)
                 } else {
+                    // 自身
                     runtimeData.tags.openSideBar = true
                     closeSession()
                     new Logger().add(LogType.UI, '右滑打开侧边栏触发完成')
