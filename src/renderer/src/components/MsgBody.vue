@@ -636,6 +636,13 @@ defineExpose({
              */
             imageLoaded(event: Event) {
                 const img = event.target as HTMLImageElement
+				// 计算图片宽度
+				const vh = document.documentElement.clientHeight || document.body.clientHeight
+				const imgHeight = img.naturalHeight || img.height
+				let imgWidth = img.naturalWidth || img.width
+				if (imgHeight > vh * 0.35)
+					imgWidth = (imgWidth * (vh * 0.35)) / imgHeight
+				img.setAttribute('style', `--width: ${imgWidth}px`)
                 // eslint-disable-next-line vue/require-explicit-emits
                 this.$emit('imageLoaded', img.offsetHeight)
             },

@@ -209,7 +209,7 @@ div.rotate > div > svg {
     margin: -10px;
 }
 .msg-img.face {
-    max-width: calc(50% + 20px);
+	width: calc(var(--width) / 2 + 20px);
 }
 
 .msg-face {
