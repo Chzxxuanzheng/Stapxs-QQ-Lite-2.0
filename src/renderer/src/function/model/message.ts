@@ -17,14 +17,12 @@ export abstract class Message {
      */
     readonly abstract type: string
     readonly uuid: string = uuid()
-    sub_type?: string
     abstract session?: Session
     time?: Time
     message_id?: string
-    constructor(data: object) {
-        if (data['time']) this.time = new Time(data['time'])
-        if (data['message_id']) this.message_id = String(data['message_id'])
-        if (data['sub_type']) this.sub_type = data['sub_type']
+    constructor(data: {message_id?: string, time?: number}) {
+		if (data.message_id) this.message_id = data.message_id
+		if (data.time && !isNaN(data.time)) this.time = new Time(data.time)
     }
 
     abstract get preMsg(): string

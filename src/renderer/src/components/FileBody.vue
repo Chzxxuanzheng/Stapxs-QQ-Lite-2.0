@@ -58,7 +58,7 @@
             <template v-if="folderItems !== undefined">
                 <div v-for="sub_item in folderItems"
                     :key="'sub_file-' + sub_item.id">
-                    <FileBody :item="sub_item" />
+                    <FileBody :item="markRaw(item)" />
                 </div>
             </template>
             <div v-else class="loading" style="opacity: 0.9;">
@@ -76,7 +76,6 @@ import { computed } from 'vue'
 
 const { item } = defineProps<{
     item: GroupFile | GroupFileFolder
-    // parent?: GroupFileFolder
 }>()
 
 const downloadPercent = computed(() => {

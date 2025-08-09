@@ -34,23 +34,6 @@
                     </option>
                 </select>
             </div>
-            <div class="opt-item">
-                <font-awesome-icon :icon="['fas', 'gear']" />
-                <div>
-                    <span>{{ $t('解析配置') }}</span>
-                    <span>{{
-                        $t('不同框架之间的化学反应我们将其称之为达利园效应')
-                    }}</span>
-                </div>
-                <select v-model="jsonMapName" @change="changeJsonMap">
-                    <option v-if="jsonMapName == ''" value="">
-                        {{ $t('未连接') }}
-                    </option>
-                    <option v-for="item in getPathMapList()" :key="item" :value="item">
-                        {{ item.replace('Chat', '') }}
-                    </option>
-                </select>
-            </div>
             <div v-if="!runtimeData.tags.proxyPort" class="opt-item" :class="checkDefault('proxyUrl')">
                 <font-awesome-icon :icon="['fas', 'route']" />
                 <div>
@@ -150,24 +133,6 @@
         </div>
         <div class="ss-card">
             <header>{{ $t('调试') }}</header>
-            <div class="opt-item">
-                <font-awesome-icon :icon="['fas', 'paper-plane']" />
-                <div>
-                    <span>{{ $t('发送原始消息') }}</span>
-                    <span>{{ $t('咻 ——') }}</span>
-                </div>
-                <input v-model="ws_text" class="ss-input" style="width: 150px"
-                    type="text" @keyup="sendTestWs">
-            </div>
-            <div class="opt-item">
-                <font-awesome-icon :icon="['fas', 'paper-plane']" />
-                <div>
-                    <span>{{ $t('接收原始消息') }}</span>
-                    <span>{{ $t('咻咻 ——') }}</span>
-                </div>
-                <input v-model="parse_text" class="ss-input" style="width: 150px"
-                    type="text" @keyup="sendTestParse">
-            </div>
             <div class="opt-item">
                 <font-awesome-icon :icon="['fas', 'envelope']" />
                 <div>
@@ -277,7 +242,6 @@ import {
     checkDefault,
     optDefault,
 } from '@renderer/function/option'
-import { Connector } from '@renderer/function/connect'
 import { PopInfo, PopType } from '@renderer/function/base'
 import { runtimeData, dispatch } from '@renderer/function/msg'
 import { BrowserInfo, detect } from 'detect-browser'
@@ -341,7 +305,6 @@ watch(() => proxyUrl.value, () => {
         data() {
             return {
                 dev: import.meta.env.DEV,
-                jsonMapName: runtimeData.jsonMap?.name ?? '',
 
                 checkDefault: checkDefault,
                 BotMsgType: BotMsgType,
@@ -353,31 +316,7 @@ watch(() => proxyUrl.value, () => {
                 appmsg_text: '',
             }
         },
-        mounted() {
-            this.$watch(
-                () => runtimeData.jsonMap?.name,
-                () => { this.jsonMapName = runtimeData.jsonMap?.name ?? '' },
-            )
-        },
         methods: {
-            sendTestWs(event: KeyboardEvent) {
-                // 发送测试 WS 消息
-                if (event.keyCode === 13 && this.ws_text !== '') {
-                    const info = JSON.parse(this.ws_text)
-                    this.ws_text = ''
-                    // 修改 echo 防止被消息处理机处理
-                    info.echo = 'websocketTest'
-                    Connector.sendRawJson(JSON.stringify(info))
-                }
-            },
-            sendTestParse(event: KeyboardEvent) {
-                // 发送测试解析消息
-                if (event.keyCode === 13 && this.parse_text !== '') {
-                    const info = JSON.parse(this.parse_text)
-                    dispatch(info)
-                    this.parse_text = ''
-                }
-            },
             sendTestAppmsg(event: KeyboardEvent) {
                 if (event.keyCode === 13 && this.appmsg_text !== '') {
                     new PopInfo().add(PopType.INFO, this.appmsg_text, false)
@@ -485,15 +424,13 @@ watch(() => proxyUrl.value, () => {
                     }
                 }
 
+                // TODO: botInfo改为适配器信息
                 info += 'Application Info:\n'
                 info += `    Uptime            -> ${Math.floor(((new Date().getTime() - uptime) / 1000) * 100) / 100} s\n`
                 info += `    Package Version   -> ${packageInfo.version}\n`
                 info += `    Service Work      -> ${runtimeData.tags.sw}\n`
 
                 info += 'Backend Info:\n'
-                info += `    Bot Info Name     -> ${runtimeData.botInfo.app_name}\n`
-                info += `    Bot Info Version  -> ${runtimeData.botInfo.app_version !== undefined ? runtimeData.botInfo.app_version : runtimeData.botInfo.version}\n`
-                info += `    Loaded Config     -> ${runtimeData.jsonMap?.name}\n`
 
                 info += 'View Info:\n'
                 info += `    Doc Width         -> ${document.getElementById('app')?.offsetWidth} px\n`
@@ -667,20 +604,6 @@ watch(() => proxyUrl.value, () => {
                     case BotMsgType.Array:
                         return this.$t('Array 数组')
                 }
-            },
-            getPathMapList() {
-                const pathMap = import.meta.glob('@renderer/assets/pathMap/*.yaml')
-                const pathMapList: string[] = []
-                Object.keys(pathMap).forEach((key: string) => {
-                    const name = key.split('/').pop()?.replace('.yaml', '')
-                    if (name === 'std') return
-                    if (name) pathMapList.push(name)
-                })
-                return pathMapList
-            },
-            changeJsonMap() {
-                const getPath = loadJsonMap(this.jsonMapName)
-                if (getPath) runtimeData.jsonMap = getPath
             },
             // 查看配置文件
             rmNeedlessOption() {

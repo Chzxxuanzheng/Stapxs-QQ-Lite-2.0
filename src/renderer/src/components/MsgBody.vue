@@ -104,7 +104,7 @@
                             <img v-else-if="item instanceof ImgSeg"
                                 :title="(!item.summary || item.summary == '') ? $t('预览图片') : item.summary"
                                 :alt="$t('图片')"
-                                :class=" imgStyle(data.message.length, index, item.asface)"
+                                :class=" imgStyle(data.message.length, index, item.isFace)"
                                 :src="item.src"
                                 @load="imageLoaded"
                                 @error="imgLoadFail"
@@ -372,13 +372,12 @@
                 </TransitionGroup>
             </div>
         </div>
-        <code style="display: none">{{ data.raw_message }}</code>
+        <code style="display: none">{{ data.plaintext }}</code>
     </div>
 </template>
 
 <script setup lang="ts">
 import Option from '@renderer/function/option'
-import CardMessage from './msg-component/CardMessage.vue'
 import app from '@renderer/main'
 import markdownit from 'markdown-it'
 
@@ -416,10 +415,12 @@ import {
     XmlSeg
 } from '@renderer/function/model/seg'
 import { Msg, SelfMsg} from '@renderer/function/model/msg'
-import { Member, Role, IUser } from '@renderer/function/model/user'
+import { Member, IUser } from '@renderer/function/model/user'
 import { wheelMask } from '@renderer/function/utils/input'
 import { GroupSession } from '@renderer/function/model/session'
 import { UserInfoPan } from '@renderer/pages/Chat.vue'
+import { Role } from '@renderer/function/adapter/enmu'
+import CardMessage from './msg-component/CardMessage.vue'
 
 //#region == 声明变量 ================================================================
 const {
@@ -470,11 +471,10 @@ const {
 )
 //#endregion
 //#region == 工具函数 ================================================================
-function getAtMember(id: string): IUser | number {
-    const user_id = Number(id)
-    const user = data.session?.getUserById(user_id)
+function getAtMember(id: number): IUser | number {
+    const user = data.session?.getUserById(id)
     if (user) return user
-    else return user_id
+    else return id
 }
 //#endregion
 //#region == 暴露给下面的script =======================================================

@@ -15,29 +15,22 @@
 import qed from '@renderer/assets/qed.txt?raw'
 
 import app from '@renderer/main'
-import Option, { optDefault } from './option'
+import { optDefault } from './option'
 
 import Umami from '@stapxs/umami-logger-typescript'
 
 import {
-    getMsgData,
     parseMsgList,
-    createMsg,
 } from '@renderer/function/utils/msgUtil'
 import {
-    callBackend,
     getInch,
     randomNum,
 } from '@renderer/function/utils/systemUtil'
 import {
     reloadUsers,
-    updateMenu,
-    loadJsonMap,
-    sendStatEvent,
 } from '@renderer/function/utils/appUtil'
 import { reactive, markRaw, defineAsyncComponent } from 'vue'
 import { PopInfo, PopType, Logger, LogType } from './base'
-import { Connector, login } from './connect'
 import {
     RunTimeDataElem,
     BotMsgType,
@@ -257,76 +250,6 @@ const noticeFunctions = {
 
 const msgFunctions = {
     /**
-     * 保存 Bot 信息
-     */
-    getVersionInfo: (_: string, msg: { [key: string]: any }) => {
-        const data = getMsgData('version_info', msg, msgPath.version_info)[0]
-
-        if (data) {
-            // 如果 runtime 存在（即不是第一次连接），且 app_name 不同，重置 runtime
-            resetRimtime(
-                runtimeData.botInfo.app_name != data.app_name && !login.status,
-            )
-
-            runtimeData.botInfo = data
-            if (Option.get('open_ga_bot') !== false) {
-                if (data.app_name !== undefined) {
-                    sendStatEvent('connect', { method: data.app_name })
-                } else {
-                    sendStatEvent('connect', { method: '（未知）' })
-                }
-            }
-            if (!login.status) {
-                // 尝试动态载入对应的 pathMap
-                if (data.app_name !== undefined) {
-                    const getMap = loadJsonMap(data.app_name)
-                    if (getMap != null) msgPath = getMap
-                }
-                // 继续获取后续内容
-                Connector.send('get_login_info', {}, 'getLoginInfo')
-            }
-        }
-    },
-
-    /**
-     * 保存账号信息
-     */
-    getLoginInfo: async (_: string, msg: { [key: string]: any }) => {
-        const msgBody = getMsgData('login_info', msg, msgPath.login_info)
-        if (msgBody) {
-            const data = msgBody[0]
-
-            // 如果 runtime 存在（即不是第一次连接），且 uin 不同，重置 runtime
-            resetRimtime(runtimeData.loginInfo.uin != data.uin && !login.status)
-
-            // 完成登陆初始化
-            runtimeData.loginInfo = data
-            login.status = true
-            // 显示账户菜单
-            updateMenu({
-                parent: 'account',
-                id: 'userName',
-                action: 'label',
-                value: data.nickname,
-            })
-            const title = `${data.nickname}（${data.uin}）`
-            if(runtimeData.tags.platform == 'web') {
-                document.title = title + '- Stapxs QQ Lite'
-            } else {
-                document.title = title
-                callBackend(undefined, 'win:setTitle', false, title)
-            }
-            // 结束登录页面的水波动画
-            clearInterval(runtimeData.tags.loginWaveTimer)
-            // 跳转标签卡
-            const barMsg = document.getElementById('bar-msg')
-            if (barMsg != null) barMsg.click()
-            // 加载列表消息
-            await reloadUsers()
-        }
-    },
-
-    /**
      * 获取收藏表情
      */
     getRoamingStamp: (
@@ -379,6 +302,12 @@ const handlers: Record<string, (payload: any, metaArgs?: string[]) => void> = {
 
 // ==========================================
 
+/**
+ *
+ * @deprecated
+ * @param list
+ * @returns
+ */
 export function getMessageList(list: any[] | undefined): Msg[] {
     list = parseMsgList(
         list,
@@ -432,7 +361,7 @@ async function newMsg(_: string, data: any) {
     if (data.detail_type == 'guild') return
 
     // 消息基础信息 ============================================
-    const msg = createMsg(data)
+    // const msg = createMsg(data)
     if (!msg) return logger.error(data, '消息解析失败')
     if (!msg.session) return logger.error(null, '消息没有 session 信息，无法处理消息')
     if (!msg.message_id) return logger.error(null, '消息没有 message_id 信息，无法处理消息')
@@ -548,9 +477,7 @@ const baseRuntime = {
     },
     systemNoticesList: undefined,
     onMsgList: [],
-    groupAssistList: [],
     loginInfo: {} as unknown as {nickname: string, uin: number},
-    botInfo: {},
     sysConfig: {} as Record<keyof typeof optDefault, any | null>,
     popBoxList: [],
     mergeMsgStack: [],
@@ -564,8 +491,7 @@ const baseRuntime = {
 export const runtimeData: RunTimeDataElem = reactive(baseRuntime)
 
 // 重置 Runtime，但是保留应用设置之类已经加载好的应用内容
-export function resetRimtime(resetAll = false) {
-    runtimeData.botInfo = reactive([])
+export function resetRuntime(resetAll = false) {
     runtimeData.watch = reactive(baseRuntime.watch)
     firstHeartbeatTime = -1
     heartbeatTime = -1
@@ -573,7 +499,6 @@ export function resetRimtime(resetAll = false) {
         runtimeData.tags = reactive(baseRuntime.tags)
         runtimeData.systemNoticesList = reactive([])
         runtimeData.onMsgList = reactive([])
-        runtimeData.groupAssistList = reactive([])
         runtimeData.loginInfo = reactive({} as unknown as {nickname: string, uin: number})
     }
 }

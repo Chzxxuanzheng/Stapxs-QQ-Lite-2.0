@@ -86,7 +86,7 @@
             </div>
         </div>
         <div :class="'friend-list-space' + (runtimeData.tags.openSideBar ? ' open' : '')">
-            <div v-if="!loginInfo.status || !runtimeData.nowChat" class="ss-card">
+            <div v-if="!driver.isConnected() || !runtimeData.nowChat" class="ss-card">
                 <font-awesome-icon :icon="['fas', 'inbox']" />
                 <span>{{ $t('选择联系人开始聊天') }}</span>
             </div>
@@ -110,10 +110,11 @@ import {
 } from 'vue'
 import { runtimeData } from '@renderer/function/msg'
 import { reloadUsers, vMenu } from '@renderer/function/utils/appUtil'
-import { login as loginInfo } from '@renderer/function/connect'
+import { loginInfo as loginInfo } from '@renderer/function/login'
 import { callBackend } from '@renderer/function/utils/systemUtil'
 import { SessionClass, Session } from '@renderer/function/model/session'
 import { vAutoFocus } from '@renderer/function/utils/appUtil'
+import driver from '@renderer/function/driver'
 
 const emit = defineEmits<{
     userClick: [session: Session],

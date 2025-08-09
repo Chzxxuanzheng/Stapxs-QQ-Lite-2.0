@@ -33,7 +33,31 @@ export function regIpcListener() {
         if (!connector && win) {
             connector = new Connector(win)
         }
-        connector?.connect(args.address, args.token)
+        connector?.connect(args.url)
+    })
+    ipcMain.on('onebot:get', (_, args: {
+        url: string,
+        data: Record<string, any>,
+        header: Record<string, any>
+    }) => {
+        return Connector.httpRequest(
+            args.url,
+            args.data,
+            args.header,
+            'GET'
+        )
+    })
+    ipcMain.on('onebot:post', (_, args:{
+        url: string,
+        data: Record<string, any>,
+        header: Record<string, any>
+    }) => {
+        return Connector.httpRequest(
+            args.url,
+            args.data,
+            args.header,
+            'POST'
+        )
     })
     // 获取系统平台
     ipcMain.handle('sys:getPlatform', () => {

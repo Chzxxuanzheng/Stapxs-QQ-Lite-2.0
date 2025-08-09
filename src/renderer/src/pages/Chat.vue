@@ -68,7 +68,7 @@
                 @scroll-to-msg="scrollToMsg"
                 @image-loaded="imgLoadedScroll"
                 @left-move="replyMsg"
-                @sender-double-click="(user)=>sendPoke(user.user_id)"
+                @sender-double-click="(user)=>sendPoke(user)"
                 @emoji-click="changeRespond" />
         </div>
         <!-- 滚动到底部悬浮标志 -->
@@ -236,7 +236,7 @@
                     </div>
                     <div v-if="chat instanceof UserSession"
                         :title="$t('戳一戳')"
-                        @click="sendPoke(chat.id)">
+                        @click="sendPrivatePoke()">
                         <font-awesome-icon :icon="['fas', 'fa-hand-point-up']" />
                     </div>
                     <div v-if="chat instanceof GroupSession"
@@ -339,7 +339,7 @@
                     <div><font-awesome-icon :icon="['fas', 'floppy-disk']" /></div>
                     <a>{{ $t('下载图片') }}</a>
                 </div>
-                <div v-show="tags.menuDisplay.revoke" @click="revokeMsg">
+                <div v-show="tags.menuDisplay.revoke" @click="recallMsg">
                     <div><font-awesome-icon :icon="['fas', 'xmark']" /></div>
                     <a>{{ $t('撤回') }}</a>
                 </div>
@@ -358,7 +358,7 @@
                     <div><font-awesome-icon :icon="['fas', 'at']" /></div>
                     <a>{{ $t('提及') }}</a>
                 </div>
-                <div v-show="tags.menuDisplay.poke" @click="menuSelectedUser ? sendPoke(menuSelectedUser!.user_id) : ''">
+                <div v-show="tags.menuDisplay.poke" @click="menuSelectedUser ? sendGroupPoke(menuSelectedUser as Member) : ''">
                     <div><font-awesome-icon :icon="['fas', 'fa-hand-point-up']" /></div>
                     <a>{{ $t('戳一戳') }}</a>
                 </div>
@@ -474,7 +474,6 @@ const userInfoPanFunc: UserInfoPan = {
     } from '@renderer/function/utils/msgUtil'
     import { scrollToMsg } from '@renderer/function/utils/appUtil'
     import { Logger, LogType, PopInfo, PopType } from '@renderer/function/base'
-    import { Connector } from '@renderer/function/connect'
     import { runtimeData } from '@renderer/function/msg'
     import {
         SQCodeElem,
@@ -484,10 +483,11 @@ const userInfoPanFunc: UserInfoPan = {
     import { Seg, FileSeg, TxtSeg, ImgSeg, FaceSeg } from '@renderer/function/model/seg'
     import { SystemNotice } from '@renderer/function/model/notice'
     import { wheelMask } from '@renderer/function/utils/input'
-    import { BaseUser, Member, Role, IUser } from '@renderer/function/model/user'
+    import { BaseUser, Member, IUser } from '@renderer/function/model/user'
     import { GroupSession, Session, UserSession } from '@renderer/function/model/session'
     import { Message } from '@renderer/function/model/message'
     import { Time } from '@renderer/function/model/data'
+    import { Role } from '@renderer/function/adapter/enmu'
 
     export interface UserInfoPan {
         open: (user: IUser|number, x: number, y: number) => void
@@ -524,7 +524,6 @@ const userInfoPanFunc: UserInfoPan = {
                 uuid,
                 Option: Option,
                 getFace: getFace,
-                Connector: Connector,
                 runtimeData: runtimeData,
                 getTimeConfig: getTimeConfig,
                 trueLang: getTrueLang(),
@@ -1094,31 +1093,27 @@ const userInfoPanFunc: UserInfoPan = {
             async changeRespond(id: string, msg: Msg) {
                 this.closeMsgMenu()
 
-                const hasSend = this.menuSelectedMsg?.emojis[id]?.meSend ?? false
+                if (!runtimeData.nowAdapter?.setResponse) {
+                    new PopInfo().add(
+                        PopType.ERR,
+                        this.$t('当前适配器不支持表情回应'),
+                        true,
+                    )
+                    return
+                }
+
+                const hasSend = msg?.emojis[id]?.meSend ?? false
 
                 // lgr 贴表情不会根据是否已经有了做判断,而且我拿不到 emoji_id,不知道也没有已经贴上去了
                 // 所以采用这个逻辑,添加成功按贴表情成功处理,否则尝试移除表情
-                const param = { // OB是个神马玩意?得写两套参数...
-                    message_id: msg.message_id,
-                    emoji_id: id,
-                    group_id: this.chat.id,
-                    code: id,
-                    is_add: !hasSend,
-                    set: !hasSend,
-                }
-                const re = await Connector.callApi('send_respond', param)
 
-                if (!re && !hasSend) {
-                    // 可能已经发送了,改成撤回
-                    param.is_add = false
-                    param.set = false
+                console.log(msg, id, !hasSend)
+                const re = await runtimeData.nowAdapter.setResponse(
+                    msg, id, !hasSend,
+                )
 
-                    const re = await Connector.callApi('send_respond', param)
-                    if (!re) return
-                    msg.setEmoji(id, false)
-                }
                 if (!re) return
-                msg.setEmoji(id, true)
+                msg.setEmoji(id, !hasSend)
             },
 
             /**
@@ -1133,17 +1128,22 @@ const userInfoPanFunc: UserInfoPan = {
                     button: [
                         {
                             text: app.config.globalProperties.$t('确定'),
-                            fun: () => {
-                                Connector.send(
-                                    'set_group_kick',
-                                    {
-                                        group_id: this.chat.id,
-                                        user_id: user.user_id,
-                                    },
-                                    'setGroupKick',
-                                )
+                            fun: async () => {
                                 this.closeUserMenu()
                                 runtimeData.popBoxList.shift()
+                                if (!runtimeData.nowAdapter?.kickMember) {
+                                    new PopInfo().add(
+                                        PopType.ERR,
+                                        this.$t('当前适配器不支持移除成员'),
+                                        true,
+                                    )
+                                    return
+                                }
+
+                                await runtimeData.nowAdapter.kickMember(
+                                    this.chat as GroupSession,
+                                    user as Member,
+                                )
                             },
                         },
                         {
@@ -1327,7 +1327,7 @@ const userInfoPanFunc: UserInfoPan = {
                     file.size
                 )]
 
-                const selfMsg = new SelfMsg(
+                const selfMsg = SelfMsg.create(
                     message,
                     this.chat,
                 )
@@ -1518,26 +1518,52 @@ const userInfoPanFunc: UserInfoPan = {
             /**
              * 发送戳一戳
              */
-            sendPoke(user_id: number) {
-                if (runtimeData.jsonMap.poke) {
-                    let name = runtimeData.jsonMap.poke.name
-                    if (
-                        this.chat.type == 'user' &&
-                        runtimeData.jsonMap.poke.private_name
-                    ) {
-                        name = runtimeData.jsonMap.poke.private_name
-                    }
-                    Connector.send(
-                        name,
-                        {
-                            user_id: user_id,
-                            group_id: this.chat.id,
-                        },
-                        'sendPoke',
-                    )
-                }
+            async sendPoke(user: IUser) {
                 this.tags.showMoreDetail = false
                 this.tags.menuDisplay.poke = false
+
+                if (this.chat instanceof GroupSession) {
+                    await this.sendGroupPoke(user)
+                } else if (this.chat instanceof UserSession) {
+                    await this.sendPrivatePoke()
+                }
+            },
+            async sendGroupPoke(target: IUser) {
+                if (!(target instanceof Member)) {
+                    new PopInfo().add(
+                        PopType.ERR,
+                        this.$t('无法戳一戳该用户'),
+                        true,
+                    )
+                    return
+                }
+                if (!runtimeData.nowAdapter?.sendGroupPoke) {
+                    new PopInfo().add(
+                        PopType.ERR,
+                        this.$t('当前适配器不支持戳一戳'),
+                        true,
+                    )
+                    return
+                }
+
+                await runtimeData.nowAdapter.sendGroupPoke(
+                    this.chat as GroupSession,
+                    target,
+                )
+            },
+            async sendPrivatePoke() {
+                if (!runtimeData.nowAdapter?.sendPrivatePoke) {
+                    new PopInfo().add(
+                        PopType.ERR,
+                        this.$t('当前适配器不支持戳一戳'),
+                        true,
+                    )
+                    return
+                }
+
+                await runtimeData.nowAdapter.sendPrivatePoke(
+                    this.chat as UserSession,
+                )
             },
 
             /**
@@ -1633,7 +1659,7 @@ const userInfoPanFunc: UserInfoPan = {
                 if (!msg) return
 
                 const popInfo = new PopInfo()
-                app.config.globalProperties.$copyText(msg.raw_message).then(
+                app.config.globalProperties.$copyText(msg.plaintext).then(
                     () => {
                         popInfo.add(PopType.INFO, this.$t('复制成功'), true)
                     },
@@ -1675,17 +1701,23 @@ const userInfoPanFunc: UserInfoPan = {
             /**
              * 撤回消息
              */
-            revokeMsg() {
+            async recallMsg() {
                 const msg = this.menuSelectedMsg
                 if (!msg) return
-                const msgId = msg.message_id
-                Connector.callApi('revoke_msg', { message_id: msgId })
-                    .catch(err=>{
-                        new Logger().error(err, '撤回消息失败：')
-                        new PopInfo().add(PopType.ERR, this.$t('撤回失败'), true)
-                    })
+
+                if (!runtimeData.nowAdapter?.recallMsg) {
+                    new PopInfo().add(
+                        PopType.ERR,
+                        this.$t('当前适配器不支持撤回消息'),
+                        true,
+                    )
+                    return
+                }
+
                 // 关闭消息菜单
                 this.closeMsgMenu()
+
+                await runtimeData.nowAdapter.recallMsg(msg as Msg)
             },
             jumpSearchMsg() {
                 this.closeSearch()

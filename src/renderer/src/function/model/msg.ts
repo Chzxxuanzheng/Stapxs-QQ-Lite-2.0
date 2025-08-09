@@ -6,21 +6,19 @@
  * @Description: 提供模型定义和类型声明，用于处理消息相关的数据结构。（虽然把整个项目的类型全重构了不太现实...但还是从现在开始规范些吧...）
  */
 
-import { Connector } from '../connect'
-import { createMsg } from '../utils/msgUtil'
-import { Logger, PopInfo, PopType } from '../base'
+import { PopInfo, PopType } from '../base'
 import { runtimeData } from '../msg'
 import app from '@renderer/main'
-import { BotMsgType } from '../elements/information'
 import { Time, TimeoutSet } from './data'
 import { AtSeg, ForwardSeg, ReplySeg, Seg } from './seg'
 import { autoReactive } from './utils'
-import { BaseUser, Member, type IUser } from './user'
+import { BaseUser, getSender, Member, type IUser } from './user'
 import { Message } from './message'
-import { GroupSession, Session, TempSession } from './session'
+import { GroupSession, Session } from './session'
 import { delay } from '../utils/systemUtil'
+import { EssenceData, MsgData, SegData } from '../adapter/interface'
+import { reactive } from 'vue'
 
-const logger = new Logger()
 type IconData = { icon: string, rotate: boolean, desc: string, color: string }
 
 /**
@@ -31,15 +29,14 @@ export class Msg extends Message {
     readonly type = 'message'
     message: Seg[]
     sender: IUser
-    raw_message: string
     atme: boolean = false
     atall: boolean = false
     imgList: {url: string, id: string}[] = []
     session?: Session
     emojis: { [key: string]: {count: number, meSend: boolean} } = {}
+    constructor(data: MsgData)
     constructor(segs: Seg[], sender: IUser, session?: Session, senderTime?: Time)
-    constructor(data: any)
-    constructor(arg1: Seg[] | any, arg2?: IUser, arg3?: Session, arg4?: Time) {
+    constructor(arg1: Seg[] | MsgData, arg2?: IUser, arg3?: Session, arg4?: Time) {
         if (arg2) {
             // constructor(segs: Seg[], sender: user, session?: Session, senderTime?: Time)
             const segs = arg1 as Seg[]
@@ -50,36 +47,33 @@ export class Msg extends Message {
             this.message = segs
             this.sender = sender
             this.session = session
-            this.raw_message = this.generateRawMsg()
         }else {
-            const data = arg1 as any
+            // constructor(data: MsgData)
+            const data = arg1 as MsgData
             super(data)
-            if (!data['sender']) throw new Error('发送者信息缺失')
-            if (!data['message']) throw new Error('消息内容缺失')
-            this.sender = BaseUser.parse(data['sender'])
-            this.message = Msg.createSegs(data['message'])
-            if (data['raw_message'] || data['raw_message'] === '') this.raw_message = data['raw_message']
-            else this.raw_message = this.generateRawMsg()
+            // 补充消息段
+            this.message = Msg.parseSegs(data['message'])
+
+            // 判断提及自己
             this.message.forEach(seg => {
-                if (!(seg instanceof AtSeg)) return
-                if (seg.user_id === 'all') this.atall = true
-                else if (seg.user_id === String(runtimeData.loginInfo.uin)) this.atme = true
+                if (seg.type === 'atall') this.atall = true
+                else if (
+                    seg instanceof AtSeg && Number(seg.user_id) === Number(runtimeData.loginInfo.uin)
+                ) this.atme = true
             })
-            if (data['message_type'] === 'group') {
-                this.session = Session.getSession('group', data['group_id'])
-            } else if (data['message_type'] === 'private') {
-                this.session = Session.getSession('user', data['user_id'])
-            } else if (data['group_id'] && data['user_id']) {
-                this.session = Session.getSession('temp', data['group_id'], data['user_id'])
-            }
-            // 更新Sender
-            if (!this.session) return
-            if (this.session instanceof GroupSession) {
-                const session = this.session as GroupSession
-                this.session.activate().then(()=>{
-                    this.sender = session.getUserById(this.sender.user_id) ?? this.sender
-                })
-            }
+            // 生成session
+            this.session = Session.getSession(
+                data.session_info.type,
+                data.session_info.id,
+                data.session_info.group_id
+            )
+
+            this.sender = new BaseUser(data.sender.id, data.sender.nickname)
+
+            this.session.activate().then(()=>{
+                // 获取发送者
+                this.sender = getSender(data.sender, this.session)
+            })
         }
         // TODO: 文件图片支持
         this.message.forEach(seg => {
@@ -92,27 +86,8 @@ export class Msg extends Message {
         })
     }
 
-    static createSegs(data: any[]): Seg[] {
-        return data.map(item => Seg.parse(item))
-    }
-
-    /**
-     * 生成raw_message,应在data里没raw_message时使用
-     * @returns
-     */
-    generateRawMsg(): string {
-        const { $t } = app.config.globalProperties
-        if (this.message.length === 0) return $t('空消息')
-        return this.message.map(seg => seg.toCq()).join('')
-    }
-
-    /**
-     * 序列化message为可发送内容
-     * @returns 序列化后的内容
-     */
-    serialize(): object[] | string {
-        if (runtimeData.tags.msgType == BotMsgType.Array) return this.message.map(item => item.toArray())
-        else return this.message.map(item => item.toCq()).join('')
+    static parseSegs(data: SegData[]): Seg[] {
+        return data.map(item => Seg.parse(item)).filter(seg => seg !== undefined) as Seg[]
     }
 
     /**
@@ -198,21 +173,6 @@ export class Msg extends Message {
     }
 
     /**
-     * 序列化转化为合并转发节点
-     * @returns 合并转发节点
-     */
-    toMergeForwardNode(){
-        return {
-            type: 'node',
-            data: {
-                user_id: String(this.sender.user_id),
-                nickname: this.sender.name,
-                content: this.serialize(),
-            }
-        }
-    }
-
-    /**
      * 重新设置表情数据
      * @param data 表情数据
      * @description 重新设置表情数据，清空之前的表情数据
@@ -249,26 +209,24 @@ export class Msg extends Message {
 /**
  * 用户自己发送的消息
  */
-@autoReactive
 export class SelfMsg extends Msg {
     state: 'notSend' | 'sending' | 'sent' | 'failed' = 'notSend'
     private static lock: number = 0
     declare session: Session
     static readonly sendIds: TimeoutSet<string> = new TimeoutSet()
 
-    constructor(segs: Seg[], session: Session) {
+    protected constructor(segs: Seg[], session: Session) {
         const sender = session.getMe()
         super(segs, sender, session)
     }
 
-    createSendParam(): any {
-        const param: any = this.session.createSendParam()
-        param.message = this.serialize()
-        return param
+    static create(segs: Seg[], session: Session): SelfMsg {
+        return reactive(new this(segs, session)) as unknown as SelfMsg
     }
-    getSendApi(): string {
-        if (!this.session) throw new Error('会话信息缺失')
-        return this.session.getSendApi()
+
+    static createMerge(messages: Msg[], session: Session): SelfMsg {
+        const segs = [new ForwardSeg(messages)]
+        return reactive(new this(segs, session)) as unknown as SelfMsg
     }
 
     /**
@@ -276,34 +234,27 @@ export class SelfMsg extends Msg {
      * @returns 是否发送成功
      */
     async send(): Promise<boolean> {
+        if (!runtimeData.nowAdapter) return false
         if (this.state === 'sending') throw new Error('该消息正在发送,不能发送')
         if (this.state === 'sent') throw new Error('该消息已经发送成功,不能发送')
         if (!this.session) throw new Error('会话信息缺失')
-        //#region 拼装参数 =======================================================
-        const param = this.createSendParam()
-        const api = this.getSendApi()
-        //#endregion
 
         //#region 发送消息 =======================================================
         this.state = 'sending'
         SelfMsg.lock++
-        let data: any|undefined
-        try {
-            [ data ] = await Connector.callApi(api, param)
-        } catch (err) {
-            logger.error(err as Error, '发送消息失败')
-        }
-        if (!data || !data['message_id']) {
+
+        const msgId = await runtimeData.nowAdapter.sendMsg(this)
+
+        if (!msgId) {
             SelfMsg.lock--
             this.state = 'failed'
             new PopInfo().add(PopType.ERR, '发送消息失败')
             return false
         }
-        this.message_id = String(data['message_id'])
+        this.message_id = msgId
         //#endregion
 
         //#region 获取发送后真实消息 ============================================
-        const msgId = String(data['message_id'])
         SelfMsg.sendIds.add(msgId)
         SelfMsg.lock--
         // 发送成功后获取消息内容
@@ -311,19 +262,11 @@ export class SelfMsg extends Msg {
         // 不知道为啥这里有时候会失败...重试5次吧
         for (let retry = 0; retry < 5; retry++) {
             try{
-                const [ msgData ] = await Connector.callApi('get_message', { message_id: msgId })
-                // 艹,原来这样获得的消息不包含群组id...
-                // 补加会话信息
-                if (this.session.type === 'group') msgData.group_id = this.session.id
-                else if (this.session.type === 'user') msgData.user_id = this.session.id
-                else if (this.session instanceof TempSession) {
-                    msgData.group_id = this.session.group_id
-                    msgData.user_id = this.session.id
-                }
-                if (msgData) {
-                    msg = createMsg(msgData)
-                    break
-                }
+                const msgData = await runtimeData.nowAdapter.getMsg(this.session, msgId)
+
+                if (!msgData) continue
+
+                msg = new Msg(msgData)
             } catch {/**/}
             await delay(100)
         }
@@ -335,7 +278,6 @@ export class SelfMsg extends Msg {
         }
         // 更新自身内容
         this.message = msg.message
-        this.raw_message = this.generateRawMsg()
         const oldImgs = this.imgList
         this.imgList = msg.imgList
         if (oldImgs.length > 0) this.session.updateImgList(oldImgs, this.imgList)
@@ -416,52 +358,6 @@ export class SelfMsg extends Msg {
 }
 
 /**
- * 合并转发需要重写序列化函数
- */
-export class SelfMergeMsg extends SelfMsg {
-    constructor(messages: Msg[], session: Session) {
-        const segs = [new ForwardSeg(messages)]
-        super(segs, session)
-    }
-
-    override serialize(): object[] | string {
-        // 没forward_id会抛异常,不抛代表有
-        try {
-            return super.serialize()
-        } catch (err) { /* empty */ }
-        if (runtimeData.tags.msgType == BotMsgType.CQCode) {
-            new PopInfo().add(PopType.ERR, app.config.globalProperties.$t('合并转发消息不支持CQCode格式'))
-            throw new Error('合并转发消息不支持CQCode格式')
-        }
-        const msgs = (this.message[0] as ForwardSeg).content
-        if (!msgs) throw new Error('合并转发消息内容缺失')
-
-        return msgs.map(msg => msg.toMergeForwardNode())
-    }
-
-    override generateRawMsg(): string {
-        const { $t } = app.config.globalProperties
-        return $t('合并转发消息')
-    }
-
-    override createSendParam(): any {
-        const seg = this.message[0] as ForwardSeg
-        if (seg.id) return super.createSendParam()
-
-        const param: any = this.session.createSendParam()
-        param.messages = this.serialize()
-        return param
-    }
-    override getSendApi(): string {
-        const seg = this.message[0] as ForwardSeg
-        if (seg.id) return super.createSendParam()
-
-        if (!this.session) throw new Error('会话信息缺失')
-        return this.session.getSendApi(true)
-    }
-}
-
-/**
  * 自身发送的预览消息
  */
 export class SelfPreMsg extends Msg {
@@ -478,11 +374,6 @@ export class SelfPreMergeMsg extends SelfPreMsg {
         const segs = [new ForwardSeg(messages)]
         super(segs.map(seg =>{seg.id='0';return seg}))
     }
-
-    override generateRawMsg(): string {
-        const { $t } = app.config.globalProperties
-        return $t('合并转发消息')
-    }
 }
 
 /**
@@ -491,22 +382,12 @@ export class SelfPreMergeMsg extends SelfPreMsg {
 export class EssenceMsg extends Msg {
     operatorTime: Time
     operator: BaseUser | Member
-    constructor(data: any, session: GroupSession) {
+    constructor(data: EssenceData, session: GroupSession) {
         // 变化为Msg用的格式
-        const segsData = data['content'].map((item: any) => {
-            return {
-                type: item['type'],
-                ...item['data']
-            }
-        })
-        const segs = Msg.createSegs(segsData)
-        const sender = session.getUserById(Number(data['sender_id'])) || new BaseUser(
-            data['sender_id'], data['sender_nick']
-        )
-        super(segs, sender, session, new Time(data['sender_time']))
-        this.operator = session.getUserById(Number(data['operator_id'])) || new BaseUser(
-            data['operator_id'], data['operator_nick']
-        )
-        this.operatorTime = new Time(data['operator_time'])
+        const segs = Msg.parseSegs(data.content)
+        const sender = getSender(data.sender, session)
+        super(segs, sender, session, new Time(data.sender_time))
+        this.operator = getSender(data.operator, session) as BaseUser | Member
+        this.operatorTime = new Time(data.operator_time)
     }
 }

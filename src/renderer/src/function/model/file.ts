@@ -8,12 +8,12 @@
 
 import app from '@renderer/main'
 import { PopInfo, PopType } from '../base'
-import { Connector } from '../connect'
-import { GroupFileElem, GroupFileFolderElem } from '../elements/information'
 import { downloadFile } from '../utils/appUtil'
 import { Time } from './data'
 import { getSizeFromBytes } from '../utils/systemUtil'
 import { shallowRef, ShallowRef } from 'vue'
+import { runtimeData } from '../msg'
+import { GroupFileData, GroupFolderData } from '../adapter/interface'
 
 export class GroupFile {
     type: string = 'file'
@@ -30,7 +30,7 @@ export class GroupFile {
 
     downloadPercent: ShallowRef<number|undefined> = shallowRef()
 
-    constructor(data: GroupFileElem, groupId: number) {
+    constructor(data: GroupFileData, groupId: number) {
         this.id = data.file_id
         this.name = data.file_name
         this.size = data.size
@@ -84,16 +84,16 @@ export class GroupFile {
      */
     async getUrl() {
         const { $t } = app.config.globalProperties
-        const [ data ] = await Connector.callApi('get_group_file_url', {
-            group_id: this.groupId,
-            file_id: this.id,
-        })
+        if (!runtimeData.nowAdapter) return
+
+        const data = await runtimeData.nowAdapter.getGroupFileUrl!(this)
 
         if (!data) {
             new PopInfo().add(PopType.ERR, $t('获取下载连接失败'))
             return false
         }
-        this.url = data.file_url
+
+        this.url = data
         return true
     }
 
@@ -119,7 +119,7 @@ export class GroupFileFolder {
 
     items: ShallowRef<(GroupFile | GroupFileFolder)[] | undefined> = shallowRef(undefined)
     isOpen: ShallowRef<boolean> = shallowRef(false)
-    constructor(data: GroupFileFolderElem, groupId: number) {
+    constructor(data: GroupFolderData, groupId: number) {
         this.id = data.folder_id
         this.name = data.folder_name
         this.count = data.count
@@ -134,32 +134,26 @@ export class GroupFileFolder {
         if (this.items.value !== undefined) return true
 
         const { $t } = app.config.globalProperties
-        const data = await Connector.callApi('group_folder_files', {
-            group_id: this.groupId,
-            folder_id: this.id,
-        })
+
+        if (!runtimeData.nowAdapter) return false
+
+        const data = await runtimeData.nowAdapter.getGroupFolderFile!(this.groupId, this.id)
         if (!data) {
             new PopInfo().add(PopType.ERR, $t('获取文件夹内容失败'))
             return false
         }
 
-        const out: (GroupFile | GroupFileFolder)[] = []
-
-        data.forEach((item) => {
-            if (item.file_id) {
-                out?.push(new GroupFile(item, this.groupId))
-            } else if (item.folder_id) {
-                out?.push(new GroupFileFolder(item, this.groupId))
-            }
-        })
-        out.sort(
-            (a, b) => {
-            if (a.type === 'folder' && b.type === 'file') return -1
-            if (a.type === 'file' && b.type === 'folder') return 1
+        const sort = (a, b) => {
             if (!a.createTime) return -1
             if (!b.createTime) return 1
             return b.createTime.time - a.createTime.time
-        })
+        }
+
+        const out: (GroupFile | GroupFileFolder)[] = [
+            ...data.folders.map(folder => new GroupFileFolder(folder, this.groupId)).sort(sort),
+            ...data.files.map(file => new GroupFile(file, this.groupId)).sort(sort),
+        ]
+
         this.items.value = out
 
         return true

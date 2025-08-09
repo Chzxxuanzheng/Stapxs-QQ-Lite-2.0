@@ -235,28 +235,6 @@ export function parseMsgList(
 }
 
 /**
- * 将收到的消息转为Msg对象
- * @param data
- * @returns
- */
-export function createMsg(data: any): Msg|undefined {
-    const msgPath = runtimeData.jsonMap
-    // 对消息进行一次格式化处理
-    let list = getMsgData(
-        'message_list',
-        buildMsgList([data]),
-        msgPath.message_list,
-    )
-    if (!list) return
-    list = parseMsgList(
-        list,
-        msgPath.message_list.type,
-        msgPath.message_value,
-    )
-    return list[0]
-}
-
-/**
  * 将消息对象转换为 CQCode
  * @param data
  * @returns CQCode 字符串

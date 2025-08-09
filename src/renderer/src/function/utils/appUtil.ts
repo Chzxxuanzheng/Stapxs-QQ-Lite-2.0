@@ -11,7 +11,7 @@ import WelPan from '@renderer/components/WelPan.vue'
 
 import { KeyboardInfo } from '@capacitor/keyboard'
 import { LogType, Logger, PopInfo, PopType } from '@renderer/function/base'
-import { Connector, login } from '@renderer/function/connect'
+import { loginInfo } from '../login'
 import { runtimeData } from '@renderer/function/msg'
 import {
     hslToRgb,
@@ -144,58 +144,34 @@ export function openLink(url: string, external = false) {
  */
 export async function reloadUsers(useCache: boolean = true) {
     // 加载用户列表
-    if (!login.status) return
+    if (!driver.isConnected()) return
+    if (!runtimeData.nowAdapter) return
 
     // 保存当前会话信息
     const nowChatId = runtimeData.nowChat?.id
 
     // 拉取新数据
     const task: Promise<void>[] = []
-    const friendData: any[] = []
-    const groupData: any[] = []
+    let friendData: FriendData[]|undefined
+    let groupData: GroupData[]|undefined
     // 加载群组列表
     task.push((async()=>{
-        const data = await Connector.callApi('group_list', {no_cache: !useCache})
-        for (const item of data) {
-            groupData.push({
-                group_id: item.group_id,
-                group_name: item.group_name,
-                member_count: item.member_count,
-            })
-        }
+        groupData = await runtimeData.nowAdapter!.getGroupList(useCache)
     })())
     // 加载好友列表
     task.push((async()=>{
-        let data = await Connector.callApi('friend_list', {no_cache: !useCache})
-        if (data !== undefined) {
-            for (const item of data) {
-                friendData.push({
-                    user_id: item.user_id,
-                    nickname: item.nickname,
-                    remark: item.remark,
-                    class_id: item.class_id[0],
-                    class_name: item.class_name[0],
-                })
-            }
-            return
-        }
-        // 好麻烦啊，写适配器必须提上日程
-        data = await Connector.callApi('friend_category', {})
-        for (const classItem of data) {
-            const class_id = classItem.categoryId
-            const class_name = classItem.categoryName
-            for (let i=0; i < classItem.user_ids.length; i++) {
-                friendData.push({
-                    user_id: classItem.user_ids[i],
-                    nickname: classItem.user_nicknames[i],
-                    remark: classItem.user_remark[i],
-                    class_id: class_id,
-                    class_name: class_name,
-                })
-            }
-        }
+        friendData = await runtimeData.nowAdapter!.getFriendList(useCache)
     })())
+    // 等待所有任务完成
     await Promise.all(task)
+
+	if (!groupData || !friendData) {
+		new PopInfo().add(
+			PopType.ERR,
+			app.config.globalProperties.$t('加载用户列表失败，请稍后再试。'),
+		)
+		return
+	}
 
     // 清除旧数据
     Session.clear()
@@ -246,7 +222,7 @@ export async function reloadUsers(useCache: boolean = true) {
         session.setAlwaysTop(true, false)
     }
 
-    // 设置通知开关
+    // 加载通知开关
     const noticeList = runtimeData.sysConfig?.notice_group[runtimeData.loginInfo.uin]
     if (noticeList) {
         for (const session of GroupSession.sessionList) {
@@ -453,7 +429,8 @@ export function createIpc() {
     })
     addBackendListener(undefined, 'bot:logout', () => {
         option.remove('auto_connect')
-        Connector.close()
+        if (!runtimeData.nowAdapter) return
+        runtimeData.nowAdapter.close()
     })
     addBackendListener(undefined, 'bot:quickReply', (event, data) => {
         const info = data ?? event.payload
@@ -494,15 +471,13 @@ export function createIpc() {
     })
     // 后端连接模式
     addBackendListener(undefined, 'onebot:onopen', (event, data) => {
-        const info = data ?? event.payload
-        Connector.onopen(info.address, info.token)
+        backendWs._onOpen(data ?? event.payload)
     })
     addBackendListener(undefined, 'onebot:onmessage', (event, message) => {
-        Connector.onmessage(message ?? event.payload)
+        backendWs._onMessage(message ?? event.payload)
     })
     addBackendListener(undefined, 'onebot:onclose', (event, data) => {
-        const info = data ?? event.payload
-        Connector.onclose(info.code, info.reason || info.message, info.address, info.token)
+        backendWs._onClose(data ?? event.payload)
     })
 }
 
@@ -517,12 +492,25 @@ export async function loadMobile() {
         addBackendListener('Onebot', 'onebot:event', (data) => {
             const msg = JSON.parse(data.data)
             switch(data.type) {
-                case 'onopen': Connector.onopen(login.address, login.token); break
-                case 'onmessage': Connector.onmessage(data.data); break
-                case 'onclose': Connector.onclose(msg.code, msg.message, login.address, login.token); break
+                case 'onopen':
+                    backendWs._onOpen({
+                        address: loginInfo.address,
+                    })
+                    break
+                case 'onmessage':
+                    backendWs._onMessage(data.data)
+                    break
+                case 'onclose':
+                    backendWs._onClose({
+                        code: msg.code,
+                        message: msg.message
+                    })
+                    break
                 case 'onerror': {
-                    login.creating = false
-                    popInfo.add(PopType.ERR, $t('连接失败') + ': ' + msg.type, false);
+                    backendWs._onClose({
+                        code: -1,
+                        message: $t('连接失败') + ': ' + msg.type
+                    })
                     break
                 }
                 case 'onServiceFound': setQuickLogin(msg.address, msg.port); break
@@ -656,8 +644,10 @@ import verticalCss from '@renderer/assets/css/append/mobile/append_mobile_vertic
 import { ActionType, LocalNotificationSchema } from '@capacitor/local-notifications'
 import { Session } from '../model/session'
 import { MenuEventData } from '../elements/information'
-import { Role } from '../model/user'
 import { SessionBox } from '../model/box'
+import driver, { backendWs } from '../driver'
+import { Role } from '../adapter/enmu'
+import { FriendData, GroupData } from '../adapter/interface'
 // import windowsCss from '@renderer/assets/css/append/mobile/append_windows.css?raw'
 /**
 * 装载补充样式
@@ -754,8 +744,8 @@ export async function loadAppendStyle() {
 * @param port 端口
 */
 function setQuickLogin(address: string, port: number) {
-    if(login.quickLogin != null)
-        login.quickLogin.push({ address: address, port: port })
+    if(loginInfo.quickLogin != null)
+        loginInfo.quickLogin.push({ address: address, port: port })
 }
 
 /**

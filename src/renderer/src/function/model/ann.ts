@@ -10,6 +10,7 @@ import app from '@renderer/main'
 import { GroupSession } from './session'
 import { Member } from './user'
 import { Time } from './data'
+import { GroupAnnouncementData } from '../adapter/interface'
 
 export class Ann {
     content: string
@@ -20,14 +21,7 @@ export class Ann {
     read?: boolean
     readNum?: number
 
-    constructor(data: {
-        content: string
-        img_id: string
-        time: number
-        sender: number
-        is_read?: boolean
-        read_num?: number
-    }, session: GroupSession) {
+    constructor(data: GroupAnnouncementData, session: GroupSession) {
         this.content = data.content
         this.imgId = data.img_id
         this.time = new Time(data.time)

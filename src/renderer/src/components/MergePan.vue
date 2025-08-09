@@ -453,7 +453,7 @@
                 if (!msg) return
 
                 const popInfo = new PopInfo()
-                app.config.globalProperties.$copyText(msg.raw_message).then(
+                app.config.globalProperties.$copyText(msg.plaintext).then(
                     () => {
                         popInfo.add(PopType.INFO, this.$t('复制成功'), true)
                     },

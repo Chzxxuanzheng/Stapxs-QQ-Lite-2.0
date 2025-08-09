@@ -97,21 +97,23 @@
                 <div :name="$t('成员')">
                     <div class="chat-info-tab-member">
                         <div class="search-view">
-                            <input :placeholder="$t('搜索 ……')" @input="search">
+                            <input
+                                v-search="searchInfo as any"
+                                :placeholder="$t('搜索 ……')">
                         </div>
-                        <div v-for="member in searchList.length > 0 ? searchList : chat.memberList"
+                        <div v-for="member in searchInfo!.isSearch ? searchInfo!.query : chat.memberList"
                             :key="'chatinfomlist-' + member.user_id" class="edit">
                             <img alt="nk" loading="lazy"
                                 :src="member.face">
                             <div>
-                                <a @click="startChat(member as Member)">{{ member.name }}</a>
+                                <a @click="startChat(member)">{{ member.name }}</a>
                                 <font-awesome-icon v-if="member.role === 'owner'" :icon="['fas', 'crown']" />
                                 <font-awesome-icon v-if="member.role === 'admin'" :icon="['fas', 'star']" />
                             </div>
                             <!-- 在手机端戳 id 就能触发 -->
-                            <span @click="clickMember(member as Member)">{{ member.user_id }}</span>
-                            <font-awesome-icon v-if="canEditMember(member.role)" :icon="['fas', 'wrench']" @click="clickMember(member as Member)" />
-                            <font-awesome-icon v-else :icon="['fas', 'copy']" @click="clickMember(member as Member)" />
+                            <span @click="clickMember(member)">{{ member.user_id }}</span>
+                            <font-awesome-icon v-if="canEditMember(member.role)" :icon="['fas', 'wrench']" @click="clickMember(member)" />
+                            <font-awesome-icon v-else :icon="['fas', 'copy']" @click="clickMember(member)" />
                         </div>
                     </div>
                 </div>
@@ -131,7 +133,7 @@
                         <template v-if="fileInfo">
                             <div v-for="item in fileInfo"
                                 :key="'file-' + item.id">
-                                <FileBody :item="item" />
+                                <FileBody :item="markRaw(item)" />
                             </div>
                         </template>
                         <div v-else class="loading" style="opacity: 0.9;">
@@ -147,18 +149,18 @@
                     </div>
                 </div>
             </BcTab>
-            <div v-if="showUserConfig && chat instanceof GroupSession" class="ss-card user-config show">
+            <div v-if="configMember && chat instanceof GroupSession" class="ss-card user-config show">
                 <div>
-                    <img alt="nk" :src="showUserConfig.face">
+                    <img alt="nk" :src="configMember.face">
                     <div>
-                        <a>{{ showUserConfig.name }}</a>
-                        <span>{{ showUserConfig.user_id }}</span>
+                        <a>{{ configMember.name }}</a>
+                        <span>{{ configMember.user_id }}</span>
                     </div>
                     <font-awesome-icon
                         style="margin-right: 20px;"
                         :icon="['fas', 'copy']"
-                        @click="copyText(showUserConfig.user_id)" />
-                    <font-awesome-icon :icon="['fas', 'angle-down']" @click="showUserConfig = null" />
+                        @click="copyText(configMember.user_id)" />
+                    <font-awesome-icon :icon="['fas', 'angle-down']" @click="configMember = undefined" />
                 </div>
                 <div>
                     <header>{{ $t('成员信息') }}</header>
@@ -170,11 +172,11 @@
                                 $t('啊吧啊吧……')
                             }}</span>
                         </div>
-                        <input v-model="showUserConfigRaw.card"
+                        <input v-model.trim="configCard"
                             style="width: 50%"
                             class="ss-input"
                             type="text"
-                            @change="updateMemberCard(showUserConfig as Member, showUserConfigRaw.card)">
+                            @change="updateMemberCard(configMember as Member, configCard)">
                     </div>
                     <div v-if="chat.getMe().role === 'owner'" class="opt-item">
                         <font-awesome-icon :icon="['fas', 'clipboard-list']" />
@@ -184,13 +186,13 @@
                                 $t('猪咪猪咪')
                             }}</span>
                         </div>
-                        <input v-model="showUserConfigRaw.title"
+                        <input v-model.trim="configTitle"
                             style="width: 50%"
                             class="ss-input"
                             type="text"
-                            @change="updateMemberTitle($event, showUserConfig as Member)">
+                            @change="updateMemberTitle(configMember as Member, configTitle)">
                     </div>
-                    <template v-if="canEditMember(showUserConfig.role)">
+                    <template v-if="canEditMember(configMember.role)">
                         <header>{{ $t('操作') }}</header>
                         <div class="opt-item">
                             <font-awesome-icon :icon="['fas', 'clipboard-list']" />
@@ -200,15 +202,14 @@
                                     $t('要让小猫咪不许说话几分钟呢？')
                                 }}</span>
                             </div>
-                            <input v-model="memberInfo.banMin"
+                            <input v-model.number="configBanMin"
                                 style="width: 50%"
                                 class="ss-input"
                                 type="text"
-                                @input="checkNumber"
-                                @change="banMumber($event, showUserConfig as Member)">
+                                @change="banMember(configMember as Member, configBanMin)">
                         </div>
                         <button class="ss-button"
-                            @click="removeUser(showUserConfig as Member, chat.id)">
+                            @click="removeUser(configMember as Member)">
                             {{ $t('移出群聊') }}
                         </button>
                     </template>
@@ -219,316 +220,270 @@
     </div>
 </template>
 
-<script lang="ts">
-// TODO: 改setup式，把as Reactive的变量改成ref
-    import app from '@renderer/main'
-    import BulletinBody from '@renderer/components/BulletinBody.vue'
-    import FileBody from '@renderer/components/FileBody.vue'
-    import OptInfo from './options/OptInfo.vue'
-    import BcTab from 'vue3-bcui/packages/bc-tab'
+<script setup lang="ts">
+import app from '@renderer/main'
+import BulletinBody from '@renderer/components/BulletinBody.vue'
+import FileBody from '@renderer/components/FileBody.vue'
+import OptInfo from './options/OptInfo.vue'
+import BcTab from 'vue3-bcui/packages/bc-tab'
 
-    import { Connector } from '@renderer/function/connect'
-    import { PopInfo, PopType } from '@renderer/function/base'
-    import { defineComponent, Reactive, ShallowRef, shallowRef } from 'vue'
-    import { delay, getTrueLang } from '@renderer/function/utils/systemUtil'
-    import { runtimeData } from '@renderer/function/msg'
-    import { GroupSession, Session, UserSession } from '@renderer/function/model/session'
-    import { Member, Role, User } from '@renderer/function/model/user'
-    import { Ann } from '@renderer/function/model/ann'
-    import { changeSession } from '@renderer/function/utils/msgUtil'
-    import { GroupFile, GroupFileFolder } from '@renderer/function/model/file'
+import { PopInfo, PopType } from '@renderer/function/base'
+import { ref, ShallowRef, shallowRef, markRaw, nextTick, shallowReactive } from 'vue'
+import { delay, getTrueLang } from '@renderer/function/utils/systemUtil'
+import { runtimeData } from '@renderer/function/msg'
+import { GroupSession, Session, UserSession } from '@renderer/function/model/session'
+import { Member, User } from '@renderer/function/model/user'
+import { Ann } from '@renderer/function/model/ann'
+import { changeSession } from '@renderer/function/utils/msgUtil'
+import { GroupFile, GroupFileFolder } from '@renderer/function/model/file'
+import { Role } from '@renderer/function/adapter/enmu'
+import { vSearch } from '@renderer/function/utils/appUtil'
 
-    export default defineComponent({
-        name: 'ViewInfo',
-        components: { BulletinBody, FileBody, OptInfo, BcTab },
-        props: {
-            chat: {
-                type: Object as () => Session,
-                required: true,
-            }
-        },
-        emits: ['close'],
-        data() {
-            let userInfo: User | undefined
-            if (this.chat instanceof UserSession)
-                userInfo = this.chat.useUserInfo()
-            let anns: ShallowRef<Ann[]>
-            if (this.chat instanceof GroupSession)
-                anns = this.chat.useAnn()
-            else
-                anns = shallowRef([])
-            let fileInfo: ShallowRef<(GroupFileFolder | GroupFile)[] | undefined>
-            if (this.chat instanceof GroupSession)
-                fileInfo = this.chat.useFile()
-            else
-                fileInfo = shallowRef(undefined)
-            return {
-                runtimeData: runtimeData,
-                trueLang: getTrueLang(),
-                isTop: false,
-                searchList: [] as Member[],
-                showUserConfig: null as Member | null,
-                showUserConfigRaw: {
-                    card: '',
-                    title: '',
+const { chat } = defineProps<{
+    chat: Session
+}>()
+const emit = defineEmits<{
+    close: []
+}>()
+const userInfo: ShallowRef<User | undefined> = (
+    chat instanceof UserSession ? chat.useUserInfo() : shallowRef(undefined)
+)
+const anns: ShallowRef<Ann[]> = (
+    chat instanceof GroupSession ? chat.useAnn() : shallowRef([])
+)
+const fileInfo: ShallowRef<(GroupFileFolder | GroupFile)[] | undefined> = (
+    chat instanceof GroupSession ? chat.useFile() : shallowRef(undefined)
+)
+
+const searchInfo =  chat instanceof GroupSession ? shallowReactive({
+    originList: chat.memberList,
+    query: shallowReactive([] as Member[]),
+    isSearch: false,
+}) : undefined
+
+const configMember = ref<Member | undefined>(undefined)
+const configTitle = ref<string>('')
+const configCard = ref<string>('')
+const configBanMin = ref<number>(0)
+
+const trueLang = getTrueLang()
+
+function $t(key: string, option: {[key: string]: string}={}) {
+    return app.config.globalProperties.$t(key, option)
+}
+
+/**
+ * 移出群聊
+ */
+function removeUser(mem: Member) {
+    const popInfo = {
+        title: $t('提醒'),
+        html: `<span>${$t('真的要将 {user} 移出群聊吗', { user: mem.name })}</span>`,
+        button: [
+            {
+                text: app.config.globalProperties.$t('确定'),
+                fun: async() => {
+                    if (!runtimeData.nowAdapter?.kickMember) {
+                        new PopInfo().add(PopType.INFO, $t('当前适配器不支持移除群成员'))
+                        return
+                    }
+
+                    await runtimeData.nowAdapter.kickMember(chat as GroupSession, mem)
+
+                    runtimeData.popBoxList.shift()
+                    await checkSetMemInfoResult()
                 },
-                memberInfo: {
-                    banMin: 0,
+            },
+            {
+                text: app.config.globalProperties.$t('取消'),
+                master: true,
+                fun: () => {
+                    runtimeData.popBoxList.shift()
                 },
-                GroupSession,
-                UserSession,
-                userInfo,
-                anns,
-                fileInfo,
-            }
+            },
+        ],
+    }
+    runtimeData.popBoxList.push(popInfo)
+}
+
+function copyText(text: string | number) {
+    const popInfo = new PopInfo()
+    app.config.globalProperties.$copyText(String(text)).then(
+        () => {
+            popInfo.add(PopType.INFO, $t('复制成功'), true)
         },
-        methods: {
-            /**
-             * 移出群聊
-             */
-            removeUser(mem: Member, group_id: number) {
-                const popInfo = {
-                    title: this.$t('提醒'),
-                    html: `<span>${this.$t('真的要将 {user} 移出群聊吗', { user: mem.name })}</span>`,
-                    button: [
-                        {
-                            text: app.config.globalProperties.$t('确定'),
-                            fun: async() => {
-                                await Connector.callApi('group_kick',{
-                                    group_id: group_id,
-                                    user_id: mem.user_id,
-                                    reject_add_request: false,
-                                })
-                                runtimeData.popBoxList.shift()
-                                await this.checkSetMemInfoResult()
-                            },
-                        },
-                        {
-                            text: app.config.globalProperties.$t('取消'),
-                            master: true,
-                            fun: () => {
-                                runtimeData.popBoxList.shift()
-                            },
-                        },
-                    ],
-                }
-                runtimeData.popBoxList.push(popInfo)
-            },
+        () => {
+            popInfo.add(PopType.ERR, $t('复制失败'), true)
+        },
+    )
+}
 
-            copyText(text: any) {
-                const popInfo = new PopInfo()
-                app.config.globalProperties.$copyText(String(text)).then(
-                    () => {
-                        popInfo.add(PopType.INFO, this.$t('复制成功'), true)
-                    },
-                    () => {
-                        popInfo.add(PopType.ERR, this.$t('复制失败'), true)
-                    },
-                )
-            },
+function banMember(mem: Member, banTime: number) {
+    if (banTime > 0) {
+        const popInfo = {
+            title: $t('操作'),
+            html: `<span>${$t('确认禁言？')}</span>`,
+            button: [
+                {
+                    text: $t('确认'),
+                    fun: async () => {
+                        runtimeData.popBoxList.shift()
+                        closeChatInfoPan()
 
-            banMumber(event: Event, mem: Member) {
-                const value = (event.target as HTMLInputElement).value
-                if (value !== '') {
-                    const num = parseInt(value)
-                    if (num > 0) {
-                        const popInfo = {
-                            title: this.$t('操作'),
-                            html: `<span>${this.$t('确认禁言？')}</span>`,
-                            button: [
-                                {
-                                    text: this.$t('确认'),
-                                    fun: async () => {
-                                        runtimeData.popBoxList.shift()
-                                        this.closeChatInfoPan()
-                                        await Connector.callApi('ban_member', {
-                                            group_id: this.chat.id,
-                                            user_id: mem.user_id,
-                                            duration: num * 60,
-                                        })
-                                    },
-                                },
-                                {
-                                    text: this.$t('取消'),
-                                    master: true,
-                                    fun: () => {
-                                        runtimeData.popBoxList.shift()
-                                    },
-                                },
-                            ],
+                        if (!runtimeData.nowAdapter?.banMember) {
+                            new PopInfo().add(PopType.INFO, $t('当前适配器不支持禁言成员'))
+                            return
                         }
-                        runtimeData.popBoxList.push(popInfo)
+
+                        await runtimeData.nowAdapter.banMember(
+                            chat as GroupSession, mem, banTime * 60
+                        )
+                    },
+                },
+                {
+                    text: $t('取消'),
+                    master: true,
+                    fun: () => {
+                        runtimeData.popBoxList.shift()
+                    },
+                },
+            ],
+        }
+        runtimeData.popBoxList.push(popInfo)
+    }
+}
+
+function updateMemberCard(mem: Member, newValue: string) {
+    const popInfo = {
+        title: $t('操作'),
+        html: `<span>${$t('确认修改昵称？')}</span>`,
+        button: [
+            {
+                text: $t('确认'),
+                fun: async () => {
+                    runtimeData.popBoxList.shift()
+                    closeChatInfoPan()
+                    if (!runtimeData.nowAdapter?.setMemberCard) {
+                        new PopInfo().add(PopType.INFO, $t('当前适配器不支持修改群昵称'))
+                        return
                     }
-                }
+                    await runtimeData.nowAdapter.setMemberCard(chat as GroupSession, mem, newValue)
+
+                    await checkSetMemInfoResult()
+                },
             },
-
-            updateMemberCard(mem: Member, newValue: string) {
-                const popInfo = {
-                    title: this.$t('操作'),
-                    html: `<span>${this.$t('确认修改昵称？')}</span>`,
-                    button: [
-                        {
-                            text: this.$t('确认'),
-                            fun: async () => {
-                                runtimeData.popBoxList.shift()
-                                this.closeChatInfoPan()
-                                await Connector.callApi('set_group_nickname', {
-                                    group_id: this.chat.id,
-                                    user_id: mem.user_id,
-                                    card: newValue,
-                                })
-                                await this.checkSetMemInfoResult()
-                            },
-                        },
-                        {
-                            text: this.$t('取消'),
-                            master: true,
-                            fun: () => {
-                                this.showUserConfigRaw.card = mem.card?.toString() ?? ''
-                                runtimeData.popBoxList.shift()
-                            },
-                        },
-                    ],
-                }
-                runtimeData.popBoxList.push(popInfo)
+            {
+                text: $t('取消'),
+                master: true,
+                fun: () => {
+                    configCard.value = mem.card?.toString() ?? ''
+                    runtimeData.popBoxList.shift()
+                },
             },
+        ],
+    }
+    runtimeData.popBoxList.push(popInfo)
+}
 
-            updateMemberTitle(event: Event, mem: Member) {
-                const value = (event.target as HTMLInputElement).value
-                if (mem.title?.toString() !== value) {
-                    const popInfo = {
-                        title: this.$t('操作'),
-                        html: `<span>${this.$t('确认修改头衔？')}</span>`,
-                        button: [
-                            {
-                                text: this.$t('确认'),
-                                fun: async () => {
-                                    runtimeData.popBoxList.shift()
-                                    this.closeChatInfoPan()
-                                    await Connector.callApi('set_group_title', {
-                                        group_id: this.chat.id,
-                                        user_id: mem.user_id,
-                                        special_title: value,
-                                    })
-                                    await this.checkSetMemInfoResult()
-                                },
-                            },
-                            {
-                                text: this.$t('取消'),
-                                master: true,
-                                fun: () => {
-                                    this.showUserConfigRaw.title = mem.title?.toString() ?? ''
-                                    runtimeData.popBoxList.shift()
-                                },
-                            },
-                        ],
-                    }
-                    runtimeData.popBoxList.push(popInfo)
-                }
-            },
+function updateMemberTitle(mem: Member, value: string) {
+    if (mem.title?.toString() !== configTitle.value) {
+        const popInfo = {
+            title: $t('操作'),
+            html: `<span>${$t('确认修改头衔？')}</span>`,
+            button: [
+                {
+                    text: $t('确认'),
+                    fun: async () => {
+                        runtimeData.popBoxList.shift()
 
-            getBanTimeMin(endTime: number) {
-                // endTime 可能是精确到秒的时间戳
-                if(endTime < 10000000000) {
-                    endTime *= 1000
-                }
-                const now = new Date().getTime()
-                const time = endTime - now
-                if (time > 0) {
-                    return Math.floor(time / 1000 / 60)
-                } else {
-                    return 0
-                }
-            },
+                        closeChatInfoPan()
+                        if (!runtimeData.nowAdapter?.setMemberTitle) {
+                            new PopInfo().add(PopType.INFO, $t('当前适配器不支持修改群头衔'))
+                            return
+                        }
+                        await runtimeData.nowAdapter.setMemberTitle(chat as GroupSession, mem, value)
 
-            checkNumber(event: Event) {
-                const value = (event.target as HTMLInputElement).value
-                if (value !== '') {
-                    const num = parseInt(value)
-                    if (isNaN(num)) {
-                        (event.target as HTMLInputElement).value = ''
-                    } else if (num < 0) {
-                        (event.target as HTMLInputElement).value = '0'
-                    }
-                }
-            },
+                        await checkSetMemInfoResult()
+                    },
+                },
+                {
+                    text: $t('取消'),
+                    master: true,
+                    fun: () => {
+                        configTitle.value = mem.title?.toString() ?? ''
+                        runtimeData.popBoxList.shift()
+                    },
+                },
+            ],
+        }
+        runtimeData.popBoxList.push(popInfo)
+    }
+}
 
-            /**
-             * 关闭面板
-             */
-            closeChatInfoPan() {
-                this.showUserConfig = null
-                this.$emit('close', null)
-            },
+/**
+ * 关闭面板
+ */
+function closeChatInfoPan() {
+    configMember.value = undefined
+    emit('close')
+}
 
-            /**
-             * 发起聊天
-             */
-            startChat(mem: Member) {
-                // 如果是自己的话就忽略
-                if (mem.user_id == runtimeData.loginInfo.uin) return
+/**
+ * 发起聊天
+ */
+function startChat(mem: Member) {
+    // 如果是自己的话就忽略
+    if (mem.user_id == runtimeData.loginInfo.uin) return
 
-                // 检查这个人是不是好友
-                let session: Session | undefined = mem?.user
+    // 检查这个人是不是好友
+    let session: Session | undefined = mem?.user
 
-                // 没了创建一个临时聊天
-                if (!session)
-                    session = Session.getSession('temp', mem.user_id, this.chat.id)
+    // 没了创建一个临时聊天
+    if (!session)
+        session = Session.getSession('temp', mem.user_id, chat.id)
 
-                // 激活会话
-                if (!session.activate) session.activate()
-                // 切换到这个聊天
-                this.$nextTick(() => {
-                    changeSession(session)
-                })
-            },
-
-            openMoreConfig(mem: Member) {
-                this.showUserConfig = mem as Reactive<Member>
-                // 初始化一些内容
-                this.showUserConfigRaw = {
-                    card: mem.card?.toString() ?? '',
-                    title: mem.title?.toString() ?? '',
-                }
-                // this.memberInfo.banMin = this.getBanTimeMin(mem.shut_up_timestamp)
-
-            },
-            clickMember(mem: Member) {
-                if(this.canEditMember(mem.role)) {
-                    this.openMoreConfig(mem)
-                } else {
-                    this.copyText(mem.user_id)
-                }
-            },
-
-            search(event: Event) {
-                const value = (event.target as HTMLInputElement).value
-                if (value !== '') {
-                    this.searchList = (this.chat as GroupSession).memberList.filter(
-                        (mem: Member) => mem.match(value),
-                    ) as Reactive<Member>[]
-                } else {
-                    this.searchList = [] as any[]
-                }
-            },
-
-            canEditMember(role: string) {
-                const me = (this.chat as GroupSession).getMe()
-                return me?.canAdmin(role as Role)
-            },
-
-            async checkSetMemInfoResult() {
-                const popInfo = {
-                    title: this.$t('操作'),
-                    html: `<span>${this.$t('正在确认操作……')}</span>`
-                }
-                runtimeData.popBoxList.push(popInfo)
-                await delay(1000)
-                await (this.chat as GroupSession).reloadUserList(false)
-                runtimeData.popBoxList.shift()
-            },
-        },
+    // 激活会话
+    if (!session.activate) session.activate()
+    // 切换到这个聊天
+    nextTick(() => {
+        changeSession(session)
     })
+}
+
+function openMoreConfig(mem: Member) {
+    configMember.value = mem
+    configCard.value = mem.card?.toString() ?? ''
+    configTitle.value = mem.title?.toString() ?? ''
+    configBanMin.value = (mem.banTime?.time ?? 0) / 1000 / 60
+}
+
+function clickMember(mem: Member) {
+    if(canEditMember(mem.role)) {
+        openMoreConfig(mem)
+    } else {
+        copyText(mem.user_id)
+    }
+}
+
+function canEditMember(role: string) {
+    const me = (chat as GroupSession).getMe()
+    return me.canAdmin(role as Role)
+}
+
+async function checkSetMemInfoResult() {
+    const popInfo = {
+        title: $t('操作'),
+        html: `<span>${$t('正在确认操作……')}</span>`
+    }
+    runtimeData.popBoxList.push(popInfo)
+    await delay(1000)
+    await (chat as GroupSession).reloadUserList(false)
+    runtimeData.popBoxList.shift()
+}
+
+defineExpose({
+    openMoreConfig
+})
 </script>
 
 <style scoped>

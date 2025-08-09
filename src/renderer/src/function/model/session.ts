@@ -21,15 +21,15 @@ import { Name } from './data'
 import { Message } from './message'
 import { EssenceMsg, Msg } from './msg'
 import { reactive } from 'vue'
-import { getMessageList, runtimeData } from '../msg'
-import { Connector } from '../connect'
+import { runtimeData } from '../msg'
 import { SystemNotice } from './notice'
 import { Logger, PopInfo, PopType } from '../base'
 import { isDeleteMsg } from '../utils/msgUtil'
-import { BaseUser, Member, Role, IUser, User } from './user'
+import { BaseUser, Member, IUser, User } from './user'
 import { Ann } from './ann'
 import { GroupFile, GroupFileFolder } from './file'
 import { SessionBox } from './box'
+import { Role } from '../adapter/enmu'
 
 /**
  * 会话基类
@@ -137,7 +137,7 @@ export abstract class Session {
     abstract match(str: string): boolean
     /**
      * 通过id获取用户
-     * @param id 用户id
+     * @param id  用户id
      */
     abstract getUserById(id: number): IUser | undefined
     //#endregion
@@ -306,22 +306,21 @@ export abstract class Session {
         this.loadHistoryLock = true
 
         const { $t } = app.config.globalProperties
+        // 过滤不支持的适配器
+        if (!runtimeData.nowAdapter?.getHistoryMsg) {
+            this.lastLoadFaileFlag = true
+            this.messageList.unshift(SystemNotice.info(
+                runtimeData.nowAdapter?.name + $t('不支持获取历史记录')
+            ))
+            return false
+        }
         try {
             if (this.lastLoadFaileFlag) this.messageList.shift()
             // 添加提示词
             this.messageList.unshift(SystemNotice.info($t('获取历史记录ing')))
 
-            // 组装参数
-            const apiName = this.type == 'group' ? 'get_group_msg_history' : 'get_private_msg_history'
-            const params = {
-                group_id: this.id,
-                user_id: this.id,
-                message_id: this.headMsg?.message_id,
-                count: 20,
-            }
-
             // 调API
-            const data = await Connector.callApi(apiName, params)
+            const data = await runtimeData.nowAdapter.getHistoryMsg(this, 20, this.headMsg)
 
             // 删除提示
             this.messageList.shift()
@@ -333,7 +332,8 @@ export abstract class Session {
                 this.canLoadMoreHistory = false
                 msgs = [SystemNotice.info($t('没有更多历史消息'))]
             }else {
-                msgs = getMessageList(data)
+                msgs = data.map(item => new Msg(item))
+                // TODO: 移到适配器里
                 const startId = msgs.findIndex(item => item.message_id === this.headMsg?.message_id)
                 if (startId >= 0) {
                     // 如果开始的消息在列表中，则截断
@@ -348,6 +348,7 @@ export abstract class Session {
             // 重设headMsg
             this.headMsg = <Msg>msgs[0]
         } catch (e) {
+            new Logger().error(e as Error, '加载历史消息失败')
             this.lastLoadFaileFlag = true
             this.messageList.unshift(SystemNotice.info($t('获取历史记录失败')))
             new PopInfo().add(
@@ -382,43 +383,30 @@ export abstract class Session {
     }
 
     /**
-     * 设为已读消息set_message_read
+     * 设为已读消息
      * @param msgId 消息id
      */
-    async setRead(msgId?: string): Promise<void> {
+    async setRead(targetMsg?: Msg): Promise<void> {
         // 避免频繁调用...昨天吃警告了.tx竟然没给我踹下去
         if (!this.newMsg) return
-        if (!msgId) {
+        if (!targetMsg) {
             for (const msg of this.messageList) {
                 if (msg instanceof Msg) {
-                    msgId = msg.message_id
+                    targetMsg = msg
                     break
                 }
             }
         }
-        // api
-        this.newMsg = 0
-        this.showNotice = false
-        this.highlightInfo = []
-        let api: string
-        const params: {
-            group_id?: number,
-            user_id?: number,
-            message_id?: string
-        } = this.createSendParam()
-        if (this.type === 'group') {
-            api = 'set_group_message_read'
-        }else {
-            api = 'set_user_message_read'
-        }
-        params.message_id = msgId
 
-        // 更新收纳盒
+        if (!targetMsg) return
+
+        // 向收纳盒上报消息
         for (const box of this.boxs) {
             box.sessionSetReaded()
         }
 
-        await Connector.callApi(api, params)
+        // 调用api
+        await runtimeData.nowAdapter?.setMsgReaded?.(this, targetMsg)
     }
 
     /**
@@ -627,25 +615,13 @@ export class GroupSession extends Session {
 
     async reloadUserList(useCache: boolean = true): Promise<void> {
         // 获取新数据
-        const memData = await Connector.callApi('get_group_member_list', {
-            group_id: this.id,
-            no_cache: !useCache,
-        })
+        const memData = await runtimeData.nowAdapter?.getMemberList(this, useCache)
         if (!memData) throw new Error('获取群成员列表失败')
+
         const newDataMap = new Map<number, Member>()
         for (const item of memData) {
             const newData = new Member(item)
             newDataMap.set(newData.user_id, newData)
-        }
-        const banData = await Connector.callApi('ban_list', {
-            group_id: this.id
-        })
-        // 这个感觉效率好低啊...
-        if (banData){
-            banData.forEach(item => {
-                const mem = this.getUserById(item.user_id)
-                if (mem) mem.setBanTime(item.ban_time)
-            })
         }
 
         // 比对数据
@@ -762,7 +738,10 @@ export class GroupSession extends Session {
      */
     async getAnn(useCache: boolean = true): Promise<Ann[]> {
         if (useCache && this.annCache !== undefined) return this.annCache
-        const data = await Connector.callApi('group_notices', {group_id: this.id})
+
+        if (!runtimeData.nowAdapter?.getGroupAnnouncement) return []
+
+        const data = await runtimeData.nowAdapter.getGroupAnnouncement(this)
         if (!data) {
             new PopInfo().add(
                 PopType.ERR,
@@ -770,17 +749,7 @@ export class GroupSession extends Session {
             )
             return []
         }
-        const ann = data.map(item => {
-            // 不知道为啥这里的数据格式不对...临时处理下吧
-            const data = {}
-            for (const key in item) {
-                if (item[key] instanceof Array)
-                    data[key] = item[key].at(0) ?? undefined
-                else
-                    data[key] = item[key]
-            }
-            return new Ann(data as any, this)
-        })
+        const ann = data.map(item => new Ann(item, this))
         this.annCache = ann
         return ann
     }
@@ -801,7 +770,10 @@ export class GroupSession extends Session {
      */
     async getFile(useCache: boolean = true): Promise<(GroupFile | GroupFileFolder)[]> {
         if (useCache && this.fileCache) return this.fileCache
-        const data = await Connector.callApi('group_files', {group_id: this.id})
+
+        if (!runtimeData.nowAdapter?.getGroupFile) return []
+
+        const data = await runtimeData.nowAdapter?.getGroupFile(this)
         if (!data) {
             new PopInfo().add(
                 PopType.ERR,
@@ -809,18 +781,19 @@ export class GroupSession extends Session {
             )
             return []
         }
-        const out: (GroupFile | GroupFileFolder)[] = []
-        data.forEach(item => {
-            if (item.file_id) out.push(new GroupFile(item, this.id))
-            else out.push(new GroupFileFolder(item, this.id))
-        })
-        this.fileCache = out.sort((a, b) => {
-            if (a.type === 'folder' && b.type === 'file') return -1
-            if (a.type === 'file' && b.type === 'folder') return 1
+        const { files: fileData, folders: folderData } = data
+
+        const sort = (a: GroupFile | GroupFileFolder, b: GroupFile | GroupFileFolder) => {
             if (!a.createTime) return -1
             if (!b.createTime) return 1
             return b.createTime.time - a.createTime.time
-        })
+        }
+
+        const files = fileData.map(item => new GroupFile(item, this.id)).sort(sort)
+        const folders = folderData.map(item => new GroupFileFolder(item, this.id)).sort(sort)
+
+        const out = [...folders, ...files]
+        this.fileCache = out
         return out
     }
     useFile(): ShallowRef<(GroupFile | GroupFileFolder)[] | undefined> {
@@ -834,9 +807,17 @@ export class GroupSession extends Session {
      * 刷新群精华列表
      */
     async reloadEssenceList(): Promise<void> {
-        const data = await Connector.callApi('group_essence', {group_id: this.id})
+        if (!runtimeData.nowAdapter?.getGroupEssence) return
+
+        const data = await runtimeData.nowAdapter.getGroupEssence(this)
         // 获取失败
-        if (!data) return
+        if (!data) {
+            new PopInfo().add(
+                PopType.ERR,
+                app.config.globalProperties.$t('获取群精华消息失败'),
+            )
+            return
+        }
         const list = data.map(item => new EssenceMsg(item, this))
         this.essenceList = list
     }
@@ -929,7 +910,7 @@ export class UserSession extends Session {
      */
     async getUserInfo(useCache: boolean = true): Promise<User | undefined> {
         if (useCache && this.userCache) return this.userCache
-        const [ data ] = await Connector.callApi('friend_info', {user_id: this.id})
+        const data = await runtimeData.nowAdapter?.getUserInfo(this.id, useCache)
         if (!data) {
             new PopInfo().add(
                 PopType.ERR,
@@ -937,9 +918,6 @@ export class UserSession extends Session {
             )
             return
         }
-        data.id = this.id
-        data.nickname = this.name.toString()
-        data.remark = this._remark?.toString()
         const user = new User(data)
         this.userCache = user
         return user
@@ -949,12 +927,12 @@ export class UserSession extends Session {
      * @param useCache 是否使用缓存
      * @returns
      */
-    useUserInfo(useCache: boolean = true): User | undefined {
+    useUserInfo(useCache: boolean = true): ShallowRef<User | undefined> {
         const user = shallowRef<User | undefined>(undefined)
         this.getUserInfo(useCache).then(data => {
             user.value = data
         })
-        return user as unknown as User | undefined
+        return user
     }
 }
 

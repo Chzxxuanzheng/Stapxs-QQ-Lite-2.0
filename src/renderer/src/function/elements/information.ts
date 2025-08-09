@@ -1,3 +1,4 @@
+import { AdapterInterface, LoginInfo } from '../adapter/interface'
 import { SessionBox } from '../model/box'
 import { ForwardSeg } from '../model/seg'
 import { Session } from '../model/session'
@@ -10,13 +11,7 @@ export enum BotMsgType {
 
 export interface RunTimeDataElem {
     sysConfig: Record<keyof typeof optDefault, any | null>
-    jsonMap?: any
-    botInfo: { [key: string]: any }
-    loginInfo: {
-        uin: number,
-        nickname: string,
-    }
-    groupAssistList: (UserFriendElem & UserGroupElem)[]
+    loginInfo: LoginInfo,
     onMsgList: (UserFriendElem & UserGroupElem)[]
     systemNoticesList?: { [key: string]: any }
     pageView: {
@@ -66,8 +61,9 @@ export interface RunTimeDataElem {
     mergeMsgStack: ForwardSeg[]
     mergeMessageImgList?: any[] | undefined
     stickerCache?: any[]
-    nowChat: undefined | Session
-    nowBox: undefined | SessionBox  // 当前的会话盒子
+    nowChat?: Session
+    nowBox?: SessionBox  // 当前的会话盒子
+    nowAdapter?: AdapterInterface // 当前适配器
     img_list: {url: string, id: string}[]
     color_mod: 'light' | 'dark'
     popBoxList: {
@@ -128,29 +124,6 @@ export interface UserGroupElem extends UserElem {
     py_start?: string
     class_id?: number
     class_name?: string
-}
-
-export interface GroupFileElem {
-    file_id: string
-    file_name: string
-    size: number
-    download_times: number
-    dead_time: number
-    upload_time: number
-    uploader_name: string
-
-    download_percent?: number
-}
-
-export interface GroupFileFolderElem {
-    folder_id: string
-    folder_name: string
-    count: number
-    create_time: number
-    creater_name: string
-
-    items?: GroupFileElem[]
-    show_items?: boolean
 }
 
 export interface GroupMemberInfoElem {

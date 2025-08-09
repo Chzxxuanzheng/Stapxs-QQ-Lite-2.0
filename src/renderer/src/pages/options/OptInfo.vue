@@ -63,7 +63,6 @@
 
 <script setup lang="ts">
 import { runtimeData } from '@renderer/function/msg'
-import { Connector } from '@renderer/function/connect'
 import { reloadUsers } from '@renderer/function/utils/appUtil'
 import { GroupSession } from '@renderer/function/model/session'
 import { Member } from '@renderer/function/model/user'
@@ -75,6 +74,7 @@ import {
     watch,
     Ref,
 } from 'vue'
+import { PopInfo, PopType } from '@renderer/function/base'
 
 //#region == 声明变量 ================================================================
 const { $t } = app.config.globalProperties
@@ -116,10 +116,11 @@ function setGroupNotice(event: Event) {
 async function setGroupName(event: KeyboardEvent) {
     if (!chat) return
     if (event.key === 'Enter') {
-        await Connector.callApi('set_group_name', {
-            group_id: chat.id,
-            group_name: nowChatName.value,
-        })
+        if (!runtimeData.nowAdapter?.setGroupName) {
+            new PopInfo().add(PopType.INFO, $t('当前适配器不支持设置群名称'))
+            return
+        }
+        await runtimeData.nowAdapter.setGroupName(chat, nowChatName.value)
 
         await checkSetChatInfoResult()
     }
@@ -136,9 +137,11 @@ function leaveGroup() {
                 text: $t('确定'),
                 fun: async () => {
                     runtimeData.popBoxList.shift()
-                    await Connector.callApi('leave_group', {
-                        group_id: runtimeData.nowChat?.id,
-                    })
+                    if (!runtimeData.nowAdapter?.leaveGroup) {
+                        new PopInfo().add(PopType.INFO, $t('当前适配器不支持退出群聊'))
+                        return
+                    }
+                    await runtimeData.nowAdapter.leaveGroup(chat)
 
                     await checkSetChatInfoResult()
                 },
