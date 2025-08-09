@@ -1221,7 +1221,7 @@ const userInfoPanFunc: UserInfoPan = {
                         if (data.addTop === true) {
                             this.msg = '[SQ:' + index + ']' + this.msg
                         } else {
-                            this.msg += '[S@conQ:' + index + ']'
+                            this.msg += '[SQ:' + index + ']'
                         }
                     }
                     return index
