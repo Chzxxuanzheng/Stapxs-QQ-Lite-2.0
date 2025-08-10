@@ -24,12 +24,12 @@ import { reactive } from 'vue'
 import { runtimeData } from '../msg'
 import { SystemNotice } from './notice'
 import { Logger, PopInfo, PopType } from '../base'
-import { isDeleteMsg } from '../utils/msgUtil'
 import { BaseUser, Member, IUser, User } from './user'
 import { Ann } from './ann'
 import { GroupFile, GroupFileFolder } from './file'
 import { SessionBox } from './box'
 import { Role } from '../adapter/enmu'
+import { SessionData } from '../adapter/interface'
 
 /**
  * 会话基类
@@ -154,11 +154,32 @@ export abstract class Session {
 
     /**
      * 获得会话。没有的临时会话会创建，群聊和私聊会抛异常
-     * @param type
-     * @param id
-     * @param group_id
+     * @param data 会话数据
      */
-    static getSession(type: 'group' | 'user' | 'temp', id: number, group_id?: number): Session {
+    static getSession(data: SessionData): Session
+    /**
+     * 获得会话。没有的临时会话会创建，群聊和私聊会抛异常
+     * @param type 会话类型
+     * @param id 会话id
+     * @param group_id 临时会话的群id
+     */
+    static getSession(type: 'group' | 'user' | 'temp', id: number, group_id?: number): Session
+    static getSession(
+        arg1: 'group' | 'user' | 'temp' | SessionData,
+        arg2?: number,
+        arg3?: number
+    ): Session {
+        if (!arg2) {
+            const data = arg1 as SessionData
+            return Session.getSession(
+                data.type,
+                data.id,
+                data.group_id
+            )
+        }
+        const type = arg1 as 'group' | 'user' | 'temp'
+        const id = arg2 as number
+        const group_id = arg3 as number | undefined
         let session: Session | undefined
         switch (type) {
             case 'group':
@@ -333,12 +354,6 @@ export abstract class Session {
                 msgs = [SystemNotice.info($t('没有更多历史消息'))]
             }else {
                 msgs = data.map(item => new Msg(item))
-                // TODO: 移到适配器里
-                const startId = msgs.findIndex(item => item.message_id === this.headMsg?.message_id)
-                if (startId >= 0) {
-                    // 如果开始的消息在列表中，则截断
-                    msgs.splice(startId, 99)
-                }
             }
 
             this.imgFromHistory(msgs)
@@ -376,7 +391,6 @@ export abstract class Session {
             if (runtimeData.sysConfig.preview_notice) {
                 if (msg instanceof SystemNotice) continue
             } else if (!(msg instanceof Msg)) continue
-            if (isDeleteMsg(msg)) continue
             this.preMessage = msg
             break
         }

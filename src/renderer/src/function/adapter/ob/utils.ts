@@ -212,3 +212,57 @@ export function createSender(user_id: number, nickname?: string): SenderData {
         sex: Gender.Unknown,
     }
 }
+
+/**
+ * CQ码解析
+ * @param msg CQCode 消息
+ * @returns 消息对象
+ */
+export function parseCQ(cq: string) {
+    // 将纯文本也处理为 CQCode 格式
+    // PS：这儿不用担心方括号本身，go-cqhttp 会把它转义掉
+    let reg = /^[^\]]+?\[|\].+\[|\][^[]+$|^[^[\]]+$/g
+    const textList = cq.match(reg)
+    if (textList !== null) {
+        textList.forEach((item) => {
+            item = item.replace(']', '').replace('[', '')
+            cq = cq.replace(item, `[CQ:text,text=${item}]`)
+        })
+    }
+    // 拆分 CQCode
+    reg = /\[.+?\]/g
+    cq = cq.replaceAll('\n', '\\n')
+    const list = cq.match(reg)
+    // 处理为 object
+    const back: { [ket: string]: any }[] = []
+    reg = /\[CQ:([^,]+),(.*)\]/g
+    if (list !== null) {
+        list.forEach((item) => {
+            if (item.match(reg) !== null) {
+                const info: { [key: string]: any } = { type: RegExp.$1 }
+                RegExp.$2.split(',').forEach((key: string) => {
+                    const kv = [] as string[]
+                    kv.push(key.substring(0, key.indexOf('=')))
+                    // 对 html 转义字符进行反转义
+                    const a = document.createElement('a')
+                    a.innerHTML = key.substring(key.indexOf('=') + 1)
+                    kv.push(a.innerText)
+                    info[kv[0]] = kv[1]
+                })
+                // 对文本消息特殊处理
+                if (info.type == 'text') {
+                    info.text = RegExp.$2
+                        .substring(RegExp.$2.lastIndexOf('=') + 1)
+                        .replaceAll('\\n', '\n')
+                    // 对 html 转义字符进行反转义
+                    const a = document.createElement('a')
+                    a.innerHTML = info.text
+                    info.text = a.innerText
+                }
+                back.push(info)
+            }
+        })
+    }
+    logger.debug('解析 CQ 消息结果: ' + JSON.stringify(back))
+    return back
+}

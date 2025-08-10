@@ -53,9 +53,6 @@ export interface RunTimeDataElem {
     inch: number
     watch: {
         // PS: 一些给监听器捕捉用的数据
-        heartbeatTime?: number
-        oldHeartbeatTime?: number
-        lastHeartbeatTime?: number
         backTimes: number
     }
     mergeMsgStack: ForwardSeg[]

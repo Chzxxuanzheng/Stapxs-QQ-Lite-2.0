@@ -24,6 +24,8 @@ module.exports = {
         'quotes': ['warn', 'single'],
         // 三元表达式
         'multiline-ternary': ['warn', 'never'],
+        // 分号
+        'semi': ['warn', 'never'],
 
         // === Vue 相关规则 ===
         // html 缩进

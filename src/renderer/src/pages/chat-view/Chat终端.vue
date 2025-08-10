@@ -172,7 +172,7 @@
     import { Msg } from '@renderer/function/model/msg'
     import { ReplySeg, Seg } from '@renderer/function/model/seg'
     import { Session } from '@renderer/function/model/session'
-    import { Notice, RevokeNotice } from '@renderer/function/model/notice'
+    import { Notice, RecallNotice } from '@renderer/function/model/notice'
     import { Message } from '@renderer/function/model/message'
 import SystemNotice from './SystemNotice.vue'
 
@@ -217,7 +217,7 @@ import SystemNotice from './SystemNotice.vue'
                 endMsg: null as null | Message,       // 尾部消息,用来和chat.messageList比对来更新cmdLines
                 Msg,
                 Notice,
-                RevokeNotice,
+                RecallNotice: RevokeNotice,
             }
         },
         watch: {

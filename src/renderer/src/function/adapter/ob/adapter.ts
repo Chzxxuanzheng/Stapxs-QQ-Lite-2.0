@@ -4,8 +4,11 @@ import type {
     AdapterInterface,
     AtAllSegData,
     AtSegData,
+    BanEventData,
+    BanLiftEventData,
     EssenceData,
     EssenceSeg,
+    EventData,
     FaceSegData,
     FilesData,
     FileSegData,
@@ -16,15 +19,21 @@ import type {
     GroupData,
     ImgSegData,
     ImplInfo,
+    JoinEventData,
     JsonSegData,
+    LeaveEventData,
     MdSegData,
     MemberData,
     MfaceSegData,
     MsgData,
+    MsgEventData,
+    PokeEventData,
     PokeSegData,
+    RecallEventData,
     ReplySegData,
     SegData,
     SenderData,
+    SessionData,
     TextSegData,
     UnknownSegData,
     UserData,
@@ -72,6 +81,15 @@ import type {
     LgrObImgSeg,
     LgrObGetMsg,
     LgrObGetCustomFace,
+    ObMessageEvent,
+    ObHeartEvent,
+    ObNoticeEvent,
+    ObGroupRecallEvent,
+    ObGroupIncreaseEvent,
+    ObGroupDecreaseEvent,
+    ObGroupBanEvent,
+    ObFriendRecallEvent,
+    ObPokeEvent,
 } from './type'
 import { LoginInfo } from '../interface'
 import { GroupSession, Session, UserSession } from '@renderer/function/model/session'
@@ -98,6 +116,8 @@ import {
 } from '@renderer/function/model/seg'
 import { Msg } from '@renderer/function/model/msg'
 import { runtimeData } from '@renderer/function/msg'
+import { queueWait } from '@renderer/function/utils/systemUtil'
+import { handleEvent } from '@renderer/function/event'
 
 const logger = new Logger()
 
@@ -118,6 +138,7 @@ function api(
     }
 }
 
+// TODO: Warn: 退群消息为自身退群的话，操作为0
 class OneBotAdapter implements AdapterInterface {
     name = 'OneBot'
     version = '0.0.1'
@@ -150,6 +171,17 @@ class OneBotAdapter implements AdapterInterface {
         this.segSerializer['poke'] = this.pokeSerializer.bind(this)
         this.segSerializer['xml'] = this.xmlSerializer.bind(this)
         this.segSerializer['json'] = this.jsonSerializer.bind(this)
+
+        this.eventProcessers['message'] = this.messageEvent.bind(this)
+        this.eventProcessers['meta'] = this.metaEvent.bind(this)
+        this.eventProcessers['notice'] = this.noticeEvent.bind(this)
+
+        this.noticeEventProcessers['group_increase'] = this.groupIncreaseEvent.bind(this)
+        this.noticeEventProcessers['group_decrease'] = this.groupDecreaseEvent.bind(this)
+        this.noticeEventProcessers['group_ban'] = this.groupBanEvent.bind(this)
+        this.noticeEventProcessers['group_recall'] = this.groupRecallEvent.bind(this)
+        this.noticeEventProcessers['friend_recall'] = this.friendRecallEvent.bind(this)
+        this.noticeEventProcessers['poke'] = this.pokeEvent.bind(this)
     }
 
     async connect(url: string, ssl: boolean, token?: string): Promise<boolean> {
@@ -381,32 +413,13 @@ class OneBotAdapter implements AdapterInterface {
     }
     //#endregion
     //#endregion
-
+    //#endregion
 
 
     //#region == 消息相关 ===========================================
     async parseMsg(data: ObMsg): Promise<MsgData> {
         const message = await this.parseSeg(data.message)
-        let session_info
-        // 组装会话信息
-        if (data.message_type === 'group') {
-            session_info = {
-                id: data.group_id,
-                type: 'group',
-            }
-        }else if (data.message_type === 'private' && data.sub_type === 'group') {
-            session_info = {
-                id: data.user_id,
-                group_id: data.group_id,
-                type: 'temp',
-            }
-        }else {
-            session_info = {
-                id: data.user_id,
-                type: 'user',
-            }
 
-        }
         // 组装发送者信息
         let sender: SenderData
         if (data.message_type === 'group' && data.sub_type === 'anonymous') {
@@ -424,11 +437,34 @@ class OneBotAdapter implements AdapterInterface {
         }
         return {
             message_id: data.message_id.toString(),
-            session_info:session_info,
+            session: this.parseSession(data),
             sender: sender,
             time: data.time,
             message: message,
         }
+    }
+    parseSession(data: ObMessageEvent | ObMsg): SessionData {
+        let session_info
+        // 组装会话信息
+        if (data.message_type === 'group') {
+            session_info = {
+                id: data.group_id,
+                type: 'group',
+            }
+        } else if (data.message_type === 'private' && data.sub_type === 'group') {
+            session_info = {
+                id: data.user_id,
+                group_id: data.group_id,
+                type: 'temp',
+            }
+        } else {
+            session_info = {
+                id: data.user_id,
+                type: 'user',
+            }
+
+        }
+        return session_info
     }
     async serializeMsg(msg: Msg): Promise<ObSeg<string, any>[]> {
         const data = await Promise.all(msg.message.map(seg => this.serializeSeg(seg)))
@@ -668,12 +704,164 @@ class OneBotAdapter implements AdapterInterface {
     }
     //#endregion
     //#endregion
+
+    //#region == 事件相关 ===========================================
+    eventProcessers: Record<string, (event: any) => Promise<EventData | undefined>> = {}
+    async messageEvent(event: ObMessageEvent): Promise<MsgEventData> {
+        const process = async (data: ObMessageEvent) => {
+            if (data.sub_type === 'other') throw new Error('不支持 other 类型的消息')
+            if (data.sub_type === 'notice') throw new Error('不支持 notice 类型的消息')
+
+            const originMsg: ObMsg = {
+                time: data.time,
+                message_type: data.message_type,
+                sub_type: data.sub_type,
+                message_id: data.message_id,
+                real_id: 0,
+                sender: data.sender,
+                message: data.message,
+                user_id: data.user_id,
+                group_id: data?.group_id,
+            }
+
+            const msgData = await this.parseMsg(originMsg)
+            const out: MsgEventData = {
+                type: 'msg',
+                message: msgData,
+                message_id: data.message_id.toString(),
+                time: data.time,
+                session: msgData.session,
+            }
+            return out
+        }
+        const sessionId = event.message_type === 'group' ? event.group_id : event.user_id
+        return await queueWait(process(event), `${event.message_type}-${sessionId}`)
+    }
+    async metaEvent(event: ObHeartEvent): Promise<undefined> {
+        if (event.meta_event_type !== 'heartbeat') return
+        // TODO: 心跳事件
+    }
+    noticeEventProcessers: Record<string, (event: any) => Promise<EventData | undefined>> = {}
+    async noticeEvent(event: ObNoticeEvent): Promise<undefined | EventData> {
+        const processer = this.noticeEventProcessers[event.notice_type]
+        if (!processer) return
+        const sessionId = event.group_id || event.user_id
+        const type = event.group_id ? 'group' : 'user'
+        return await queueWait(
+            processer(event),
+            `${type}-${sessionId}`
+        )
+    }
+    async groupIncreaseEvent(event: ObGroupIncreaseEvent): Promise<JoinEventData> {
+        return {
+            type: 'join',
+            session: {
+                id: event.group_id,
+                type: 'group',
+            },
+            user: createSender(event.user_id),
+            operator: createSender(event.operator_id),
+            join_type: event.sub_type,
+            time: event.time,
+        }
+    }
+    async groupDecreaseEvent(event: ObGroupDecreaseEvent): Promise<LeaveEventData> {
+        return {
+            type: 'leave',
+            session: {
+                id: event.group_id,
+                type: 'group',
+            },
+            user: createSender(event.user_id),
+            operator: createSender(event.operator_id),
+            time: event.time,
+        }
+    }
+    async groupBanEvent(event: ObGroupBanEvent): Promise<BanEventData|BanLiftEventData> {
+        if (event.sub_type === 'ban') {
+            return {
+                type: 'ban',
+                session: {
+                    id: event.group_id,
+                    type: 'group',
+                },
+                user: createSender(event.user_id),
+                operator: createSender(event.operator_id),
+                time: event.time,
+                duration: event.duration,
+            }
+        }else {
+            return {
+                type: 'banLift',
+                session: {
+                    id: event.group_id,
+                    type: 'group',
+                },
+                user: createSender(event.user_id),
+                operator: createSender(event.operator_id),
+                time: event.time,
+            }
+        }
+    }
+    async groupRecallEvent (event: ObGroupRecallEvent): Promise<RecallEventData> {
+        return {
+            type: 'recall',
+            session: {
+                id: event.group_id,
+                type: 'group',
+            },
+            user: createSender(event.user_id),
+            operator: createSender(event.operator_id),
+            time: event.time,
+            recallId: event.message_id.toString(),
+        }
+    }
+    async friendRecallEvent (event: ObFriendRecallEvent): Promise<RecallEventData> {
+        return {
+            type: 'recall',
+            session: {
+                id: event.user_id,
+                type: 'user',
+            },
+            user: createSender(event.user_id),
+            operator: createSender(event.user_id),
+            time: event.time,
+            recallId: event.message_id.toString(),
+        }
+    }
+    async pokeEvent(event: ObPokeEvent): Promise<PokeEventData> {
+        return {
+            type: 'poke',
+            session: {
+                id: event.group_id,
+                type: 'group',
+            },
+            sender: createSender(event.user_id),
+            target: createSender(event.target_id),
+            action: '戳了戳',
+            suffix: '',
+            ico: 'https://tianquan.gtimg.cn/nudgeaction/item/0/expression.jpg',
+            time: event.time,
+        }
+    }
+    //#endregion
     private onmessage(data: any) {
         return this.handleEvent(data)
     }
 
+    /**
+     * 事件处理
+     * @param event 事件
+     * @returns
+     */
     protected handleEvent(event: any) {
-        //
+        const eventProcesser = this.eventProcessers[event.post_type]
+        if (!eventProcesser) return
+        eventProcesser(event)
+            .then((data) => {
+                if (!data) return
+                handleEvent(data)
+            })
     }
 
     private resetCache(){

@@ -115,7 +115,7 @@
 
     import { defineComponent, nextTick, Reactive } from 'vue'
     import { runtimeData } from '@renderer/function/msg'
-    import { isDeleteMsg, isShowTime } from '@renderer/function/utils/msgUtil'
+    import { isShowTime } from '@renderer/function/utils/msgUtil'
     import { wheelMask } from '@renderer/function/utils/input'
     import { Msg } from '@renderer/function/model/msg'
     import ForwardPan from './ForwardPan.vue'
@@ -144,7 +144,6 @@
                 stack,
                 nowData: stack.at(-1),
                 isShowTime,
-                isDeleteMsg,
                 positionCache: [] as number[],
                 addMode: true,
                 chatMove: {

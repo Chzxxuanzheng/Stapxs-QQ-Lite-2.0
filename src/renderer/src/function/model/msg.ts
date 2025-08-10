@@ -27,6 +27,7 @@ type IconData = { icon: string, rotate: boolean, desc: string, color: string }
 @autoReactive
 export class Msg extends Message {
     readonly type = 'message'
+    message_id?: string
     message: Seg[]
     sender: IUser
     atme: boolean = false
@@ -51,6 +52,9 @@ export class Msg extends Message {
             // constructor(data: MsgData)
             const data = arg1 as MsgData
             super(data)
+            // 消息id
+            this.message_id = data.message_id
+
             // 补充消息段
             this.message = Msg.parseSegs(data['message'])
 
@@ -63,9 +67,9 @@ export class Msg extends Message {
             })
             // 生成session
             this.session = Session.getSession(
-                data.session_info.type,
-                data.session_info.id,
-                data.session_info.group_id
+                data.session.type,
+                data.session.id,
+                data.session.group_id
             )
 
             this.sender = new BaseUser(data.sender.id, data.sender.nickname)

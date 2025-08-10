@@ -2,8 +2,8 @@ import app, { i18n } from '@renderer/main'
 
 import l10nConfig from '@renderer/assets/l10n/_l10nconfig.json'
 import PO from 'pofile'
-import { runtimeData } from '../msg';
-import { Logger, LogType, PopInfo, PopType } from '../base';
+import { runtimeData } from '../msg'
+import { Logger, LogType, PopInfo, PopType } from '../base'
 
 /**
  * 异步延迟
@@ -11,7 +11,7 @@ import { Logger, LogType, PopInfo, PopType } from '../base';
  * @returns Promise<void>
  */
 export function delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise(resolve => setTimeout(resolve, ms))
 }
 
 /**
@@ -477,6 +477,56 @@ export function getInch(): number {
     const dpi = div.offsetWidth
     document.body.removeChild(div)
     return dpi
+}
+
+const queueWaitMap = new Map<string, Promise<any>>()
+/**
+ * 阻塞式处理相同id的异步请求，直到前一个完成
+ * @param promise 当前异步请求
+ * @param id id
+ * @param timeout 超时
+ * @returns
+ */
+export function queueWait<T>(promise: Promise<T>, id: string, timeout: number = 10_000): Promise<T> {
+    const selfPromise = new Promise<T>((_resolve, _reject) => {
+        // 结束处理
+        const end = () => {
+            clearTimeout(timeoutId)
+        }
+
+        const resolve = (value: T) => {
+            _resolve(value)
+            end()
+        }
+        const reject = (reason: any) => {
+            _reject(reason)
+            end()
+        }
+
+        // 创建超时处理
+        const timeoutId = setTimeout(() => {
+            reject(new Error('处理超时'))
+        }, timeout)
+
+        // 执行当前 promise 的函数
+        const executePromise = async () => {
+            try {
+                resolve(await promise)
+            } catch (error) {
+                reject(error)
+            }
+        }
+
+        // 执行
+        const prePromise = queueWaitMap.get(id)
+        if (prePromise)
+            prePromise.finally(executePromise)
+        else
+            executePromise()
+    })
+    queueWaitMap.set(id, selfPromise)
+
+    return selfPromise
 }
 
 /**

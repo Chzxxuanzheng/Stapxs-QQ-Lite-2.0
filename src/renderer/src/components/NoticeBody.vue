@@ -13,7 +13,7 @@
     <div :id="'notice-' + id" class="note">
         <!-- #region == 接收到的消息 ========================================== -->
         <!-- 撤回 -->
-        <div v-if="data instanceof RevokeNotice" class="note-recall note-base">
+        <div v-if="data instanceof RecallNotice" class="note-recall note-base">
             <template v-if="data.selfRevoke">
                 <a v-user="data.user" />
                 <span>{{ $t('撤回了一条消息') }}</span>
@@ -45,7 +45,7 @@
         <!-- 戳一戳 -->
         <div v-else-if="data instanceof PokeNotice" class="note-notify note-base">
             <a v-user="data.user" />
-            <img :src="data.img">
+            <img :src="data.ico">
             <span>{{ data.action }}</span>
             <a v-user="data.target" />
             <span>{{ data.suffix }}</span>
@@ -108,7 +108,7 @@ import {
     DeleteNotice,
     BanLiftNotice,
     PokeNotice,
-    RevokeNotice,
+    RecallNotice,
     TimeNotice,
     LeaveNotice,
     JoinNotice,

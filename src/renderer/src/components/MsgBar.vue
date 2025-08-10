@@ -19,12 +19,12 @@
                 :key="'notice-time-' + (msgIndex.time.time / ( 4 * 60 )).toFixed(0)"
                 :data="SystemNotice.time(msgIndex.time.time)" />
             <!-- [已删除]消息 -->
-            <NoticeBody
+            <!-- <NoticeBody
                 v-if="isDeleteMsg(msgIndex)"
                 :key="'delete-' + msgIndex.uuid"
-                :data="SystemNotice.delete()" />
+                :data="SystemNotice.delete()" /> -->
             <!-- 消息体 -->
-            <MsgBody v-else-if="msgIndex instanceof Msg"
+            <MsgBody v-if="msgIndex instanceof Msg"
                 :key="'msg-' + msgIndex.uuid"
                 :selected="isSelected(msgIndex)"
                 :data="msgIndex"
@@ -54,7 +54,7 @@ import { defineComponent, type PropType, Reactive } from 'vue'
 import MsgBody, { MsgBodyConfig } from './MsgBody.vue'
 import NoticeBody from './NoticeBody.vue'
 
-import { isDeleteMsg, isShowTime } from '@renderer/function/utils/msgUtil';
+import { isShowTime } from '@renderer/function/utils/msgUtil';
 import { runtimeData } from '@renderer/function/msg';
 import { Msg } from '@renderer/function/model/msg';
 import { Message } from '@renderer/function/model/message';
@@ -119,11 +119,11 @@ export default defineComponent({
         emojiClick: (_id: string, _msg: Msg) => true,
     },
     data() {
+        console.log(this.msgs)
         return {
             multiselectMode: false,
             multipleSelectList: new Set as Set<Msg>,
             multipleSelectListCardNum: 0,
-			isDeleteMsg,
 			isShowTime,
             runtimeData,
             selectMsg: null as null | Msg,

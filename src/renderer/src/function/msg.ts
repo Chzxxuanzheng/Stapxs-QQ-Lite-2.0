@@ -20,9 +20,6 @@ import { optDefault } from './option'
 import Umami from '@stapxs/umami-logger-typescript'
 
 import {
-    parseMsgList,
-} from '@renderer/function/utils/msgUtil'
-import {
     getInch,
     randomNum,
 } from '@renderer/function/utils/systemUtil'
@@ -37,95 +34,13 @@ import {
 } from './elements/information'
 import { Notify } from './notify'
 import { Msg, SelfMsg } from './model/msg'
-import { BanLiftNotice, BanNotice, JoinNotice, LeaveNotice, PokeNotice, RevokeNotice } from './model/notice'
 import { Session } from './model/session'
-import { Member } from './model/user'
 
-// eslint-disable-next-line
-const msgPaths = import.meta.glob("@renderer/assets/pathMap/*.yaml", { eager: true})
-// 取出包含 Lagrange.OneBot.yaml 的那条
-const msgPathAt = Object.keys(msgPaths).find((item) => {
-    return item.indexOf('Lagrange.OneBot.yaml') > 0
-})
-let msgPath = {} as { [key: string]: any }
-if(msgPathAt != undefined) {
-    msgPath = (msgPaths[msgPathAt] as any).default
-}
 // 其他 tag
 const logger = new Logger()
-let firstHeartbeatTime = -1
-let heartbeatTime = -1
-
-export function dispatch(raw: string | { [k: string]: any }, echo?: string) {
-    let msg: any;
-
-    // TODO: 分发事件适配
-    // TODO: 事件模型重构
-    logger.add(LogType.WS, 'GET：', raw)
-
-    // 1) 如有需要先 parse
-    if (typeof raw === 'string') {
-        try {
-            msg = JSON.parse(raw)
-        } catch {
-            if (!raw.includes('"meta_event_type":"heartbeat"')) {
-                logger.add(LogType.WS, 'GET：' + raw)
-            }
-            return
-        }
-    } else {
-        msg = raw
-    }
-
-    // 2) 決定 name/key
-    const name = echo ? echo.split('_')[0] : msg.post_type === 'notice' ? msg.sub_type ?? msg.notice_type : msg.post_type
-
-    // 3) 安全調用 handler
-    try {
-        const fn = handlers[name]
-        if (!fn) throw new Error(`No handler for "${name}"`)
-        const metaArgs = echo ? echo.split('_') : undefined
-        fn(msg, metaArgs)
-    } catch (e) {
-        logger.error(e as Error, `跳转事件处理错误 - ${name}:\n${JSON.stringify(msg)}`)
-    }
-}
 
 // ==============================================================
 const noticeFunctions = {
-    /**
-     * 心跳包
-     */
-    meta_event: (_: string, msg: { [key: string]: any }) => {
-        if (firstHeartbeatTime == -1) {
-            firstHeartbeatTime = 0
-            runtimeData.watch.heartbeatTime = 0
-            return
-        }
-        if (firstHeartbeatTime == 0) {
-            firstHeartbeatTime = msg.time
-            runtimeData.watch.lastHeartbeatTime = msg.time
-            return
-        }
-        if (firstHeartbeatTime != -1 && heartbeatTime == -1) {
-            // 计算心跳时间
-            heartbeatTime = msg.time - firstHeartbeatTime
-        }
-        // 记录心跳状态
-        if (heartbeatTime != -1) {
-            runtimeData.watch.heartbeatTime = heartbeatTime
-            runtimeData.watch.oldHeartbeatTime =
-                runtimeData.watch.lastHeartbeatTime
-            runtimeData.watch.lastHeartbeatTime = msg.time
-        }
-    },
-
-    /**
-     * 新消息
-     */
-    message_sent: newMsg,
-    message: newMsg,
-
     /**
      * 请求
      */
@@ -171,13 +86,6 @@ const noticeFunctions = {
     },
 
     /**
-     * 消息撤回
-     */
-    group_recall: revokeMsg,
-    friend_recall: revokeMsg,
-    recall: revokeMsg,
-
-    /**
      * 表情回应
      */
     group_msg_emoji_like: (_: string, msg: { [key: string]: any }) => {
@@ -195,47 +103,6 @@ const noticeFunctions = {
         }
     },
 
-    /**
-     * 群禁言
-     */
-    ban: (_: string, msg: { [key: string]: any }) => {
-        const notice = new BanNotice(msg as any)
-        if (!notice.session) {
-            throw new Error('群禁言通知解析失败')
-        }
-        const session = notice.session
-        if (notice.user instanceof Member) notice.user.setBanTime(notice.duration)
-        session.addMessage(notice)
-    },
-    lift_ban: (_: string, msg: { [key: string]: any }) => {
-        const notice = new BanLiftNotice(msg as any)
-
-        if (!notice.session) {
-            throw new Error('群禁言通知解析失败')
-        }
-
-        const session = notice.session
-        if (notice.user instanceof Member) notice.user.clearBanTime()
-        session.addMessage(notice)
-    },
-
-    /**
-     * 戳一戳
-     */
-    poke: (_: string, msg: { [key: string]: any }) => {
-        const notice = new PokeNotice(msg as any)
-        if (! notice.session)  throw new Error('戳一戳通知解析失败')
-
-        notice.session.addMessage(notice)
-    },
-
-    approve: joinGroup,
-    invite: joinGroup,
-
-    leave: leaveGroup,
-    kick: leaveGroup,
-    kick_me: leaveGroup,
-
     input_status: (_: string, msg: { [key: string]: any }) => {
         const { $t } = app.config.globalProperties
         const session = Session.getSessionById(msg.user_id)
@@ -250,33 +117,6 @@ const noticeFunctions = {
 
 const msgFunctions = {
     /**
-     * 获取收藏表情
-     */
-    getRoamingStamp: (
-        _: string,
-        msg: { [key: string]: any },
-        echoList: string[],
-    ) => {
-        const getCount = Number(echoList[1])
-        const data = msg.data
-        if (msgPath.roaming_stamp.reverse) {
-            data.reverse()
-        }
-        if (runtimeData.stickerCache == undefined) {
-            runtimeData.stickerCache = data
-        } else if (runtimeData.jsonMap.roaming_stamp.pagerType == 'full') {
-            // 全量分页模式下不追加
-            if (getCount > runtimeData.stickerCache.length + 48) {
-                // 已经获取到所有内容了
-                data.push('end')
-            }
-            runtimeData.stickerCache = data
-        } else {
-            runtimeData.stickerCache = runtimeData.stickerCache.concat(data)
-        }
-    },
-
-    /**
      * 系统通知后处理
      */
     setFriendAdd: updateSysInfo,
@@ -289,49 +129,8 @@ const msgFunctions = {
     ) => void
 }
 
-const handlers: Record<string, (payload: any, metaArgs?: string[]) => void> = {
-  ...(Object.entries(msgFunctions).reduce((acc, [key, fn]) => ({
-    ...acc,
-    [key]: (payload: any, metaArgs?: string[]) => fn(key, payload, metaArgs)
-  }), {})),
-  ...(Object.entries(noticeFunctions).reduce((acc, [key, fn]) => ({
-    ...acc,
-    [key]: (payload: any) => fn(key, payload)
-  }), {}))
-};
-
 // ==========================================
-
-/**
- *
- * @deprecated
- * @param list
- * @returns
- */
-export function getMessageList(list: any[] | undefined): Msg[] {
-    list = parseMsgList(
-        list,
-        msgPath.message_list.type,
-        msgPath.message_value,
-    )
-    // 倒序处理
-    if (msgPath.message_list.order === 'reverse') {
-        list.reverse()
-    }
-    // 检查必要字段
-    list.forEach((item: any) => {
-        if (!item.post_type) {
-            item.post_type = 'message'
-        }
-    })
-    return list
-}
-
-function revokeMsg(_: string, msg: any) {
-    const notice = new RevokeNotice(msg)
-    if (!notice.session || !notice.message_id) throw new Error('撤回通知缺少必要信息')
-    const session = notice.session
-    const msgId = notice.message_id
+export function recallMsg(session: Session, msgId: string) {
     // 寻找消息
     let matchMsg: undefined | Msg
     let matchMsgId: undefined | number
@@ -349,20 +148,15 @@ function revokeMsg(_: string, msg: any) {
 
     // 添加提示,移除消息
     session.removeMsg(matchMsg)
-    session.addMessage(notice)
 
     // 撤回通知
     new Notify().closeAll(String(session.id))
 }
 
 let qed_try_times = 0
-async function newMsg(_: string, data: any) {
-    // 没有对频道的支持计划
-    if (data.detail_type == 'guild') return
+export async function newMsg(msg: Msg) {
 
     // 消息基础信息 ============================================
-    // const msg = createMsg(data)
-    if (!msg) return logger.error(data, '消息解析失败')
     if (!msg.session) return logger.error(null, '消息没有 session 信息，无法处理消息')
     if (!msg.message_id) return logger.error(null, '消息没有 message_id 信息，无法处理消息')
     const loginId = runtimeData.loginInfo.uin
@@ -373,6 +167,7 @@ async function newMsg(_: string, data: any) {
         if (await SelfMsg.isSendMsg(msg)) return
     }
 
+    // 添加消息
     msg.session.addMessage(msg)
 
     // 抽个签 (什么鬼？业务逻辑而还没抽签多)
@@ -421,26 +216,6 @@ function updateSysInfo(
             runtimeData.systemNoticesList?.splice(index, 1)
         }
     }
-}
-
-async function joinGroup(_: string, msg: { [key: string]: any }){
-    const notice = new JoinNotice(msg as any)
-
-    if (!notice.session) throw new Error('入群通知解析失败')
-    await notice.session.reloadUserList(true)
-
-    notice.refreshUserData()
-    notice.session.addMessage(notice)
-
-}
-
-async function leaveGroup(_: string, msg: { [key: string]: any }) {
-    const notice = new LeaveNotice(msg as any)
-
-    if (!notice.session) throw new Error('退群通知解析失败')
-
-    notice.session.addMessage(notice)
-    await notice.session.reloadUserList(true)
 }
 
 // ==============================================================
@@ -493,8 +268,6 @@ export const runtimeData: RunTimeDataElem = reactive(baseRuntime)
 // 重置 Runtime，但是保留应用设置之类已经加载好的应用内容
 export function resetRuntime(resetAll = false) {
     runtimeData.watch = reactive(baseRuntime.watch)
-    firstHeartbeatTime = -1
-    heartbeatTime = -1
     if (resetAll) {
         runtimeData.tags = reactive(baseRuntime.tags)
         runtimeData.systemNoticesList = reactive([])

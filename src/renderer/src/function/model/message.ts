@@ -6,9 +6,9 @@
  * @Description: 直接在消息栏上展示的模型
  */
 
-import { v4 as uuid } from 'uuid';
-import { Session } from './session';
-import { Time } from './data';
+import { v4 as uuid } from 'uuid'
+import { Session } from './session'
+import { Time } from './data'
 
 export abstract class Message {
     /**
@@ -19,9 +19,7 @@ export abstract class Message {
     readonly uuid: string = uuid()
     abstract session?: Session
     time?: Time
-    message_id?: string
-    constructor(data: {message_id?: string, time?: number}) {
-		if (data.message_id) this.message_id = data.message_id
+    constructor(data: {time?: number}) {
 		if (data.time && !isNaN(data.time)) this.time = new Time(data.time)
     }
 

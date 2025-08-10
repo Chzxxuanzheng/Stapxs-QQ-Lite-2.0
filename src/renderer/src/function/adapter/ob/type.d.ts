@@ -387,7 +387,9 @@ export interface ObEvent {
 export interface ObPrivateSender {
     user_id: number 	// 发送者 QQ 号
     nickname: string 	// 昵称
-    sex: string 	    // 性别，male 或 female 或 unknown
+    sex: 'male' |       // 性别
+         'female' |
+         'unknown'
     age: number 	    // 年龄
 }
 
@@ -395,7 +397,9 @@ export interface ObGroupSender {
     user_id: number 	// 发送者 QQ 号
     nickname: string 	// 昵称
     card: string 	    // 群名片／备注
-    sex: string 	    // 性别，male 或 female 或 unknown
+    sex: 'male' |       // 性别
+         'female' |
+         'unknown'
     age: number 	    // 年龄
     area: string 	    // 地区
     level: string 	    // 成员等级
@@ -421,6 +425,7 @@ export interface ObMsg {
     group_id?: number // 仅在群消息中存在，表示所在的群号
 }
 
+//#region == 消息段 ============================================
 export interface ObSeg<T extends string, D> {
     type: T
     data: D
@@ -464,6 +469,101 @@ export type ObXmlSeg = ObSeg<'xml', {
 export type ObJsonSeg = ObSeg<'json', {
     data: string
 }>
+//#endregion
+
+//#region == 事件 ==============================================
+export interface ObEvent{
+    time: number,           // 事件发生时间戳
+    self_id: number,        // 事件发送者的 QQ 号
+    post_type: 'message' |  // 事件类型
+               'notice' |
+               'request' |
+               'meta_event'
+
+}
+export interface ObGroupMessageEvent extends ObEvent {
+    post_type: 'message'
+    message_type: 'group'               // 消息类型
+    sub_type: 'normal' |                // 子类型
+              'anonymous' |
+              'notice'
+    message_id: number                  // 消息 ID
+    user_id: number                     // 发送者 QQ 号
+    group_id: number                    // 群号
+    message: ObSeg<string, any>[]       // 消息内容
+    raw_message: string                 // 原始消息文本
+    sender: ObGroupSender |             // 发送者信息
+            ObAnonymousSender
+
+}
+export interface ObPrivateMessageEvent extends ObEvent {
+    post_type: 'message'
+    message_type: 'private'             // 消息类型
+    sub_type: 'friend' |                // 子类型
+              'normal' |
+              'other'
+    message_id: number                  // 消息 ID
+    user_id: number                     // 发送者 QQ 号
+    group_id?: number                   // 群号
+    message: ObSeg<string,any>[]        // 消息内容
+    raw_message: string                 // 原始消息文本
+    sender: ObPrivateSender             // 发送者信息
+}
+export type ObMessageEvent = ObGroupMessageEvent | ObPrivateMessageEvent
+export interface ObHeartEvent extends ObEvent {
+    post_type: 'meta_event'
+    meta_event_type: 'heartbeat'        // 元事件类型
+    interval: number                    // 心跳间隔
+}
+export interface ObNoticeEvent extends ObEvent {
+    post_type: 'notice'
+    notice_type: string
+    group_id?: number                   // 群号（可能不存在）
+    user_id?: number                    // 用户 QQ 号（可能不存在）
+}
+export interface ObGroupIncreaseEvent extends ObNoticeEvent {
+    notice_type: 'group_increase'       // 群成员增加事件
+    sub_type: 'approve' | 'invite'      // 子类型
+    group_id: number                    // 群号
+    user_id: number                     // 新成员 QQ 号
+    operator_id: number                 // 操作人 QQ 号
+}
+export interface ObGroupDecreaseEvent extends ObNoticeEvent {
+    notice_type: 'group_decrease'       // 群成员减少事件
+    sub_type: 'leave' |                 // 子类型
+              'kick' |
+              'kick_me'
+    group_id: number                    // 群号
+    user_id: number                     // 成员 QQ 号
+    operator_id: number                 // 操作人 QQ 号（可能不存在）
+}
+export interface ObGroupBanEvent extends ObNoticeEvent {
+    notice_type: 'group_ban'            // 群禁言事件
+    sub_type: 'ban' | 'lift_ban'        // 子类型
+    group_id: number                    // 群号
+    operator_id: number                 // 操作人 QQ 号（可能不存在）
+    user_id: number                     // 被禁言成员 QQ 号
+    duration: number                    // 禁言时长，单位秒
+}
+export interface ObGroupRecallEvent extends ObNoticeEvent {
+    notice_type: 'group_recall'         // 群消息撤回事件
+    group_id: number                    // 群号
+    user_id: number                     // 撤回者 QQ 号
+    operator_id: number                 // 操作人 QQ 号
+    message_id: number                  // 被撤回消息 ID
+}
+export interface ObFriendRecallEvent extends ObNoticeEvent {
+    notice_type: 'friend_recall'        // 好友消息撤回事件
+    user_id: number                     // 撤回者 QQ 号
+    message_id: number                  // 被撤回消息 ID
+}
+export interface ObPokeEvent extends ObNoticeEvent {
+    notice_type: 'poke'                 // 戳一戳事件
+    group_id: number                    // 群号
+    user_id: number                     // 戳一戳者 QQ 号
+    target_id: number                   // 被戳者 QQ 号
+}
+//#endregion
 
 //#region == LGRV1 ==============================================
 export type LgrObGetFriendList = ObResponse<{

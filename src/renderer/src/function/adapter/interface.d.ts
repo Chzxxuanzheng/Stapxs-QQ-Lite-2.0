@@ -348,20 +348,107 @@ export interface SenderData {
     role?: Role                 // 角色
     title?: string              // 头衔
 }
+export interface SessionData {
+    id: number,                     // 会话ID
+    group_id?: number,              // 临时会话群ID
+    type: 'group' | 'user' | 'temp' // 会话类型
+}
+//#endregion
+
+//#region == 事件 ==================================================
+export type MessageEventType = 'msg' | 'recall' | 'ban' | 'banLift' | 'poke' | 'join' | 'leave'
+export type EventType = MessageEventType | 'unknown'
+export interface EventData {
+    type: string                // 事件类型
+    time: number                // 事件发生时间戳
+}
+export interface MessageEventData extends EventData {
+    type: MessageEventType      // 事件类型
+    session: SessionData        // 事件发生的会话
+}
+/**
+ * 新消息事件
+ */
+export interface MsgEventData extends MessageEventData {
+    type: 'msg'                 // 事件类型
+    message: MsgData            // 消息数据
+    message_id: string          // 事件携带通知的消息ID
+}
+/**
+ * 撤回消息事件
+ */
+export interface RecallEventData extends MessageEventData {
+    type: 'recall'              // 事件类型
+    recallId: string            // 被撤回的消息ID
+    user: SenderData            // 撤回消息的用户信息
+    operator: SenderData        // 撤回操作员信息
+}
+/**
+ * 禁言事件
+ */
+export interface BanEventData extends MessageEventData {
+    type: 'ban'                 // 事件类型
+    user: SenderData            // 被禁言的用户ID
+    operator: SenderData        // 操作员信息
+    duration: number            // 禁言时间，单位秒
+}
+/**
+ * 解除禁言事件
+ */
+export interface BanLiftEventData extends MessageEventData {
+    type: 'banLift'             // 事件类型
+    user: SenderData            // 被解禁的用户ID
+    operator: SenderData        // 操作员信息
+}
+/**
+ * 戳一戳事件
+ */
+export interface PokeEventData extends MessageEventData {
+    type: 'poke'                // 事件类型
+    sender: SenderData          // 发送者信息
+    target: SenderData          // 被戳一戳的用户信息
+    action: string              // 戳一戳动作
+    suffix: string              // 戳一戳后缀
+    ico: string                 // 戳一戳图片链接
+}
+/**
+ * 用户加入事件
+ */
+export interface JoinEventData extends MessageEventData {
+    type: 'join'                    // 事件类型
+    user: SenderData                // 加入的用户信息
+    operator: SenderData            // 操作员信息
+    join_type: 'approve' | 'invite' // 加入类型
+}
+/**
+ * 群成员离开事件
+ */
+export interface LeaveEventData extends MessageEventData {
+    type: 'leave'              // 事件类型
+    user: SenderData           // 离开的用户信息
+    operator: SenderData       // 操作员信息
+}
+
+/**
+ * 未知事件数据
+ */
+export interface UnknownEventData extends EventData {
+    type: 'unknown'            // 事件类型
+    data: object               // 原始数据
+}
+//#endregion
+
+//#region == 消息 ==================================================
 
 /**
  * 消息
  */
 export interface MsgData {
-    message_id?: string	   		        // 消息ID
-    session_info: {
-        id: number,                     // 会话ID
-        group_id?: number,              // 临时会话群ID
-        type: 'group' | 'user' | 'temp' // 会话类型
-    }
-    sender: SenderData                  // 发送者信息
-    time?: number         		        // 发送时间戳
-    message: SegData[]   		        // 消息内容段
+    message_id?: string         // 消息ID
+    session: SessionData        // 会话信息
+    sender: SenderData          // 发送者信息
+    time?: number         		// 发送时间戳
+    message: SegData[]   		// 消息内容段
 }
 
 /**
@@ -378,10 +465,6 @@ export interface EssenceData {
     operator_time: number       // 操作时间戳
     content: EssenceSeg[]       // 消息内容段
 }
-//#endregion
-
-//#region == 消息 ==================================================
-
 //#endregion
 
 //#region == 消息段 ================================================

@@ -1,64 +1,71 @@
 /*
- * @FileDescription: Message 相关的模型
+ * @FileDescription: Notice 相关的模型
  * @Author: Mr.Lee
  * @Date: 2025/07/20
  * @Version: 1.0
- * @Description: 直接在消息栏上展示的通知
+ * @Description: 在消息栏上展示的通知，只负责显示通知，不关心事件怎么处理的
  */
 
-import app from '@renderer/main';
-import { runtimeData } from '../msg';
-import { Message } from './message';
-import { GroupSession, Session } from './session';
-import { autoReactive, formatTime } from './utils';
-import { getViewTime, stdUrl } from '../utils/systemUtil';
-import { BaseUser, IUser } from './user';
+import app from '@renderer/main'
+import { runtimeData } from '../msg'
+import { Message } from './message'
+import { GroupSession, Session } from './session'
+import { autoReactive, formatTime } from './utils'
+import { stdUrl } from '../utils/systemUtil'
+import { getSender, IUser } from './user'
+import type {
+    BanEventData,
+    BanLiftEventData,
+    JoinEventData,
+    LeaveEventData,
+    MessageEventType,
+    PokeEventData,
+    RecallEventData,
+    SenderData,
+    SessionData
+} from '../adapter/interface'
 
-/**
- * 通知类消息
- */
 export abstract class Notice extends Message {
     abstract readonly type: string
-    override session?: Session
-    users: IUser[] = []
-    static matchType: string[]
-    static matchSubType?: string[]
-
-    constructor(data: object) {
-        super(data)
-        if (data['group_id']) this.session = Session.getSession('group', Number(data['group_id']))
-        else if (data['user_id']) this.session = Session.getSession('user', Number(data['user_id']))
-    }
 
     get tome(): boolean {
         return false
     }
+}
 
-    protected getUser(id: number | string): IUser {
-        if (!this.session) return BaseUser.createById(Number(id))
-        return this.session.getUserByIdWithBu(Number(id))
+/**
+ * 收到的通知类消息
+ */
+export abstract class ReceivedNotice extends Notice {
+    abstract readonly type: MessageEventType
+    override session: Session
+    users: IUser[] = []
+
+    constructor(data: {session: SessionData, time: number}) {
+        super(data)
+        this.session = Session.getSession(data.session)
+    }
+
+    protected getUser(user: SenderData): IUser {
+        return getSender(user, this.session)
     }
 }
 
 @autoReactive
-export class RevokeNotice extends Notice {
-    override readonly type: string = 'revoke'
-    message_id: string
+export class RecallNotice extends ReceivedNotice {
+    override readonly type = 'recall'
     user: IUser
     operator: IUser
 
-    constructor(data: { message_id: string, user_id: number, operator_id?: number }) {
+    constructor(data: RecallEventData) {
         super(data)
-        this.message_id = data.message_id
-        const user_id = data.user_id
-        const operator_id = data.operator_id ?? data.user_id
-        this.user = this.getUser(user_id)
-        this.operator = this.getUser(operator_id)
+        this.user = this.getUser(data.user)
+        this.operator = this.getUser(data.operator)
         this.users.push(this.user, this.operator)
     }
 
     get selfRevoke(): boolean {
-        return this.user === this.operator
+        return this.user.user_id === this.operator.user_id
     }
 
     override get preMsg(): string {
@@ -69,17 +76,20 @@ export class RevokeNotice extends Notice {
 }
 
 @autoReactive
-export class BanNotice extends Notice {
-    override readonly type: string = 'ban'
-    declare session?: GroupSession
+export class BanNotice extends ReceivedNotice {
+    override readonly type = 'ban'
+    declare session: GroupSession
+    /**
+     * 禁言时长，单位秒
+     */
     duration: number
     user: IUser
     operator: IUser
-    constructor(data: { user_id: number, operator_id: number, duration: number }) {
+    constructor(data: BanEventData) {
         super(data)
-        this.duration = getViewTime(data.duration)
-        this.user = this.getUser(data.user_id)
-        this.operator = this.getUser(data.operator_id)
+        this.duration = data.duration
+        this.user = this.getUser(data.user)
+        this.operator = this.getUser(data.operator)
         this.users.push(this.user, this.operator)
     }
 
@@ -116,15 +126,15 @@ export class BanNotice extends Notice {
 }
 
 @autoReactive
-export class BanLiftNotice extends Notice {
-    override readonly type: string = 'lift_ban'
-    declare session?: GroupSession
+export class BanLiftNotice extends ReceivedNotice {
+    override readonly type = 'banLift'
+    declare session: GroupSession
     user: IUser
     operator: IUser
-    constructor(data: { user_id: number, operator_id: number }) {
+    constructor(data: BanLiftEventData) {
         super(data)
-        this.user = this.getUser(data.user_id)
-        this.operator = this.getUser(data.operator_id)
+        this.user = this.getUser(data.user)
+        this.operator = this.getUser(data.operator)
         this.users.push(this.user, this.operator)
     }
 
@@ -140,52 +150,21 @@ export class BanLiftNotice extends Notice {
 }
 
 @autoReactive
-export class PokeNotice extends Notice {
-    override readonly type: string = 'poke'
+export class PokeNotice extends ReceivedNotice {
+    override readonly type = 'poke'
     action!: string
     suffix!: string
-    img!: string
+    ico!: string
     user: IUser
     target: IUser
-    constructor(data: {
-        user_id: number,
-        target_id: number,
-        raw_info?: any[],
-        action?: string,
-        suffix?: string,
-        action_img_url?: string,
-    }) {
+    constructor(data: PokeEventData) {
         super(data)
-        this.user = this.getUser(data.user_id)
-        this.target = this.getUser(data.target_id)
-
+        this.user = this.getUser(data.sender)
+        this.target = this.getUser(data.target)
+        this.action = data.action
+        this.suffix = data.suffix
+        this.ico = stdUrl(data.ico)
         this.users.push(this.user, this.target)
-
-        if (data.raw_info) {
-            let getTxt = 0
-            let setImg = false
-            for (const item of data.raw_info) {
-                if (item.type === 'img') {
-                    this.img = stdUrl(item.url)
-                    setImg = true
-                }
-                if (item.type === 'nor') {
-                    if (getTxt === 0) {
-                        this.action = item.txt
-                        getTxt++
-                    } else if (getTxt === 1) {
-                        this.suffix = item.txt
-                        getTxt++
-                    }
-                }
-            }
-            if (!setImg) throw new Error('缺少必要的 poke 图片信息')
-            if (getTxt !== 2) throw new Error('缺少必要的 poke 文本信息')
-        } else if (data.action && data.suffix !== undefined && data.action_img_url) {
-            this.action = data.action
-            this.suffix = data.suffix
-            this.img = stdUrl(data.action_img_url)
-        } else throw new Error('缺少必要的 poke 信息')
     }
 
     override get tome(): boolean {
@@ -199,19 +178,28 @@ export class PokeNotice extends Notice {
     }
 }
 
-export class JoinNotice extends Notice {
-    override readonly type: string = 'join'
-    declare session?: GroupSession
+export class JoinNotice extends ReceivedNotice {
+    override readonly type = 'join'
+    declare session: GroupSession
     join_type: 'approve' | 'invite' | 'self'
     user!: IUser
     operator!: IUser
-    private user_id: number
-    private operator_id: number
-    constructor(data: { user_id: number, operator_id: number, sub_type: 'approve' | 'invite' }) {
+    private user_info: SenderData
+    private operator_info: SenderData
+    constructor(data: JoinEventData) {
         super(data)
-        this.join_type = data.sub_type
-        this.user_id = data.user_id
-        this.operator_id = data.operator_id || data.user_id
+        this.join_type = data.join_type
+        this.user_info = data.user
+        this.operator_info = data.operator
+
+        this.user = this.getUser(this.user_info)
+        this.operator = this.getUser(this.operator_info)
+        this.users.push(this.user, this.operator)
+
+        if (this.operator.user_id === 0) {
+            this.operator.user_id = this.user.user_id
+            this.join_type = 'self'
+        }
     }
 
     /**
@@ -219,13 +207,10 @@ export class JoinNotice extends Notice {
      * 因为刚加群时没他的信息
      */
     refreshUserData(){
-        this.user = this.getUser(this.user_id)
-        this.operator = this.getUser(this.operator_id)
+        this.users.length = 0
+        this.user = this.getUser(this.user_info)
+        this.operator = this.getUser(this.operator_info)
         this.users.push(this.user, this.operator)
-        if (this.operator.user_id === 0) {
-            this.operator.user_id = this.user.user_id
-            this.join_type = 'self'
-        }
     }
 
     override get preMsg(): string {
@@ -236,16 +221,15 @@ export class JoinNotice extends Notice {
     }
 }
 
-export class LeaveNotice extends Notice {
-    override readonly type: string = 'leave'
-    declare session?: GroupSession
+export class LeaveNotice extends ReceivedNotice {
+    override readonly type = 'leave'
+    declare session: GroupSession
     user: IUser
     operator: IUser
-    constructor(data: { user_id: number, operator_id: number }) {
+    constructor(data: LeaveEventData) {
         super(data)
-        if (data.operator_id === 0) data.operator_id = data.user_id
-        this.user = this.getUser(data.user_id)
-        this.operator = this.getUser(data.operator_id)
+        this.user = this.getUser(data.user)
+        this.operator = this.getUser(data.operator)
         this.users.push(this.user, this.operator)
     }
 
@@ -264,31 +248,31 @@ export class LeaveNotice extends Notice {
     }
 }
 
-export class UnknownNotice extends Notice {
-    override readonly type: string = 'unknown'
-    data: {[key: string]: any} = {}
+// export class UnknownNotice extends ReceivedNotice {
+//     override readonly type: string = 'unknown'
+//     data: {[key: string]: any} = {}
 
-    constructor(data: { notice_type: string }) {
-        super(data)
-        this.type = data.notice_type
-        this.data = data
-    }
+//     constructor(data: { notice_type: string }) {
+//         super(data)
+//         this.type = data.notice_type
+//         this.data = data
+//     }
 
-    static get type() :string {
-        return 'unknown'
-    }
+//     static get type() :string {
+//         return 'unknown'
+//     }
 
-    override get preMsg(): string {
-        const { $t } = app.config.globalProperties
-        return $t('未知通知类型') + this.type
-    }
-}
+//     override get preMsg(): string {
+//         const { $t } = app.config.globalProperties
+//         return $t('未知通知类型') + this.type
+//     }
+// }
 
 /**
  * 系统自身产生的通知,非收到协议段的
  */
 export abstract class SystemNotice extends Notice {
-    static override matchType: string[] = []
+    override session: undefined
     constructor(data: object) {
         super(data)
     }
