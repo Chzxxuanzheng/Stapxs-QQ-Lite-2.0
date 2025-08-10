@@ -301,7 +301,8 @@ export class SessionBox {
      */
     sessionNewMessage(session: Session, newMsg: Message): void {
         // 更新预览消息
-        this.preMessage = newMsg
+        if (session.preMessage === newMsg)
+            this.preMessage = newMsg
 
         // 置顶会话不更新是否有通知 | 高亮信息（重复显示了）
         if (session.alwaysTop) return
