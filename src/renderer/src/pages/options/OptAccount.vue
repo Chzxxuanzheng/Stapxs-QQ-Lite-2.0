@@ -63,18 +63,38 @@
                 </button>
             </div>
         </template>
-        <div v-if="false"
+        <div v-if="Object.keys(implBar).length > 0"
             class="ss-card">
-            <header>{{ $t('后端信息') }}</header>
+            <header>{{ $t('适配器信息') }}</header>
+            <div class="l10n-info">
+                <font-awesome-icon :icon="['fas', 'robot']" />
+                <div>
+                    <span>{{ nowAdapter.name }}
+                        <a>{{ nowAdapter.version }}</a>
+                    </span>
+                    <span>{{ $t('这是你连接的 QQ Bot 的相关信息') }}</span>
+                </div>
+            </div>
+            <component :is="implBar" />
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
+import {
+    computed,
+    markRaw
+} from 'vue'
 import { remove } from '@renderer/function/option'
 import { resetRuntime, runtimeData } from '@renderer/function/msg'
 import { PopInfo, PopType } from '@renderer/function/base'
 import { i18n } from '@renderer/main'
+import { AdapterInterface } from '@renderer/function/adapter/interface'
+
+const nowAdapter = computed(() => runtimeData.nowAdapter as AdapterInterface)
+const implBar = computed(()=>{
+    return markRaw(runtimeData.nowAdapter?.optInfo() ?? {})
+})
 
 function $t(value: string, option: any = {}) {
     return i18n.global.t(value, option)
@@ -130,25 +150,6 @@ async function setLNick(event: KeyboardEvent) {
         }else {
             new PopInfo().add(PopType.ERR, $t('个性签名设置失败'))
         }
-    }
-}
-
-function getRunStatus() {
-    const step = runtimeData.watch.heartbeatTime
-    const old = runtimeData.watch.oldHeartbeatTime
-    const last = runtimeData.watch.lastHeartbeatTime
-
-    if (step && old && last) {
-        if (last - old == step) {
-            return 'normal'
-        } else {
-            return 'slow'
-        }
-    } else {
-        if (step == 0) {
-            return 'loading'
-        }
-        return 'unknown'
     }
 }
 </script>

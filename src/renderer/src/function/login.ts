@@ -1,12 +1,15 @@
-import { reactive } from 'vue';
-import { LoginCacheElem } from './elements/system';
-import { URL } from './model/data';
-import { PopInfo, PopType } from './base';
-import { AdapterInterface } from './adapter/interface';
-import { resetRuntime, runtimeData } from './msg';
-import app from '@renderer/main';
-import { reloadUsers, updateMenu } from './utils/appUtil';
-import { callBackend } from './utils/systemUtil';
+import {
+    reactive,
+    markRaw,
+} from 'vue'
+import { LoginCacheElem } from './elements/system'
+import { URL } from './model/data'
+import { PopInfo, PopType } from './base'
+import { AdapterInterface } from './adapter/interface'
+import { resetRuntime, runtimeData } from './msg'
+import app from '@renderer/main'
+import { reloadUsers, updateMenu } from './utils/appUtil'
+import { callBackend } from './utils/systemUtil'
 
 const popInfo = new PopInfo()
 
@@ -46,7 +49,7 @@ export async function login(originUrl: string, token: string): Promise<boolean>{
     }
 
     let adapter = adapterMap.get(protocol) as AdapterInterface
-    runtimeData.nowAdapter = adapter
+    runtimeData.nowAdapter = markRaw(adapter)
     const re = await adapter.connect(url, ssl, token,)
     if (!re) {
         popInfo.add(PopType.ERR, $t('连接失败'))
@@ -57,7 +60,7 @@ export async function login(originUrl: string, token: string): Promise<boolean>{
     const redirect = await adapter.redirect?.()
     if (redirect) {
         adapter = redirect
-        runtimeData.nowAdapter = redirect
+        runtimeData.nowAdapter = markRaw(redirect)
     }
 
     // 获取登陆信息

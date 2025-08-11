@@ -91,6 +91,7 @@ import type {
     ObFriendRecallEvent,
     ObPokeEvent,
     LgrObPokeEvent,
+    LgrObGetVersionInfo,
 } from './type'
 import { LoginInfo } from '../interface'
 import { GroupSession, Session, UserSession } from '@renderer/function/model/session'
@@ -119,6 +120,11 @@ import { Msg } from '@renderer/function/model/msg'
 import { runtimeData } from '@renderer/function/msg'
 import { queueWait } from '@renderer/function/utils/systemUtil'
 import { handleEvent } from '@renderer/function/event'
+import {
+    shallowReactive,
+    shallowRef,
+    ShallowRef,
+} from 'vue'
 
 const logger = new Logger()
 
@@ -139,10 +145,12 @@ function api(
     }
 }
 
-class OneBotAdapter implements AdapterInterface {
+export class OneBotAdapter implements AdapterInterface {
     name = 'OneBot'
     version = '0.0.1'
     protocol = 'ob'
+    heartBeatInfo = shallowReactive({lastBeatTime: 0, interval: -1, expectInterval: -1})
+    botInfo: ShallowRef<ObGetVersionInfo|undefined> = shallowRef(undefined)
     protected url: string = ''
     protected ssl: boolean = false
     protected token?: string
@@ -176,7 +184,7 @@ class OneBotAdapter implements AdapterInterface {
         this.segSerializer['json'] = this.jsonSerializer.bind(this)
 
         this.eventProcessers['message'] = this.messageEvent.bind(this)
-        this.eventProcessers['meta'] = this.metaEvent.bind(this)
+        this.eventProcessers['meta_event'] = this.metaEvent.bind(this)
         this.eventProcessers['notice'] = this.noticeEvent.bind(this)
 
         this.noticeEventProcessers['group_increase'] = this.groupIncreaseEvent.bind(this)
@@ -194,7 +202,6 @@ class OneBotAdapter implements AdapterInterface {
         this.token = token
 
         this.resetCache()
-
         return await this.connector.open(url, ssl, token)
     }
 
@@ -212,7 +219,7 @@ class OneBotAdapter implements AdapterInterface {
             return undefined
 
         if (LagrangeOneBot.match(implInfo))
-            return new LagrangeOneBot(this.connector)
+            return new LagrangeOneBot(this.connector, this.botInfo.value)
         return undefined
 
     }
@@ -237,6 +244,8 @@ class OneBotAdapter implements AdapterInterface {
     async getImplInfo(): Promise<ImplInfo | undefined> {
         // 获取协议段信息
         const data: ObGetVersionInfo = await this.connector.send('get_version_info', {})
+        // 更新 botInfo
+        this.botInfo.value = data
         return {
             name: data.data.app_name,
             version: data.data.app_version,
@@ -743,7 +752,17 @@ class OneBotAdapter implements AdapterInterface {
     }
     async metaEvent(event: ObHeartEvent): Promise<undefined> {
         if (event.meta_event_type !== 'heartbeat') return
-        // TODO: 心跳事件
+
+
+        if (this.heartBeatInfo.expectInterval === -1) {
+            this.heartBeatInfo.expectInterval = event.interval /  1000
+            this.heartBeatInfo.lastBeatTime = event.time
+            return
+        }
+
+        this.heartBeatInfo.interval = event.time - this.heartBeatInfo.lastBeatTime
+        this.heartBeatInfo.lastBeatTime = event.time
+        this.heartBeatInfo.expectInterval = event.interval / 1000
     }
     noticeEventProcessers: Record<string, (event: any) => Promise<EventData | undefined>> = {}
     async noticeEvent(event: ObNoticeEvent): Promise<undefined | EventData> {
@@ -850,6 +869,14 @@ class OneBotAdapter implements AdapterInterface {
         }
     }
     //#endregion
+    get selfInfo(): {[key: string]: string} {
+        if (!this.botInfo.value) return {}
+        return {
+            '协议段名称': this.botInfo.value.data.app_name,
+            '协议段版本': this.botInfo.value.data.app_version,
+            'OneBot 版本': this.botInfo.value.data.protocol_version,
+        }
+    }
     protected onmessage(data: any) {
         return this.handleEvent(data)
     }
@@ -875,12 +902,14 @@ class OneBotAdapter implements AdapterInterface {
     }
 }
 
-class LagrangeOneBot extends OneBotAdapter implements AdapterInterface {
+export class LagrangeOneBot extends OneBotAdapter implements AdapterInterface {
     override name = 'Lagrange OneBot'
     override version = '0.0.1'
-    constructor(connector: ObConnector) {
+    declare botInfo: ShallowRef<LgrObGetVersionInfo | undefined>
+    constructor(connector: ObConnector, botInfo?: ObGetVersionInfo) {
         super()
         this.connector = connector
+        this.botInfo.value = botInfo as LgrObGetVersionInfo
         connector.setOnMessageHook(this.onmessage.bind(this))
     }
 
@@ -1349,6 +1378,14 @@ class LagrangeOneBot extends OneBotAdapter implements AdapterInterface {
         }
 
         return await Promise.all(out)
+    }
+
+    override get selfInfo(): {[key: string]: string} {
+        if (!this.botInfo.value) return {}
+        return {
+            ...super.selfInfo,
+            'ntqq协议': this.botInfo.value.data.nt_protocol,
+        }
     }
 
     private isDeletedMsg(msg: MsgData): boolean {

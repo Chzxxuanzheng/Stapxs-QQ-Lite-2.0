@@ -568,6 +568,12 @@ export interface ObPokeEvent extends ObNoticeEvent {
 //#endregion
 
 //#region == LGRV1 ==============================================
+export type LgrObGetVersionInfo = ObResponse<{
+    app_name: string
+    app_version: string
+    protocol_version: string
+    nt_protocol: string
+}>
 export type LgrObGetFriendList = ObResponse<{
     user_id: number
     nickname: string
