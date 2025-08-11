@@ -243,11 +243,11 @@ import {
     optDefault,
 } from '@renderer/function/option'
 import { PopInfo, PopType } from '@renderer/function/base'
-import { runtimeData, dispatch } from '@renderer/function/msg'
+import { runtimeData } from '@renderer/function/msg'
 import { BrowserInfo, detect } from 'detect-browser'
 import { BotMsgType } from '@renderer/function/elements/information'
 import { uptime } from '@renderer/main'
-import { loadJsonMap, useBaseDebounced } from '@renderer/function/utils/appUtil'
+import { useBaseDebounced } from '@renderer/function/utils/appUtil'
 import { callBackend, stdUrl } from '@renderer/function/utils/systemUtil'
 import {
     shallowReactive,

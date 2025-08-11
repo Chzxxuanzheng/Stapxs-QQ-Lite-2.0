@@ -1028,54 +1028,6 @@ export function BackendRequest(type: 'GET' | 'POST', url: string,
 }
 
 /**
-* 加载数据解析映射表（JSON Path）
-* @param name 配置名称
-* @returns 映射表
-*/
-export function loadJsonMap(name: string) {
-    let msgPath = undefined as { [key: string]: any } | undefined
-    if (name !== undefined) {
-        try {
-            const msgPathList = import.meta.glob(
-                '@renderer/assets/pathMap/*.yaml', { eager: true })
-            const msgPathKey = Object.keys(msgPathList).find((key) => {
-                return key.includes(name)
-            })
-            if (msgPathKey) {
-                msgPath = (msgPathList[msgPathKey] as any).default
-            }
-            if(msgPath) {
-                logger.system('开发者，请稍等一下（翻找），正在为阁下加载 ' + msgPath.name + ' 的服务映射表。')
-                if (msgPath.redirect) {
-                    // eslint-disable-next-line
-                    const newMsgPathKey = Object.keys(msgPathList).find((key) => {
-                        return key.includes(msgPath?.redirect)
-                    })
-                    let newMsgPath = undefined as
-                            { [key: string]: any } | undefined
-                    if(newMsgPathKey) {
-                        newMsgPath = (msgPathList[newMsgPathKey] as any).default
-                    }
-                    // 合并映射表
-                    Object.keys(msgPath).forEach((key) => {
-                        if (newMsgPath && key != 'name' && newMsgPath[key]) {
-                            if(msgPath)
-                                newMsgPath[key] = msgPath[key]
-                        }
-                    })
-                    msgPath = newMsgPath
-                    logger.system('非常抱歉开发者，已帮阁下将映射表重定向加载为 ：' + msgPath?.name + ' （慌张）')
-                }
-            }
-            runtimeData.jsonMap = msgPath
-        } catch (ex) {
-            logger.system('很抱歉开发者，映射表加载失败 ……' + ex)
-        }
-    }
-    return msgPath
-}
-
-/**
 * UM：统计事件统一上传方法
 * @param event 事件名
 * @param data 数据
@@ -1399,7 +1351,7 @@ export const vAutoFocus: Directive<HTMLInputElement|HTMLTextAreaElement, undefin
             const style = window.getComputedStyle(el)
             return style.display !== 'none' &&
                    style.visibility !== 'hidden' &&
-                   style.opacity !== '0'
+                   Number(style.opacity) > 0
         }
 
         if (!isVisible()) return
@@ -1457,7 +1409,7 @@ export function createVSearch<T extends { match(query: string): boolean }>()
             }
             if (stopWatch) {
                 (stopWatch.stopWatch as WatchHandle).stop();
-                (stopWatch.stopWatchEffect as WatchHandle).stop();
+                (stopWatch.stopWatchEffect as WatchHandle).stop()
                 delete (el as any)._vStopWatch
             }
         }
