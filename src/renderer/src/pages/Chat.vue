@@ -1846,6 +1846,7 @@ const userInfoPanFunc: UserInfoPan = {
                     return true
                 }
                 if (!process(event)) return
+                event.preventDefault()
                 // 创建遮罩
                 // 由于在窗口移动中,窗口判定箱也在移动,当指针不再窗口外,事件就断了
                 // 所以要创建一个不会动的全局遮罩来处理
