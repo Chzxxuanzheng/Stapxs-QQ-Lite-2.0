@@ -51,9 +51,9 @@
                     </div>
                     <div v-else-if="msgItem instanceof Notice">
                         <span
-                            v-if="msgItem instanceof RevokeNotice"
+                            v-if="msgItem instanceof RecallNotice"
                             style="color: yellow">::
-                            <span style="color: yellow; opacity: 0.7">{{ msgItem.operator.name }}</span>
+                                <span style="color: yellow; opacity: 0.7">{{ msgItem.operator.name }}</span>
                             recalled a message.</span>
                     </div>
                     <div v-else-if="msgItem.commandLine">
@@ -217,7 +217,7 @@ import SystemNotice from './SystemNotice.vue'
                 endMsg: null as null | Message,       // 尾部消息,用来和chat.messageList比对来更新cmdLines
                 Msg,
                 Notice,
-                RecallNotice: RevokeNotice,
+                RecallNotice,
             }
         },
         watch: {
@@ -325,6 +325,7 @@ import SystemNotice from './SystemNotice.vue'
                                     // 根据 item[2] 寻找这条消息 的名字
                                     const msg = this.chat.messageList.filter(
                                         (msg) => {
+                                            if (!(msg instanceof Msg)) return false
                                             return msg.message_id == item[2]
                                         },
                                     )
@@ -499,6 +500,7 @@ import SystemNotice from './SystemNotice.vue'
                     const replySeg: ReplySeg = repItem[0] as ReplySeg
                     const repMsg: Msg[] = this.chat.messageList.filter(
                         (item) => {
+                            if (!(item instanceof Msg)) return false
                             return item.message_id === replySeg.id
                         },
                     ) as Msg[]

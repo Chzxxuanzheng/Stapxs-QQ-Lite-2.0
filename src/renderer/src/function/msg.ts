@@ -135,6 +135,7 @@ export function recallMsg(session: Session, msgId: string) {
     let matchMsg: undefined | Msg
     let matchMsgId: undefined | number
     for (const [ id, msg ] of session.messageList.entries()) {
+        if (!(msg instanceof Msg)) continue
         if (msg.message_id === String(msgId)) {
             matchMsg = msg as Msg
             matchMsgId = id

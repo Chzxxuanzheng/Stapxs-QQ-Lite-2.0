@@ -246,6 +246,7 @@ export async function reloadUsers(useCache: boolean = true) {
  * 通过用户和消息 ID 跳转到对应的消息
  * @param id
  * @param msgId
+ * @deprecated 待维护
  */
 export function jumpToChat(userId: string, msgId: string) {
     const session = Session.getSessionById(Number(userId))

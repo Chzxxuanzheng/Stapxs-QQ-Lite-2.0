@@ -567,6 +567,7 @@ defineExpose({
             scrollToMsg(message_id: string) {
                 let uuid: string|undefined = undefined
                 for (const item of runtimeData.nowChat!.messageList) {
+                    if (!(item instanceof Msg)) continue
                     if (item.message_id === message_id) {
                         uuid = item.uuid
                         break
@@ -848,6 +849,7 @@ defineExpose({
              */
             getRepMsg(message_id: string): string | null {
                 const list = runtimeData.nowChat!.messageList.filter((item) => {
+                    if (!(item instanceof Msg)) return false
                     return item.message_id === message_id
                 })
                 if (list.length !== 1) return null

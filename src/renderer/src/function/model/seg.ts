@@ -12,12 +12,12 @@ import { getSender } from './user'
 export const segType = {}
 type SegCon<T extends Seg> = { new(...args: any[]): T; type: string };
 function registerSegType<T extends Seg>(segClass: SegCon<T>): void {
-    segType[segClass.type] = segClass;
+    segType[segClass.type] = segClass
 }
 
 
 export abstract class Seg {
-    declare static readonly type: string;
+    declare static readonly type: string
 
     abstract get plaintext(): string;
 
@@ -31,11 +31,11 @@ export abstract class Seg {
 	}
 
     get type(): string {
-        return (this.constructor as typeof Seg).type;
+        return (this.constructor as typeof Seg).type
     }
 
     toString(): string {
-        return this.plaintext;
+        return this.plaintext
     }
 }
 
@@ -328,9 +328,13 @@ export class ReplySeg extends Seg {
     static readonly type = 'reply'
     id: string
 	msg?: Msg
-    constructor(data: ReplySegData) {
+    constructor(msgId: string)
+    constructor(data: ReplySegData)
+    constructor(data: ReplySegData | string) {
         super()
-        this.id = data.id
+        if (typeof data === 'string')
+            this.id = data
+        else this.id = data.id
     }
 
     get plaintext(): string {
