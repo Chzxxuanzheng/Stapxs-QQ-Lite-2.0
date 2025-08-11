@@ -66,24 +66,24 @@ export interface AdapterInterface {
      * 获取好友列表
      * @param useCache 是否使用缓存
      */
-    getFriendList(useCache: boolean): Promise<FriendData[]|undefined>
+    getFriendList(useCache?: boolean): Promise<FriendData[]|undefined>
     /**
      * 获取群组列表
      * @param useCache 是否使用缓存
      */
-    getGroupList(useCache: boolean): Promise<GroupData[]|undefined>
+    getGroupList(useCache?: boolean): Promise<GroupData[]|undefined>
     /**
      * 获取用户信息
      * @param userId 用户id
      * @param useCache 是否使用缓存
      */
-    getUserInfo(userId: number, useCache: boolean): Promise<UserData|undefined>
+    getUserInfo(userId: number, useCache?: boolean): Promise<UserData|undefined>
     /**
      * 获取群成员信息
      * @param group 群组会话
      * @param useCache 是否使用缓存
      */
-    getMemberList(group: GroupSession, useCache: boolean): Promise<MemberData[]|undefined>
+    getMemberList(group: GroupSession, useCache?: boolean): Promise<MemberData[]|undefined>
     /**
      * 获取群公告信息
      * @param group

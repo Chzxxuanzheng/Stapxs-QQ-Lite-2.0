@@ -10,6 +10,7 @@ import { resetRuntime, runtimeData } from './msg'
 import app from '@renderer/main'
 import { reloadUsers, updateMenu } from './utils/appUtil'
 import { callBackend } from './utils/systemUtil'
+import { User } from './model/user'
 
 const popInfo = new PopInfo()
 
@@ -70,6 +71,7 @@ export async function login(originUrl: string, token: string): Promise<boolean>{
             PopType.ERR,
             $t('获取登录信息失败')
         )
+        adapter.close()
         return false
     }
 
@@ -78,6 +80,19 @@ export async function login(originUrl: string, token: string): Promise<boolean>{
 
     // 完成登陆初始化
     runtimeData.loginInfo = loginData
+
+    // 获取个人信息
+    const selfInfo = await adapter.getUserInfo(loginData.uin)
+    if (!selfInfo) {
+        new PopInfo().add(
+            PopType.ERR,
+            $t('获取个人信息失败')
+        )
+        adapter.close()
+        return false
+    }
+    // 设置个人信息
+    runtimeData.selfInfo = new User(selfInfo)
 
     // 显示账户菜单
     updateMenu({

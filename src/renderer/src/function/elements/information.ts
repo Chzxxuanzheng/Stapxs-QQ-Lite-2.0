@@ -2,6 +2,7 @@ import { AdapterInterface, LoginInfo } from '../adapter/interface'
 import { SessionBox } from '../model/box'
 import { ForwardSeg } from '../model/seg'
 import { Session } from '../model/session'
+import { User } from '../model/user'
 import { optDefault } from '../option'
 
 export enum BotMsgType {
@@ -12,6 +13,7 @@ export enum BotMsgType {
 export interface RunTimeDataElem {
     sysConfig: Record<keyof typeof optDefault, any | null>
     loginInfo: LoginInfo,
+    selfInfo?: User
     onMsgList: (UserFriendElem & UserGroupElem)[]
     systemNoticesList?: { [key: string]: any }
     pageView: {

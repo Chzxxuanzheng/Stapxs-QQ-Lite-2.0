@@ -270,6 +270,7 @@ export const runtimeData: RunTimeDataElem = reactive(baseRuntime)
 export function resetRuntime(resetAll = false) {
     runtimeData.watch = reactive(baseRuntime.watch)
     if (resetAll) {
+        runtimeData.selfInfo = undefined
         runtimeData.tags = reactive(baseRuntime.tags)
         runtimeData.systemNoticesList = reactive([])
         runtimeData.onMsgList = reactive([])

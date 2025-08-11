@@ -9,19 +9,15 @@
 
 <template>
     <div class="opt-page">
-        <template v-if="Object.keys(runtimeData.loginInfo).length > 0">
+        <template v-if="selfInfo">
             <div class="ss-card account-info">
-                <img :src="'https://q1.qlogo.cn/g?b=qq&s=0&nk=' + runtimeData.loginInfo.uin">
+                <img :src="selfInfo.face">
                 <div>
                     <div>
                         <span>{{ runtimeData.loginInfo.nickname }}</span>
                         <span>{{ runtimeData.loginInfo.uin }}</span>
                     </div>
-                    <span>{{
-                        runtimeData.loginInfo.info &&
-                            Object.keys(runtimeData.loginInfo.info).length > 0
-                            ? runtimeData.loginInfo.info.lnick : ''
-                    }}</span>
+                    <span>{{ selfInfo.longNick }}</span>
                 </div>
                 <font-awesome-icon :icon="['fas', 'right-from-bracket']" @click="exitConnect" />
             </div>
@@ -33,22 +29,21 @@
                         <span>{{ $t('昵称') }}</span>
                         <span>{{ $t('就只是个名字而已 ……') }}</span>
                     </div>
-                    <input v-model="runtimeData.loginInfo.nickname"
+                    <input v-model="selfNick"
                         class="ss-input"
-                        style="width: 150px"
+                        style="width: 150px;"
                         type="text"
                         @keyup="setNick">
                 </div>
-                <div v-if="runtimeData.loginInfo.info && Object.keys(runtimeData.loginInfo.info).length > 0"
-                    class="opt-item">
+                <div class="opt-item">
                     <font-awesome-icon :icon="['fas', 'pen']" />
                     <div>
                         <span>{{ $t('签名') }}</span>
                         <span>{{ $t('啊吧啊吧（智慧的眼神）') }}</span>
                     </div>
-                    <input v-model="runtimeData.loginInfo.info.lnick"
+                    <input v-model="selfSign"
                         class="ss-input"
-                        style="width: 150px"
+                        style="width: 150px;"
                         type="text"
                         @keyup="setLNick">
                 </div>
@@ -83,21 +78,43 @@
 <script setup lang="ts">
 import {
     computed,
-    markRaw
+    markRaw,
+    shallowRef,
+    watch,
 } from 'vue'
 import { remove } from '@renderer/function/option'
 import { resetRuntime, runtimeData } from '@renderer/function/msg'
 import { PopInfo, PopType } from '@renderer/function/base'
 import { i18n } from '@renderer/main'
 import { AdapterInterface } from '@renderer/function/adapter/interface'
+import { User } from '@renderer/function/model/user'
 
 const nowAdapter = computed(() => runtimeData.nowAdapter as AdapterInterface)
 const implBar = computed(()=>{
     return markRaw(runtimeData.nowAdapter?.optInfo() ?? {})
 })
+const selfInfo = computed(() => runtimeData.selfInfo)
+
+const selfNick = shallowRef<string>('')
+const selfSign = shallowRef<string>('')
 
 function $t(value: string, option: any = {}) {
     return i18n.global.t(value, option)
+}
+
+updateSelfInfo()
+watch(() => runtimeData.selfInfo, () => {
+    updateSelfInfo()
+})
+
+function updateSelfInfo() {
+    if (runtimeData.selfInfo) {
+        selfNick.value = runtimeData.selfInfo.nickname?.toString() ?? ''
+        selfSign.value = runtimeData.selfInfo.longNick?.toString() ?? ''
+    }else {
+        selfNick.value = ''
+        selfSign.value = ''
+    }
 }
 
 /**
@@ -119,16 +136,19 @@ function goLogin() {
  */
 async function setNick(event: KeyboardEvent) {
     // TODO: 这玩意的返回好像永远是错误的 …… 所以干脆不处理返回了
-    if (event.key === 'Enter' && runtimeData.loginInfo.nickname !== '') {
+    if (event.key === 'Enter' && selfNick.value !== '') {
         if (!runtimeData.nowAdapter?.setNickname) {
             new PopInfo().add(PopType.ERR, $t('当前适配器不支持设置昵称'))
             return
         }
-        const re = await runtimeData.nowAdapter?.setNickname(runtimeData.loginInfo.nickname)
+
+        const re = await runtimeData.nowAdapter?.setNickname(selfNick.value)
+
         if (re) {
-            new PopInfo().add(PopType.INFO, $t('昵称设置成功'))
+            new PopInfo().add(PopType.INFO, $t('检查更新结果ing'))
+            await reflashSelfInfo()
         }else {
-            new PopInfo().add(PopType.ERR, $t('昵称设置失败'))
+            new PopInfo().add(PopType.ERR, $t('个性签名设置失败'))
         }
     }
 }
@@ -139,17 +159,36 @@ async function setNick(event: KeyboardEvent) {
  */
 async function setLNick(event: KeyboardEvent) {
     // TODO: 这玩意的返回好像永远是错误的 …… 所以干脆不处理返回了
-    if (event.key === 'Enter' && runtimeData.loginInfo.info.lnick !== '') {
-        if (!runtimeData.nowAdapter?.setNickname) {
+    if (event.key === 'Enter' && selfSign.value !== '') {
+        if (!runtimeData.nowAdapter?.setSign) {
             new PopInfo().add(PopType.ERR, $t('当前适配器不支持设置个性签名'))
             return
         }
-        const re = await runtimeData.nowAdapter?.setSign(runtimeData.loginInfo.info.lnick)
+        const re = await runtimeData.nowAdapter?.setSign(selfSign.value)
         if (re) {
-            new PopInfo().add(PopType.INFO, $t('个性签名设置成功'))
+            new PopInfo().add(PopType.INFO, $t('检查更新结果ing'))
+            await reflashSelfInfo()
         }else {
             new PopInfo().add(PopType.ERR, $t('个性签名设置失败'))
         }
+    }
+}
+
+async function reflashSelfInfo() {
+    if (!runtimeData.nowAdapter) {
+        new PopInfo().add(PopType.ERR, $t('连接中断...'))
+        return
+    }
+    const selfInfo = await runtimeData.nowAdapter.getUserInfo(runtimeData.loginInfo.uin, false)
+    if (!selfInfo) {
+        new PopInfo().add(PopType.ERR, $t('检查更新失败'))
+        return
+    }
+    if (selfInfo) {
+        runtimeData.selfInfo = new User(selfInfo)
+        new PopInfo().add(PopType.INFO, $t('设置成功'))
+    }else {
+        new PopInfo().add(PopType.ERR, $t('设置失败'))
     }
 }
 </script>
