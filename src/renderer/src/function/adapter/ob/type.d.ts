@@ -517,7 +517,8 @@ export interface ObHeartEvent extends ObEvent {
 }
 export interface ObNoticeEvent extends ObEvent {
     post_type: 'notice'
-    notice_type: string
+    notice_type: string | 'notify'      // 通知类型一并塞进去吧...
+    sub_type?: string                   // 子类型
     group_id?: number                   // 群号（可能不存在）
     user_id?: number                    // 用户 QQ 号（可能不存在）
 }
@@ -558,7 +559,8 @@ export interface ObFriendRecallEvent extends ObNoticeEvent {
     message_id: number                  // 被撤回消息 ID
 }
 export interface ObPokeEvent extends ObNoticeEvent {
-    notice_type: 'poke'                 // 戳一戳事件
+    notice_type: 'notify'               // 戳一戳事件
+    sub_type: 'poke'                    // 子类型
     group_id: number                    // 群号
     user_id: number                     // 戳一戳者 QQ 号
     target_id: number                   // 被戳者 QQ 号
@@ -689,4 +691,10 @@ export type LgrObFileSeg = ObSeg<'file', {
     file_id: string
 }>
 export type LgrObGetCustomFace = ObResponse<string[]>
+
+export interface LgrObPokeEvent extends ObPokeEvent {
+    action: string              // 戳一戳动作
+    suffix: string              // 戳一戳后缀
+    action_img_url: string      // 戳一戳动作图片
+}
 //#endregion

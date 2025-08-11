@@ -90,6 +90,7 @@ import type {
     ObGroupBanEvent,
     ObFriendRecallEvent,
     ObPokeEvent,
+    LgrObPokeEvent,
 } from './type'
 import { LoginInfo } from '../interface'
 import { GroupSession, Session, UserSession } from '@renderer/function/model/session'
@@ -138,7 +139,6 @@ function api(
     }
 }
 
-// TODO: Warn: 退群消息为自身退群的话，操作为0
 class OneBotAdapter implements AdapterInterface {
     name = 'OneBot'
     version = '0.0.1'
@@ -149,6 +149,9 @@ class OneBotAdapter implements AdapterInterface {
     protected connector: ObConnector = new ObConnector(this.onmessage.bind(this))
 
     constructor() {
+        this.init()
+    }
+    protected init() {
         this.segParsers['text'] = this.textParser.bind(this)
         this.segParsers['image'] = this.imageParser.bind(this)
         this.segParsers['face'] = this.faceParser.bind(this)
@@ -203,6 +206,7 @@ class OneBotAdapter implements AdapterInterface {
 
     async redirect(): Promise<AdapterInterface | undefined> {
         // TODO:重定向到其他适配器逻辑
+        // nc llonebot
         const implInfo = await this.getImplInfo()
         if (!implInfo)
             return undefined
@@ -743,7 +747,8 @@ class OneBotAdapter implements AdapterInterface {
     }
     noticeEventProcessers: Record<string, (event: any) => Promise<EventData | undefined>> = {}
     async noticeEvent(event: ObNoticeEvent): Promise<undefined | EventData> {
-        const processer = this.noticeEventProcessers[event.notice_type]
+        const eventType = event.notice_type === 'notify' ? event.sub_type : event.notice_type
+        const processer = this.noticeEventProcessers[eventType ?? '']
         if (!processer) return
         const sessionId = event.group_id || event.user_id
         const type = event.group_id ? 'group' : 'user'
@@ -845,7 +850,7 @@ class OneBotAdapter implements AdapterInterface {
         }
     }
     //#endregion
-    private onmessage(data: any) {
+    protected onmessage(data: any) {
         return this.handleEvent(data)
     }
 
@@ -870,14 +875,17 @@ class OneBotAdapter implements AdapterInterface {
     }
 }
 
-// TODO: lgr getMsg缺群组信息
 class LagrangeOneBot extends OneBotAdapter implements AdapterInterface {
     override name = 'Lagrange OneBot'
     override version = '0.0.1'
     constructor(connector: ObConnector) {
         super()
         this.connector = connector
+        connector.setOnMessageHook(this.onmessage.bind(this))
+    }
 
+    protected override init(): void {
+        super.init()
         this.segParsers['markdown'] = this.mdParser.bind(this)
         this.segParsers['mface'] = this.mfaceParser.bind(this)
 
@@ -1245,6 +1253,28 @@ class LagrangeOneBot extends OneBotAdapter implements AdapterInterface {
         }
     }
     //#endregion
+    //#endregion
+
+    //#region == 事件处理 ===========================================
+    override async pokeEvent(event: LgrObPokeEvent): Promise<PokeEventData> {
+        return {
+            type: 'poke',
+            session: {
+                id: event.group_id,
+                type: 'group',
+            },
+            sender: createSender(event.user_id),
+            target: createSender(event.target_id),
+            action: event.action,
+            suffix: event.suffix,
+            ico: event.action_img_url,
+            time: event.time,
+        }
+    }
+    override async groupDecreaseEvent(event: ObGroupDecreaseEvent): Promise<LeaveEventData> {
+        if (event.operator_id === 0) event.operator_id = event.user_id
+        return super.groupDecreaseEvent(event)
+    }
     //#endregion
 
     static match(implInfo: ImplInfo): boolean {

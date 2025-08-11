@@ -154,6 +154,17 @@ export class ObConnector {
         }
     }
 
+    /**
+     * 重置onmessage钩子
+     * @param onmessage 新钩子
+     */
+    setOnMessageHook(
+        onmessage: (msg: string) => void,
+    ): void {
+        this.onmessageHook = onmessage
+        driver.onMessage(this.onmessage.bind(this))
+    }
+
     async send(
         name: string,
         args: { [key: string]: any },
