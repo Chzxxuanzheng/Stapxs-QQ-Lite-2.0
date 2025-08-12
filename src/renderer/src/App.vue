@@ -246,7 +246,7 @@ import Friends from '@renderer/pages/Friends.vue'
 import Messages from '@renderer/pages/Messages.vue'
 import Boxs from '@renderer/pages/Boxs.vue'
 import FriendMenu from '@renderer/components/FriendMenu.vue'
-import driver, { DriverState } from './function/driver'
+import driver from './function/driver'
 import { login, loginInfo } from './function/login'
 
 const friendMenu: Ref<undefined|InstanceType<typeof FriendMenu>> = ref()
@@ -528,13 +528,20 @@ export default defineComponent({
         /**
          * 发起连接
          */
-        connect() {
+        async connect() {
             if(this.tags.quickLoginSelect != '') {
                 // PS：快速连接的地址只会是局域网,没ssl,milky没做适配,所以默认 ob 协议
                 this.loginInfo.address = 'ob://' + this.tags.quickLoginSelect
             }
             // Connector.create(this.loginInfo.address, this.loginInfo.token)
-            login(this.loginInfo.address, this.loginInfo.token)
+            const re = await login(this.loginInfo.address, this.loginInfo.token)
+
+            if (!re) return
+
+            Option.save('address', this.loginInfo.address)
+            if (Option.get('save_password'))
+                Option.save('save_password', this.loginInfo.token)
+
         },
         selectQuickLogin(address: string) {
             this.tags.quickLoginSelect = address
