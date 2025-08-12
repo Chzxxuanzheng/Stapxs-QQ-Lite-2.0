@@ -32,16 +32,16 @@ export function parseMsg(msg: string, cache: Seg[], img: string[], reply?: Msg|s
     // 将图片插入 cache 列表并在消息文本前插入 SQCode
     img.forEach((item) => {
         // 插入图片到缓存列表
-        cache.push(new ImgSeg({
-            file: 'base64://' + item.substring(item.indexOf('base64,') + 7, item.length),
-        }))
+        cache.push(new ImgSeg(
+            'base64://' + item.substring(item.indexOf('base64,') + 7, item.length),
+        ))
         msg = `[SQ:${cache.length - 1}]` + msg
     })
     // 处理消息
     let back = parseMsgToSegs(msg, cache)
     // 插入引用
     if (reply instanceof Msg) reply = reply.message_id
-    if (reply) back = [new ReplySeg({id: reply}), ...back]
+    if (reply) back = [new ReplySeg(reply), ...back]
     // 插入小尾巴
     if (runtimeData.sysConfig.msg_taill) {
         const taill = (runtimeData.sysConfig.msg_taill as string).replaceAll(
@@ -100,7 +100,7 @@ function parseMsgToSegs(msg: string, cache: Seg[]) {
                 const cutMsg = cutList[0].replace(item, '')
                 // 添加前段文本
                 if (cutMsg !== '') {
-                    back.push(new TxtSeg({ text: cutMsg }))
+                    back.push(new TxtSeg(cutMsg))
                 }
                 // 添加后段特殊消息
                 if (cache[index] !== null) {
@@ -112,7 +112,7 @@ function parseMsgToSegs(msg: string, cache: Seg[]) {
         })
     }
     if (msg !== '') {
-        back.push(new TxtSeg({ text: msg }))
+        back.push(new TxtSeg(msg))
     }
 
     // 返回

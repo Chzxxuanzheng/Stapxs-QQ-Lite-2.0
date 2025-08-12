@@ -88,7 +88,7 @@
                     <!-- 表情面板 -->
                     <Transition name="pan">
                         <FacePan v-show="details[1].open"
-                            @add-special-msg="addSpecialMsg" @send-msg="sendMsg" />
+                            @add-special-seg="addSpecialSeg" @send-msg="sendMsg" />
                     </Transition>
                     <!-- 精华消息 -->
                     <Transition v-if="chat instanceof GroupSession" name="pan">
@@ -352,7 +352,7 @@
         <Menu ref="userMenu" name="chat-menu">
             <div class="ss-card msg-menu-body">
                 <div v-show="tags.menuDisplay.at"
-                    @click="menuSelectedUser ? addSpecialMsg({ msgObj: { type: 'at', qq: String(menuSelectedUser!.user_id) }, addText: true, }): '';
+                    @click="menuSelectedUser ? addSpecialSeg(new AtSeg(menuSelectedUser!.user_id)): '';
                             toMainInput();
                             closeUserMenu();">
                     <div><font-awesome-icon :icon="['fas', 'at']" /></div>
@@ -476,11 +476,10 @@ const userInfoPanFunc: UserInfoPan = {
     import { Logger, LogType, PopInfo, PopType } from '@renderer/function/base'
     import { runtimeData } from '@renderer/function/msg'
     import {
-        SQCodeElem,
         MenuEventData,
     } from '@renderer/function/elements/information'
     import { Msg, SelfMsg } from '@renderer/function/model/msg'
-    import { Seg, FileSeg, TxtSeg, ImgSeg, FaceSeg } from '@renderer/function/model/seg'
+    import { Seg, FileSeg, TxtSeg, ImgSeg, FaceSeg, AtSeg } from '@renderer/function/model/seg'
     import { SystemNotice } from '@renderer/function/model/notice'
     import { wheelMask } from '@renderer/function/utils/input'
     import { BaseUser, Member, IUser } from '@renderer/function/model/user'
@@ -848,10 +847,7 @@ const userInfoPanFunc: UserInfoPan = {
                     // 删除输入框内的 At 文本
                     this.msg = this.msg.substring(0, this.msg.lastIndexOf('@'))
                     // 添加 at 信息
-                    this.addSpecialMsg({
-                        msgObj: { type: 'at', qq: id },
-                        addText: true,
-                    })
+                    this.addSpecialSeg(new AtSeg(id))
                 }
                 this.toMainInput()
                 this.tags.onAtFind = false
@@ -1210,23 +1206,14 @@ const userInfoPanFunc: UserInfoPan = {
             },
 
             /**
-             * 添加特殊消息结构
-             * @param data obj
+             * 添加特殊消息段
+             * @param seg 特殊消息段
              */
-            addSpecialMsg(data: SQCodeElem) {
-                if (data !== undefined) {
-                    const index = this.sendCache.length
-                    this.sendCache.push(Seg.parse(data.msgObj))
-                    if (data.addText === true) {
-                        if (data.addTop === true) {
-                            this.msg = '[SQ:' + index + ']' + this.msg
-                        } else {
-                            this.msg += '[SQ:' + index + ']'
-                        }
-                    }
-                    return index
-                }
-                return -1
+            addSpecialSeg(seg: Seg) {
+                const index = this.sendCache.length
+                this.sendCache.push(seg)
+                this.msg += '[SQ:' + index + ']'
+                return index
             },
 
             /**
@@ -1363,21 +1350,14 @@ const userInfoPanFunc: UserInfoPan = {
                             if (base64data !== null) {
                                 if (Option.get('close_chat_pic_pan') === true) {
                                     // 在关闭图片插入面板的模式下将直接以 SQCode 插入输入框
-                                    const data = {
-                                        addText: true,
-                                        msgObj: {
-                                            type: 'image',
-                                            file:
-                                                'base64://' +
-                                                base64data.substring(
-                                                    base64data.indexOf(
-                                                        'base64,',
-                                                    ) + 7,
-                                                    base64data.length,
-                                                ),
-                                        },
-                                    }
-                                    this.addSpecialMsg(data)
+                                    const data = new ImgSeg(
+                                        'base64://' +
+                                        base64data.substring(
+                                            base64data.indexOf('base64,') + 7,
+                                            base64data.length
+                                        )
+                                    )
+                                    this.addSpecialSeg(data)
                                 } else {
                                     // 记录图片信息
                                     // 只要你内存够猛，随便 cache 图片，这边就不做限制了

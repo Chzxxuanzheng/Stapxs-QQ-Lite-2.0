@@ -91,7 +91,7 @@ import { User } from '@renderer/function/model/user'
 
 const nowAdapter = computed(() => runtimeData.nowAdapter as AdapterInterface)
 const implBar = computed(()=>{
-    return markRaw(runtimeData.nowAdapter?.optInfo() ?? {})
+    return markRaw(runtimeData.nowAdapter?.optInfo?.() ?? {})
 })
 const selfInfo = computed(() => runtimeData.selfInfo)
 

@@ -140,17 +140,6 @@ export interface GroupMemberInfoElem {
     py_start?: string
 }
 
-export interface SQCodeElem {
-    addText: boolean
-    addTop?: boolean
-    msgObj: MsgItemElem
-}
-
-export interface MsgItemElem {
-    type: string
-    [key: string]: any
-}
-
 export interface MenuEventData {
     x: number
     y: number

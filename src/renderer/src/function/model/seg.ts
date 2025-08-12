@@ -45,9 +45,14 @@ export class TxtSeg extends Seg {
     text: string
     praseMsg: string
     links: string[]
-    constructor(data: TextSegData) {
+    constructor(text: string)
+    constructor(data: TextSegData)
+    constructor(data: string | TextSegData) {
         super()
-        this.text = data.text
+        if (typeof data === 'string')
+            this.text = data
+        else
+            this.text = data.text
         const { text, links } = MsgBodyFuns.parseTextMsg(this.text)
         this.praseMsg = text
         this.links = links
@@ -86,11 +91,25 @@ export class ImgSeg extends Seg {
     summary?: string
     isFace: boolean = false
     imgId: string = uuid()
-    constructor(data: ImgSegData) {
+    constructor(url: string, isFace?: boolean)
+    constructor(data: ImgSegData)
+    constructor(arg1: string | ImgSegData, arg2: boolean = false) {
         super()
-        this.url = stdUrl(data.url)
-        this.summary = data.summary
-        this.isFace = data.isFace
+        if (typeof arg1 === 'string') {
+            // constructor(url: string, isFace ?: boolean)
+            const { $t } = app.config.globalProperties
+            const url = arg1 as string
+            const isFace = arg2 as boolean | undefined
+            this.url = stdUrl(url)
+            this.isFace = isFace || false
+            this.summary = $t('[图片]')
+        }else {
+            // constructor(data: ImgSegData)
+            const data = arg1 as ImgSegData
+            this.url = stdUrl(data.url)
+            this.summary = data.summary
+            this.isFace = data.isFace
+        }
     }
 
     get plaintext(): string {
@@ -145,10 +164,16 @@ export class FaceSeg extends Seg {
     text?: string
     id: number
     src?: string
-    constructor(data: FaceSegData) {
+    constructor(id: number)
+    constructor(data: FaceSegData)
+    constructor(arg: number | FaceSegData) {
         super()
-        this.text = data.text
-        this.id = data.id
+        if (typeof arg === 'number') {
+            this.id = arg
+        }else {
+            this.text = arg.text
+            this.id = arg.id
+        }
         this.src = getFace(this.id)
     }
 
@@ -164,10 +189,14 @@ export class AtSeg extends Seg {
     static readonly type = 'at'
     user_id: number
     text?: string
-    constructor(data: AtSegData) {
+    constructor(user_id: number)
+    constructor(data: AtSegData)
+    constructor(arg: AtSegData | number) {
         super()
-        this.user_id = Number(data.user_id)
-        this.text = data.text
+        if (typeof arg === 'number')
+            this.user_id = arg
+        else
+            this.user_id = Number(arg.user_id)
     }
 
     get plaintext(): string {

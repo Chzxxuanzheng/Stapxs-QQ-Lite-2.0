@@ -158,9 +158,6 @@
     import { runtimeData } from '@renderer/function/msg'
     import { getTrueLang } from '@renderer/function/utils/systemUtil'
     import {
-        SQCodeElem,
-    } from '@renderer/function/elements/information'
-    import {
         Logger,
         LogType,
         PopInfo,
@@ -170,7 +167,7 @@
     import { changeSession, closeSession, sendMsgRaw } from '@renderer/function/utils/msgUtil'
     import { uptime } from '@renderer/main'
     import { Msg } from '@renderer/function/model/msg'
-    import { ReplySeg, Seg } from '@renderer/function/model/seg'
+    import { ImgSeg, ReplySeg, Seg } from '@renderer/function/model/seg'
     import { Session } from '@renderer/function/model/session'
     import { Notice, RecallNotice } from '@renderer/function/model/notice'
     import { Message } from '@renderer/function/model/message'
@@ -728,23 +725,14 @@ import SystemNotice from './SystemNotice.vue'
             },
 
             /**
-             * 添加特殊消息结构
-             * @param data obj
+             * 添加特殊消息段
+             * @param seg 特殊消息段
              */
-            addSpecialMsg(data: SQCodeElem) {
-                if (data !== undefined) {
-                    const index = this.sendCache.length
-                    this.sendCache.push(Seg.parse(data.msgObj))
-                    if (data.addText === true) {
-                        if (data.addTop === true) {
-                            this.msg = '[SQ:' + index + ']' + this.msg
-                        } else {
-                            this.msg += '[SQ:' + index + ']'
-                        }
-                    }
-                    return index
-                }
-                return -1
+            addSpecialSeg(seg: Seg) {
+                const index = this.sendCache.length
+                this.sendCache.push(seg)
+                this.msg += '[SQ:' + index + ']'
+                return index
             },
 
             addImg(event: ClipboardEvent) {
@@ -781,22 +769,15 @@ import SystemNotice from './SystemNotice.vue'
                             const base64data = reader.result as string
                             if (base64data !== null) {
                                 if (Option.get('close_chat_pic_pan') === true) {
-                                    // 在关闭图片插入面板的模式下将直接以 SQCode 插入输入框
-                                    const data = {
-                                        addText: true,
-                                        msgObj: {
-                                            type: 'image',
-                                            file:
-                                                'base64://' +
-                                                base64data.substring(
-                                                    base64data.indexOf(
-                                                        'base64,',
-                                                    ) + 7,
-                                                    base64data.length,
-                                                ),
-                                        },
-                                    }
-                                    this.addSpecialMsg(data)
+                                   // 在关闭图片插入面板的模式下将直接以 SQCode 插入输入框
+                                    const data = new ImgSeg(
+                                        'base64://' +
+                                        base64data.substring(
+                                            base64data.indexOf('base64,') + 7,
+                                            base64data.length
+                                        )
+                                    )
+                                    this.addSpecialSeg(data)
                                 } else {
                                     // 记录图片信息
                                     // 只要你内存够猛，随便 cache 图片，这边就不做限制了

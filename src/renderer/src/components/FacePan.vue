@@ -71,10 +71,6 @@
 </template>
 
 <script lang="ts">
-    import {
-        MsgItemElem,
-        SQCodeElem,
-    } from '@renderer/function/elements/information'
     import { defineComponent } from 'vue'
     import { runtimeData } from '@renderer/function/msg'
     import { getFace } from '@renderer/function/utils/msgUtil'
@@ -82,6 +78,7 @@
     import Option from '@renderer/function/option'
 
     import BcTab from 'vue3-bcui/packages/bc-tab'
+    import { FaceSeg, ImgSeg, Seg } from '@renderer/function/model/seg'
 
     export default defineComponent({
         name: 'FacePan',
@@ -89,7 +86,7 @@
             BcTab,
         },
         props: ['display'],
-        emits: ['addSpecialMsg', 'sendMsg'],
+        emits: ['addSpecialSeg', 'sendMsg'],
         data() {
             return {
                 getFace: getFace,
@@ -139,20 +136,14 @@
                 this.loaderLock = false
             },
 
-            addSpecialMsg(json: MsgItemElem, addText: boolean) {
-                this.$emit('addSpecialMsg', {
-                    addText: addText,
-                    msgObj: json,
-                } as SQCodeElem)
+            addSpecialSeg(seg: Seg) {
+                this.$emit('addSpecialSeg', seg)
             },
             addBaseFace(id: number) {
-                this.addSpecialMsg({ type: 'face', id: id }, true)
+                this.addSpecialSeg(new FaceSeg(id))
             },
             addImgFace(url: string) {
-                this.addSpecialMsg(
-                    { type: 'image', file: url, subType: 1 },
-                    true,
-                )
+                this.addSpecialSeg(new ImgSeg(url, true))
                 // 直接发送表情
                 if(runtimeData.sysConfig.send_face == true) {
                     this.$emit('sendMsg')
