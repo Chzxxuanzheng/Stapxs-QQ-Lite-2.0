@@ -123,6 +123,9 @@ export abstract class Session {
         this.activePromise = undefined
         this.newMsg = 0
         this.showNotice = false
+        this.loadHistoryLock = undefined
+        this.lastLoadFaileFlag = false
+        this.canLoadMoreHistory = true
         Session.activeSessions.delete(this)
         this.runHook('unactiveHook')
     }
@@ -314,7 +317,7 @@ export abstract class Session {
         }
     }
 
-    private loadHistoryLock: boolean = false
+    private loadHistoryLock?: number
     private lastLoadFaileFlag: boolean = false
     canLoadMoreHistory: boolean = true
     /**
@@ -324,7 +327,8 @@ export abstract class Session {
     async loadHistory(): Promise<boolean> {
         if (this.loadHistoryLock) return false
         if (!this.canLoadMoreHistory) return false
-        this.loadHistoryLock = true
+        const selfId = Date.now()
+        this.loadHistoryLock = selfId
 
         const { $t } = app.config.globalProperties
         // 过滤不支持的适配器
@@ -342,6 +346,9 @@ export abstract class Session {
 
             // 调API
             const data = await runtimeData.nowAdapter.getHistoryMsg(this, 20, this.headMsg)
+
+            // 中断处理
+            if (this.loadHistoryLock !== selfId) return false
 
             // 删除提示
             this.messageList.shift()
@@ -370,15 +377,15 @@ export abstract class Session {
                 PopType.ERR,
                 app.config.globalProperties.$t('获取历史记录失败'),
             )
-            this.loadHistoryLock = false
+            this.loadHistoryLock = undefined
             return false
         }
-        this.loadHistoryLock = false
+        this.loadHistoryLock = undefined
         return true
     }
 
     get isLoadingHistory(): boolean {
-        return this.loadHistoryLock
+        return this.loadHistoryLock !== undefined
     }
 
     /**
