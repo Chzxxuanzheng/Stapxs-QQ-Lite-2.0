@@ -66,23 +66,6 @@ export function getPortableFileLang(name: string) {
 }
 
 /**
- * 将被 HTML 编码的符号转回来
- * @param str 待处理的字符串
- * @returns 处理完成的字符串
- */
-export function escape2Html(str: string): string {
-    let s = ''
-    if (str.length === 0) return ''
-    s = str.replace(/&amp;/g, '&')
-    s = s.replace(/&lt;/g, '<')
-    s = s.replace(/&gt;/g, '>')
-    s = s.replace(/&nbsp;/g, ' ')
-    s = s.replace(/&#39;/g, '\'')
-    s = s.replace(/&quot;/g, '"')
-    return s
-}
-
-/**
  * 将 gitmoji 字符串转为 emoji 符号
  * @param name 名称
  * @returns emoji 符号

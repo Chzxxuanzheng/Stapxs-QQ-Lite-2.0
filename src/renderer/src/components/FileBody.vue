@@ -18,9 +18,9 @@
         <font-awesome-icon v-if="item.type === 'folder'" :icon="['fas', 'folder']" />
         <font-awesome-icon v-else :icon="['fas', 'file']" />
         <div class="main">
-            <span>{{ toHtml(item.name) }}</span>
+            <span>{{ item.name }}</span>
             <div>
-                <span>{{ toHtml(item.createrName) }}</span>
+                <span>{{ item.createrName }}</span>
                 <span>{{ item.createTime ? item.createTime.format('year', 'day') : '-' }}</span>
                 <span v-if="item instanceof GroupFile && item.deadTimeFormat">{{
                     item.deadTimeFormat + $t('天后')
@@ -58,7 +58,7 @@
             <template v-if="folderItems !== undefined">
                 <div v-for="sub_item in folderItems"
                     :key="'sub_file-' + sub_item.id">
-                    <FileBody :item="markRaw(item)" />
+                    <FileBody :item="markRaw(sub_item)" />
                 </div>
             </template>
             <div v-else class="loading" style="opacity: 0.9;">
@@ -70,9 +70,8 @@
 </template>
 
 <script setup lang="ts">
-import { escape2Html as toHtml } from '@renderer/function/utils/systemUtil'
 import { GroupFile, GroupFileFolder } from '@renderer/function/model/file'
-import { computed } from 'vue'
+import { computed, markRaw } from 'vue'
 
 const { item } = defineProps<{
     item: GroupFile | GroupFileFolder
