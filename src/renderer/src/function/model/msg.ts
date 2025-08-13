@@ -271,6 +271,7 @@ export class SelfMsg extends Msg {
                 if (!msgData) continue
 
                 msg = new Msg(msgData)
+                break
             } catch {/**/}
             await delay(100)
         }
