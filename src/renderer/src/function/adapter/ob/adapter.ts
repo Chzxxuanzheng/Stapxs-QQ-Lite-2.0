@@ -870,12 +870,11 @@ export class OneBotAdapter implements AdapterInterface {
         }
     }
     //#endregion
-    // TODO: 错别字
     get selfInfo(): {[key: string]: string} {
         if (!this.botInfo.value) return {}
         return {
-            '协议段名称': this.botInfo.value.data.app_name,
-            '协议段版本': this.botInfo.value.data.app_version,
+            '协议端名称': this.botInfo.value.data.app_name,
+            '协议端版本': this.botInfo.value.data.app_version,
             'OneBot 版本': this.botInfo.value.data.protocol_version,
         }
     }
