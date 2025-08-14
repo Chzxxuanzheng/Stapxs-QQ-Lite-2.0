@@ -16,7 +16,7 @@ import {
     ComputedRef,
     computed
 } from 'vue'
-import { stdUrl } from '../utils/systemUtil'
+import { queueWait, stdUrl } from '../utils/systemUtil'
 import { Name } from './data'
 import { Message } from './message'
 import { EssenceMsg, Msg } from './msg'
@@ -269,22 +269,22 @@ export abstract class Session {
     //#endregion
 
     //#region == 消息相关 ==============================================================
-    private msgQueue: Message[] = []
     /**
      * 新增消息
      * @param msg 消息
      */
     async addMessage(msg: Message) {
-        this.msgQueue.push(msg)
+        await queueWait(this._addMessage(msg), `addMessage-${this.type}-${this.id}`, 10000)
+    }
+    private async _addMessage(msg: Message) {
+        // 激活消息
+        if (!this.isActive) await this.activate()
 
-        // 阻塞前面消息
-        await new Promise(resolve => {
-            const selfId = setInterval(() => {
-                if (this.msgQueue.at(0) !== msg) return
-                clearInterval(selfId)
-                resolve(true)
-            }, 100)
-        })
+        // 去重
+        if (
+            (msg instanceof Msg) &&
+            (this.messageList.at(-1) as Msg | undefined)?.message_id === msg.message_id
+        ) return
 
         // 消息其他处理
         try {
@@ -309,7 +309,6 @@ export abstract class Session {
         this.refushPreMsg()
         if(msg instanceof Msg && msg.sender.user_id !== runtimeData.loginInfo.uin)
             this.newMsg ++
-        this.msgQueue.shift()
 
         // 刷新收纳盒
         for (const box of this.boxs) {
@@ -420,6 +419,9 @@ export abstract class Session {
         }
 
         if (!targetMsg) return
+
+        this.newMsg = 0
+        this.showNotice = false
 
         // 向收纳盒上报消息
         for (const box of this.boxs) {
