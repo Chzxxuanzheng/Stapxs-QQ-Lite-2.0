@@ -134,7 +134,7 @@ export class MilkyAdapter implements AdapterInterface {
         this.segSerializer['at'] = this.atSerializer.bind(this)
         this.segSerializer['atall'] = this.atallSerializer.bind(this)
         this.segSerializer['video'] = this.videoSerializer.bind(this)
-        // this.segSerializer['forward'] = this.forwardSerializer.bind(this)
+        this.segSerializer['forward'] = this.forwardSerializer.bind(this)
         this.segSerializer['reply'] = this.replySerializer.bind(this)
         // this.segSerializer['poke'] = this.pokeSerializer.bind(this)
         this.segSerializer['xml'] = this.xmlSerializer.bind(this)
@@ -685,10 +685,7 @@ export class MilkyAdapter implements AdapterInterface {
      * @returns 发送消息数据
      */
     async serializeMsg(msg: Msg): Promise<Message.OutgoingSegment[]> {
-        if (this.isForwardMsg(msg))
-            return this.customForwardSerializer(msg.message.at(0) as ForwardSeg)
-        const data = await Promise.all(msg.message.map(seg => this.serializeSeg(seg)))
-        return data
+        return await Promise.all(msg.message.map(seg => this.serializeSeg(seg)))
     }
     //#region == 反序列化 ===========================
     segParsers: Record<string, ((data: any)=>Promise<SegData>)> = {}
@@ -817,7 +814,7 @@ export class MilkyAdapter implements AdapterInterface {
         if (Array.isArray(seg)) {
             return Promise.all(seg.map(d => this.serializeSeg(d)))
         } else {
-            const serializer = this[`${seg.type}Serializer`]
+            const serializer = this.segSerializer[seg.type]
             if (serializer) return await serializer(seg)
             return this.unmatchSerializer(seg)
         }
@@ -870,18 +867,25 @@ export class MilkyAdapter implements AdapterInterface {
             },
         }
     }
-    // async forwardSerializer(seg: ForwardSeg): Promise<OSeg.ForwardSeg> {
-    //     throw new Error('发送合并转发消息请使用 Msg 对象的 forward 方法生成消息体')
-    //     const id = seg.id
-    //     if (!id) throw new Error('合并转发消息没id无法序列化为标准Ob消息')
+    async forwardSerializer(seg: ForwardSeg): Promise<OSeg.ForwardSeg> {
+        const msgs = seg.content as Msg[]
+        const messagesList = await Promise.all(msgs.map(msg => this.serializeMsg(msg)))
+        const out: OSeg.ForwardSeg = {
+            type: 'forward',
+            data: {
+                messages: [],
+            }
+        }
+        for (let i = 0; i < messagesList.length; i++) {
+            out.data.messages.push({
+                user_id: msgs[i].sender.user_id,
+                sender_name: msgs[i].sender.name,
+                segments: messagesList[i],
+            })
+        }
 
-    //     return {
-    //         'type': 'forward',
-    //         'data': {
-    //             'id': id,
-    //         }
-    //     }
-    // }
+        return out
+    }
     async replySerializer(seg: ReplySeg): Promise<OSeg.ReplySeg> {
         return {
             type: 'reply',
@@ -948,20 +952,20 @@ export class MilkyAdapter implements AdapterInterface {
     async customForwardSerializer(seg: ForwardSeg): Promise<OSeg.ForwardSeg[]> {
         const msgs = seg.content as Msg[]
         const messagesList = await Promise.all(msgs.map(msg => this.serializeMsg(msg)))
-        const out: OSeg.ForwardSeg[] = []
+        const out: OSeg.ForwardSeg = {
+            type: 'forward',
+            data: {
+                messages: [],
+            }
+        }
         for (let i = 0; i < messagesList.length; i++) {
-            out.push({
-                type: 'forward',
-                data: {
-                    messages: [{
-                        user_id: msgs[i].sender.user_id,
-                        sender_name: msgs[i].sender.name,
-                        segments: messagesList[i],
-                    }]
-                }
+            out.data.messages.push({
+                user_id: msgs[i].sender.user_id,
+                sender_name: msgs[i].sender.name,
+                segments: messagesList[i],
             })
         }
-        return out
+        return [out]
     }
     //#endregion
     //#endregion
@@ -1122,9 +1126,6 @@ export class MilkyAdapter implements AdapterInterface {
         if (data.messages.at(-1)?.message_seq === startId)
             data.messages.pop() // 移除起始消息
         return data
-    }
-    protected isForwardMsg(msg: Msg): boolean {
-        return msg.message.at(0)?.type === 'forward'
     }
     protected getScene(type: 'user' | 'group' | 'temp'): 'friend' | 'group' | 'temp' {
         switch (type) {

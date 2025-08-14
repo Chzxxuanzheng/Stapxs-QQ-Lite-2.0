@@ -593,7 +593,7 @@ export class OneBotAdapter implements AdapterInterface {
         if (Array.isArray(seg)) {
             return Promise.all(seg.map(d => this.serializeSeg(d)))
         } else {
-            const serializer = this[`${seg.type}Serializer`]
+            const serializer = this.segSerializer[seg.type]
             if (serializer) return await serializer(seg)
             return this.unmatchSerializer(seg)
         }
