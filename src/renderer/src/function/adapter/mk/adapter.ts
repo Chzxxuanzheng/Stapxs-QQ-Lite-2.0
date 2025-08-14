@@ -41,7 +41,7 @@ import {
 } from '../interface'
 import driver from '@renderer/function/driver'
 
-import * as Api from '@milky/types/api'
+import * as ApiType from '@milky/types/api'
 import * as Message from '@milky/types/message'
 import { IncomingMessage } from '@milky/types/message'
 import * as Event from '@milky/types/event'
@@ -56,6 +56,12 @@ import { handleEvent } from '@renderer/function/event'
 import { Component } from 'vue'
 import MkInfo from './MkInfo.vue'
 import { Resource } from '@renderer/function/model/ressource'
+
+const Api: typeof ApiType = {} as any
+
+for (const api of Object.keys(ApiType)) {
+    Api[api] = ApiType[api].strict()
+}
 
 type ExtractZodTypes<T, Suffix extends string> = {
     [K in keyof T]: K extends `${string}${Suffix}`
@@ -201,7 +207,7 @@ export class MilkyAdapter implements AdapterInterface {
         }
     }
     @api
-    async getImplInfoRaw(): Promise<Api.GetImplInfoOutput> {
+    async getImplInfoRaw(): Promise<ApiType.GetImplInfoOutput> {
         const data = await this.callApi(
             'get_impl_info',
             {},
@@ -217,10 +223,10 @@ export class MilkyAdapter implements AdapterInterface {
      * @param useCache 是否使用缓存
      */
     @api
-    async getFriendList(useCache?: boolean): Promise<FriendData[] | undefined> {
+    async getFriendList(useCache: boolean = true): Promise<FriendData[] | undefined> {
         const data = await this.callApi(
             'get_friend_list',
-            Api.GetFriendListInput.parse({ use_cache: useCache }),
+            Api.GetFriendListInput.parse({ no_cache: !useCache }),
             Api.GetFriendListOutput
         )
         return data.friends.map(friend => ({
@@ -236,10 +242,10 @@ export class MilkyAdapter implements AdapterInterface {
      * @param useCache 是否使用缓存
      */
     @api
-    async getGroupList(useCache?: boolean): Promise<GroupData[] | undefined> {
+    async getGroupList(useCache: boolean = true): Promise<GroupData[] | undefined> {
         const data = await this.callApi(
             'get_group_list',
-            Api.GetGroupListInput.parse({ use_cache: useCache }),
+            Api.GetGroupListInput.parse({ no_cache: !useCache }),
             Api.GetGroupListOutput
         )
         return data.groups.map(group => ({
@@ -255,10 +261,11 @@ export class MilkyAdapter implements AdapterInterface {
      * @param useCache 是否使用缓存
      */
     @api
-    async getUserInfo(userId: number, useCache?: boolean): Promise<UserData | undefined> {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    async getUserInfo(userId: number, _?: boolean): Promise<UserData | undefined> {
         const data = await this.callApi(
             'get_user_profile',
-            Api.GetUserProfileInput.parse({ user_id: userId, use_cache: useCache }),
+            Api.GetUserProfileInput.parse({ user_id: userId }),
             Api.GetUserProfileOutput
         )
         return {
@@ -281,10 +288,10 @@ export class MilkyAdapter implements AdapterInterface {
      * @param useCache 是否使用缓存
      */
     @api
-    async getMemberList(group: GroupSession, useCache?: boolean): Promise<MemberData[] | undefined>{
+    async getMemberList(group: GroupSession, useCache: boolean = true): Promise<MemberData[] | undefined>{
         const data = await this.callApi(
             'get_group_member_list',
-            Api.GetGroupMemberListInput.parse({ group_id: group.id, use_cache: useCache }),
+            Api.GetGroupMemberListInput.parse({ group_id: group.id, no_cache: !useCache }),
             Api.GetGroupMemberListOutput
         )
         return data.members.map(member => ({
@@ -420,7 +427,7 @@ export class MilkyAdapter implements AdapterInterface {
      */
     @api
     async sendMsg(msg: Msg): Promise<string> {
-        let data: Api.SendGroupMessageOutput | Api.SendPrivateMessageOutput
+        let data: ApiType.SendGroupMessageOutput | ApiType.SendPrivateMessageOutput
         if (msg.session?.type === 'group') {
             data = await this.callApi(
                 'send_group_message',
@@ -519,7 +526,7 @@ export class MilkyAdapter implements AdapterInterface {
                 group_id: msg.session!.id,
                 message_seq: Number(msg.message_id),
                 reaction: emojiId,
-                add: add,
+                is_add: add,
             })
         )
 
@@ -1101,7 +1108,7 @@ export class MilkyAdapter implements AdapterInterface {
         throw new Error(`API调用失败: ${data.message} (retcode: ${data.retcode})`)
     }
     @api
-    protected async _getHistoryMsg(session: Session, startId: number | undefined, limit: number): Promise<Api.GetHistoryMessagesOutput> {
+    protected async _getHistoryMsg(session: Session, startId: number | undefined, limit: number): Promise<ApiType.GetHistoryMessagesOutput> {
         return await this.callApi(
             'get_history_messages',
             Api.GetHistoryMessagesInput.parse({
@@ -1131,7 +1138,7 @@ export class MilkyAdapter implements AdapterInterface {
         }
     }
     // TODO: 文件发送者id支持
-    protected parseFiles(data: Api.GetGroupFilesOutput): FilesData {
+    protected parseFiles(data: ApiType.GetGroupFilesOutput): FilesData {
         return {
             files: data.files.map(file => ({
                 file_id: file.file_id,
