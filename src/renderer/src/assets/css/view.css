@@ -743,8 +743,7 @@ textarea:focus {
 .box-content {
     overflow-y: hidden;
     transition: height 0.2s ease-out;
-    /* 这个自容器高度是在自己电脑上测的...添40不知道为啥偏大，明明(padding(10) + margin(10)) * 2 = 40的 */
-    height: calc(var(--content-num) * (50px + 34.5px ));
+    height: calc(var(--content-num) * (54px + 30px ) + 10px);
     background-color: var(--color-card-1);
     border-radius: 5px;
 }
@@ -1415,11 +1414,35 @@ textarea:focus {
     }
     .box-body {
         background: transparent !important;
-        padding: 10px 10px;
+        padding: 0;
+        margin: 10px;
+        transition: background 0.3s, padding 0.3s;
     }
     .box-body > div:nth-child(1) {
         justify-content: center;
+        padding: 10px 0;
     }
+    .box-body.onmenu {
+        background: var(--color-card-2) !important;
+    }
+    .box-body > div.session-body-container > div.box-content,
+    .box-body > div.session-body-container{
+        background: transparent;
+    }
+    .box-body.active {
+        background: var(--color-main) !important;
+    }
+    .box-body > div.session-body-container {
+        border-radius: 5px;
+    }
+    .box-body > div.session-body-container > div.box-content{
+        height: calc(var(--content-num) * (49px + 20px));
+    }
+
+    .box-body > div:nth-child(2) {
+        display: none;
+    }
+
     .box-body > div:nth-child(1) > div,
     .friend-body > div {
         display: none;
@@ -1432,7 +1455,6 @@ textarea:focus {
         height: 20px;
         width: 20px;
     }
-    .box-body.active > div:nth-child(1):hover,
     .friend-body.active:hover {
         background: var(--color-card-2) !important;
     }
@@ -1454,9 +1476,12 @@ textarea:focus {
         right: -3px;
         top: 4px;
     }
-    .box-content {
-        height: calc(var(--content-num) * (50px + 19.3px));
-        padding: 5px;
+
+    .box-body > div.session-body-container > div.box-content > div > div.friend-body:hover {
+        background-color: transparent !important;
+    }
+    .box-body > div.session-body-container > div.box-content > div > div.friend-body.active {
+        background-color: #00000036 !important;
     }
 }
 
@@ -1466,7 +1491,7 @@ textarea:focus {
 }
 .box-content-enter-from div.box-content,
 .box-content-leave-to div.box-content {
-    height: 0;
+    height: 0 !important;
 }
 
 @media (max-width: 700px) {
@@ -1559,10 +1584,6 @@ textarea:focus {
     .friend-list > div:last-child.open > div.list > div > div {
         padding: 10px !important;
         margin: 10px !important;
-    }
-    .friend-list > div:last-child.open > div > div,
-    .friend-list > div:last-child.open > div.list > div > div > div {
-        /* display: block; */
     }
     .friend-list > div:first-child > div.small > span {
         display: none;
