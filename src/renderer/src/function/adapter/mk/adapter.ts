@@ -796,7 +796,7 @@ export class MilkyAdapter implements AdapterInterface {
     }
     async nodeParser(data: Message.IncomingForwardedMessage): Promise<ForwardNodeData> {
         return {
-            sender: createSender(0, data.sender_name),
+            sender: createSender(this.getUidFromForward(data.avatar_url), data.sender_name),
             content: await this.parseSeg(data.segments),
         }
     }
@@ -1150,6 +1150,10 @@ export class MilkyAdapter implements AdapterInterface {
                 creater_name: folder.creator_id.toString(),
             })),
         }
+    }
+    protected getUidFromForward(face: string): number {
+        const url = URL.parse(face)
+        return Number(url?.searchParams.get('nk') ?? '0')
     }
     //#endregion
 }
