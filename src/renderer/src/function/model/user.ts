@@ -229,7 +229,7 @@ export class User implements IUser {
     _nickname?: Name
     _remark?: Name
     _longNick?: Name
-    qid: string
+    qid?: string
     country?: string
     province?: string
     city?: string

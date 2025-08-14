@@ -11,6 +11,7 @@ import { Gender, Role } from './enmu'
 import { Msg } from '../model/msg'
 import { GroupFile } from '../model/file'
 import { Member } from '../model/user'
+import { Resource } from '../model/ressource'
 
 export interface AdapterInterface {
     // 基础信息
@@ -29,7 +30,7 @@ export interface AdapterInterface {
     /**
      * 返回自身适配器的信息页面
      */
-    optInfo(): Component
+    optInfo?(): Component
     /**
      * 连接到协议段
      * @param url 协议层路径
@@ -99,6 +100,11 @@ export interface AdapterInterface {
      * @param userId
      */
     getCustomFace?(): Promise<string[]|undefined>
+    /**
+     * 获取资源url
+     * @param id
+     */
+    getRessource?(id: string): Promise<string|undefined>
     //#endregion
 
     //#region == 群聊相关 ======================
@@ -249,8 +255,8 @@ export interface FriendData {
     user_id: number             // 用户ID
     nickname: string            // 昵称
     remark?: string             // 备注
-    class_id: number            // 班级ID
-    class_name: string          // 班级名称
+    class_id: number            // 分组ID
+    class_name: string          // 分组名称
 }
 /**
  * 群友会话数据
@@ -269,7 +275,7 @@ export interface UserData {
     remark?: string             // 备注
     nickname?: string           // 昵称
     longNick?: string           // 个性签名
-    qid: string                 // qid
+    qid?: string                 // qid
     country?: string            // 国家
     province?: string           // 省份
     city?: string               // 城市
@@ -294,7 +300,7 @@ export interface MemberData {
     nickname?: string           // 昵称
     role: Role                  // 角色
     sex: Gender                 //性别
-    title: string               // 头衔
+    title?: string              // 头衔
     user_id: number             // 用户ID
     unfriendly: boolean         // 不友好记录
     banTime?: number            // 禁言时间，单位秒
@@ -319,7 +325,7 @@ export interface GroupFileData {
     file_name: string           // 文件名
     size: number                // 文件大小，单位字节
     download_times: number      // 下载次数
-    dead_time: number           // 过期时间
+    dead_time?: number          // 过期时间
     upload_time: number         // 上传时间
     uploader_name: string       // 上传者名称
 }
@@ -481,7 +487,7 @@ export interface MdSegData extends SegData {
 }
 export interface ImgSegData extends SegData {
     type: 'image'               // 消息段类型
-    url: string                 // 图片链接
+    url: Resource               // 图片链接
     isFace: boolean             // 是否是表情图片
     summary?: string            // 预览信息
 }
@@ -500,7 +506,7 @@ export interface FaceSegData extends SegData {
 }
 export interface AtSegData extends SegData {
     type: 'at'                  // 消息段类型
-    user_id: string             // 被艾特的用户ID
+    user_id: number             // 被艾特的用户ID
     text?: string               // 被艾特的用户昵称
 }
 export interface AtAllSegData extends SegData {
@@ -516,7 +522,7 @@ export interface FileSegData extends SegData {
 export interface VideoSegData extends SegData {
     type: 'video'               // 消息段类型
     file: string                // 视频文件链接
-    url: string                 // 视频链接
+    url: Resource               // 视频链接
 }
 // 正常的合并转发没几层...就一并解析了吧
 export interface ForwardSegData extends SegData {

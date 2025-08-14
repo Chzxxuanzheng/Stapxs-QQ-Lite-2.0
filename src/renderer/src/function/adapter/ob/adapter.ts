@@ -125,6 +125,7 @@ import {
     shallowRef,
     ShallowRef,
 } from 'vue'
+import { Resource } from '@renderer/function/model/ressource'
 
 const logger = new Logger()
 
@@ -506,7 +507,7 @@ export class OneBotAdapter implements AdapterInterface {
     async imageParser(data: ObImgSeg): Promise<ImgSegData> {
         return {
             type: 'image',
-            url: data.data.url,
+            url: Resource.fromUrl(data.data.url),
             isFace: false,
         }
     }
@@ -525,7 +526,7 @@ export class OneBotAdapter implements AdapterInterface {
         else {
             return {
                 type: 'at',
-                user_id: data.data.qq,
+                user_id: Number(data.data.qq),
             }
         }
     }
@@ -533,7 +534,7 @@ export class OneBotAdapter implements AdapterInterface {
         return {
             type: 'video',
             file: data.data.file,
-            url: data.data.url,
+            url: Resource.fromUrl(data.data.url),
         }
     }
     async forwardParser(data: ObForwardSeg): Promise<ForwardSegData> {
@@ -869,6 +870,7 @@ export class OneBotAdapter implements AdapterInterface {
         }
     }
     //#endregion
+    // TODO: 错别字
     get selfInfo(): {[key: string]: string} {
         if (!this.botInfo.value) return {}
         return {
@@ -1211,7 +1213,7 @@ export class LagrangeOneBot extends OneBotAdapter implements AdapterInterface {
     override async imageParser(data: LgrObImgSeg): Promise<ImgSegData> {
         return {
             type: 'image',
-            url: data.data.url,
+            url: Resource.fromUrl(data.data.url),
             isFace: data.data.subType === 7 || data.data.subType === 1,
             summary: data.data.summary,
         }

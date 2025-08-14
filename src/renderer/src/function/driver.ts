@@ -355,12 +355,14 @@ class Driver {
     private ws!: Ws
     private fetch!: Fetch
     private retry!: number
+    private path!: string
     private onMessageHook?: (msg: string) => void
     private onErrHook?: (err: OnCloseData) => void
     reset(
         url: string,
         ssl: boolean,
         token?: string,
+        path?: string,
         header: Record<string, string> = {},
         retry: number = 5,
     ) {
@@ -372,6 +374,7 @@ class Driver {
         this.wsUrl = this.getUrl('ws')
         this.httpUrl = this.getUrl('http')
         this.retry = retry
+        this.path = path ?? ''
 
         if (runtimeData.tags.clientType === 'web') {
             this.ws = nativeWs
@@ -393,13 +396,14 @@ class Driver {
         this.ws.onError(async(err) => {
             if (this.state === DriverState.Close) return
             new PopInfo().add(PopType.INFO, '连接不稳定')
-            const re = await this.connectWs()
+            const re = await this.connectWs(this.path)
 
             if (re) return
 
             // 连接失败处理
             this.state = DriverState.Error
             this.onErrHook?.(err)
+            runtimeData.nowAdapter = undefined
             new PopInfo().add(PopType.ERR, '连接中断')
         })
     }
@@ -414,7 +418,7 @@ class Driver {
         if (this.state !== DriverState.Disconnected)
             throw new Error('驱动器不处于断开状态，无法连接')
         this.state = DriverState.Connecting
-        const re = await this.connectWs()
+        const re = await this.connectWs(this.path)
         if (re) {
             this.state = DriverState.Connected
         }else {
@@ -426,6 +430,7 @@ class Driver {
 
     async close(): Promise<void> {
         this.state = DriverState.Close
+        runtimeData.nowAdapter = undefined
         await this.ws.close()
     }
     //#endregion
@@ -455,7 +460,7 @@ class Driver {
      * @param path
      * @param data
      */
-    async post(path: string, data: Record<string, any>): Promise<boolean|string> {
+    async post(path: string, data: Record<string, any>): Promise<false|string> {
         if (!this.ws.isConnected()) return false
         return await this.fetch.post(`${this.httpUrl}/${path}`, data, this.header)
     }
@@ -512,9 +517,9 @@ class Driver {
      * 连接到WebSocket
      * @returns 是否成功
      */
-    private async connectWs(): Promise<boolean> {
+    private async connectWs(path: string): Promise<boolean> {
         for (let i = 0; i < this.retry; i++) {
-            const re = await this.ws.open(this.wsUrl)
+            const re = await this.ws.open(this.wsUrl + '/' + path)
             if (re) return true
         }
         return false

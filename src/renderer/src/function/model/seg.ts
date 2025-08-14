@@ -8,6 +8,7 @@ import { Msg } from './msg'
 import { v4 as uuid } from 'uuid'
 import type { AtAllSegData, AtSegData, FaceSegData, FileSegData, ForwardSegData, ImgSegData, MdSegData, MfaceSegData, PokeSegData, ReplySegData, SegData, TextSegData, UnknownSegData, VideoSegData } from '../adapter/interface'
 import { getSender } from './user'
+import { Resource } from './ressource'
 
 export const segType = {}
 type SegCon<T extends Seg> = { new(...args: any[]): T; type: string };
@@ -87,7 +88,7 @@ export class MdSeg extends Seg {
 @registerSegType
 export class ImgSeg extends Seg {
     static readonly type = 'image'
-    url: string
+    _url: Resource
     summary?: string
     isFace: boolean = false
     imgId: string = uuid()
@@ -100,13 +101,13 @@ export class ImgSeg extends Seg {
             const { $t } = app.config.globalProperties
             const url = arg1 as string
             const isFace = arg2 as boolean | undefined
-            this.url = stdUrl(url)
+            this._url = Resource.fromUrl(url)
             this.isFace = isFace || false
             this.summary = $t('[图片]')
         }else {
             // constructor(data: ImgSegData)
             const data = arg1 as ImgSegData
-            this.url = stdUrl(data.url)
+            this._url = data.url
             this.summary = data.summary
             this.isFace = data.isFace
         }
@@ -115,6 +116,10 @@ export class ImgSeg extends Seg {
     get plaintext(): string {
         const { $t } = app.config.globalProperties
         return this.summary ?? '[' + $t('图片') + ']'
+    }
+
+    get url(): string {
+        return this._url.url
     }
 
     get src(): string {
@@ -306,15 +311,18 @@ export class FileSeg extends Seg {
 export class VideoSeg extends Seg {
     static readonly type = 'video'
     file: string
-    url: string
+    _url: Resource
     constructor(data: VideoSegData) {
         super()
         this.file = data.file
-        this.url = stdUrl(data.url)
+        this._url = data.url
     }
     get plaintext(): string {
         const { $t } = app.config.globalProperties
         return '[' + $t('视频') + ']'
+    }
+    get url(): string {
+        return this._url.url
     }
 }
 
