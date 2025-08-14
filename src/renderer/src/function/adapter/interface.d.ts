@@ -212,7 +212,7 @@ export interface AdapterInterface {
      * @param groupId 群组id
      * @param folderId 文件夹id
      */
-    getGroupFolderFile?(groupId: number, folderId: string): Promise<FilesData|undefined>
+    getGroupFolderFile?(group: GroupSession, folderId: string): Promise<FilesData|undefined>
     /**
      * 获取文件下载连接
      * @param file 要下载的文件
@@ -327,7 +327,8 @@ export interface GroupFileData {
     download_times: number      // 下载次数
     dead_time?: number          // 过期时间
     upload_time: number         // 上传时间
-    uploader_name: string       // 上传者名称
+    uploader_name?: string      // 上传者名称
+    uploader_id?: number        // 上传者ID
 }
 
 /**
@@ -337,8 +338,9 @@ export interface GroupFolderData {
     folder_id: string           // 文件夹ID
     folder_name: string         // 文件夹名称
     count: number               // 文件数量
-    create_time: number         // 创建时间
-    creater_name: string        // 创建者名称
+    create_time: number         // 创建时间GroupFile
+    creater_name?: string       // 创建者名称
+    creater_id?: number         // 创建者ID
 }
 
 export type FilesData = {files: GroupFileData[], folders: GroupFolderData[]}
@@ -434,7 +436,6 @@ export interface LeaveEventData extends MessageEventData {
     user: SenderData           // 离开的用户信息
     operator: SenderData       // 操作员信息
 }
-
 /**
  * 未知事件数据
  */

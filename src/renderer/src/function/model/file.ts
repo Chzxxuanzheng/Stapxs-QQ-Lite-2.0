@@ -14,11 +14,12 @@ import { getSizeFromBytes } from '../utils/systemUtil'
 import { shallowRef, ShallowRef } from 'vue'
 import { runtimeData } from '../msg'
 import { GroupFileData, GroupFolderData } from '../adapter/interface'
+import { GroupSession } from './session'
 
 export class GroupFile {
     type: string = 'file'
 
-    groupId: number
+    group: GroupSession
     id: string
     name: string
     size: number
@@ -30,15 +31,17 @@ export class GroupFile {
 
     downloadPercent: ShallowRef<number|undefined> = shallowRef()
 
-    constructor(data: GroupFileData, groupId: number) {
+    constructor(data: GroupFileData, group: GroupSession) {
         this.id = data.file_id
         this.name = data.file_name
         this.size = data.size
         this.downloadTimes = data.download_times
         if(data.dead_time) this.deadTime = data.dead_time
-        this.createrName = data.uploader_name
+        if (data.uploader_id) this.createrName = getSenderName(data.uploader_id, group)
+        else if (data.uploader_name) this.createrName = data.uploader_name
+        else throw new Error('文件上传者信息错误')
         if(data.upload_time) this.createTime = new Time(data.upload_time)
-        this.groupId = groupId
+        this.group = group
     }
 
     /**
@@ -110,7 +113,7 @@ export class GroupFile {
 export class GroupFileFolder {
     type: string = 'folder'
 
-    groupId: number
+    group: GroupSession
     id: string
     name: string
     count: number
@@ -119,13 +122,15 @@ export class GroupFileFolder {
 
     items: ShallowRef<(GroupFile | GroupFileFolder)[] | undefined> = shallowRef(undefined)
     isOpen: ShallowRef<boolean> = shallowRef(false)
-    constructor(data: GroupFolderData, groupId: number) {
+    constructor(data: GroupFolderData, group: GroupSession) {
         this.id = data.folder_id
         this.name = data.folder_name
         this.count = data.count
         if(data.create_time) this.createTime = new Time(data.create_time)
-        this.createrName = data.creater_name
-        this.groupId = groupId
+        if (data.creater_id) this.createrName = getSenderName(data.creater_id, group)
+        else if (data.creater_name) this.createrName = data.creater_name
+        else throw new Error('文件夹创建者信息错误')
+        this.group = group
     }
 
     async open(): Promise<boolean> {
@@ -137,7 +142,7 @@ export class GroupFileFolder {
 
         if (!runtimeData.nowAdapter) return false
 
-        const data = await runtimeData.nowAdapter.getGroupFolderFile!(this.groupId, this.id)
+        const data = await runtimeData.nowAdapter.getGroupFolderFile!(this.group, this.id)
         if (!data) {
             new PopInfo().add(PopType.ERR, $t('获取文件夹内容失败'))
             return false
@@ -150,12 +155,20 @@ export class GroupFileFolder {
         }
 
         const out: (GroupFile | GroupFileFolder)[] = [
-            ...data.folders.map(folder => new GroupFileFolder(folder, this.groupId)).sort(sort),
-            ...data.files.map(file => new GroupFile(file, this.groupId)).sort(sort),
+            ...data.folders.map(folder => new GroupFileFolder(folder, this.group)).sort(sort),
+            ...data.files.map(file => new GroupFile(file, this.group)).sort(sort),
         ]
 
         this.items.value = out
 
         return true
     }
+}
+
+function getSenderName(id: number, session: GroupSession): string {
+    const { $t } = app.config.globalProperties
+    const member = session.getUserById(id)
+    if (member) return member.name
+
+    return $t('已退群( {userId} )', { userId: id })
 }

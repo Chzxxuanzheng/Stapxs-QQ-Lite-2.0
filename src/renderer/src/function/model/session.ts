@@ -810,8 +810,8 @@ export class GroupSession extends Session {
             return b.createTime.time - a.createTime.time
         }
 
-        const files = fileData.map(item => new GroupFile(item, this.id)).sort(sort)
-        const folders = folderData.map(item => new GroupFileFolder(item, this.id)).sort(sort)
+        const files = fileData.map(item => new GroupFile(item, this)).sort(sort)
+        const folders = folderData.map(item => new GroupFileFolder(item, this)).sort(sort)
 
         const out = [...folders, ...files]
         this.fileCache = out

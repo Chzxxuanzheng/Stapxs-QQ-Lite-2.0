@@ -564,11 +564,11 @@ export class MilkyAdapter implements AdapterInterface {
      * @param folderId 文件夹id
      */
     @api
-    async getGroupFolderFile(groupId: number, folderId: string): Promise<FilesData> {
+    async getGroupFolderFile(group: GroupSession, folderId: string): Promise<FilesData> {
         const data = await this.callApi(
             'get_group_files',
             Api.GetGroupFilesInput.parse({
-                group_id: groupId,
+                group_id: group.id,
                 parent_folder_id: folderId,
             }),
             Api.GetGroupFilesOutput
@@ -584,7 +584,7 @@ export class MilkyAdapter implements AdapterInterface {
         const data = await this.callApi(
             'get_group_file_download_url',
             Api.GetGroupFileDownloadUrlInput.parse({
-                group_id: file.groupId,
+                group_id: file.group.id,
                 file_id: file.id
             }),
             Api.GetGroupFileDownloadUrlOutput
@@ -1140,14 +1140,14 @@ export class MilkyAdapter implements AdapterInterface {
                 download_times: file.downloaded_times,
                 dead_time: file.expire_time,
                 upload_time: file.uploaded_time,
-                uploader_name: file.uploader_id.toString(),
+                uploader_id: file.uploader_id,
             })),
             folders: data.folders.map(folder => ({
                 folder_id: folder.folder_id,
                 folder_name: folder.folder_name,
                 count: folder.file_count,
                 create_time: folder.created_time,
-                creater_name: folder.creator_id.toString(),
+                creater_id: folder.creator_id,
             })),
         }
     }

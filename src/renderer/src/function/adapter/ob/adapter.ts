@@ -1154,9 +1154,9 @@ export class LagrangeOneBot extends OneBotAdapter implements AdapterInterface {
     }
 
     @api
-    async getGroupFolderFile(groupId: number, folderId: string): Promise<FilesData | undefined> {
+    async getGroupFolderFile(group: GroupSession, folderId: string): Promise<FilesData | undefined> {
         const data: LgrObGetGroupFile = await this.connector.send('get_group_files_by_folder', {
-            group_id: groupId,
+            group_id: group.id,
             folder_id: folderId,
         })
         return this.parseFileData(data)
@@ -1165,7 +1165,7 @@ export class LagrangeOneBot extends OneBotAdapter implements AdapterInterface {
     @api
     async getGroupFileUrl(file: GroupFile): Promise<string | undefined> {
         const data: LgrObGetFileUrl = await this.connector.send('get_group_file_url', {
-            group_id: file.groupId,
+            group_id: file.group.id,
             file_id: file.id,
         })
 
