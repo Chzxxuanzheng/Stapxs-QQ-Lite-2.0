@@ -1109,7 +1109,7 @@ export class MilkyAdapter implements AdapterInterface {
     }
     @api
     protected async _getHistoryMsg(session: Session, startId: number | undefined, limit: number): Promise<ApiType.GetHistoryMessagesOutput> {
-        return await this.callApi(
+        const data = await this.callApi(
             'get_history_messages',
             Api.GetHistoryMessagesInput.parse({
                 message_scene: this.getScene(session.type),
@@ -1119,6 +1119,9 @@ export class MilkyAdapter implements AdapterInterface {
             }),
             Api.GetHistoryMessagesOutput
         )
+        if (data.messages.at(-1)?.message_seq === startId)
+            data.messages.pop() // 移除起始消息
+        return data
     }
     protected isForwardMsg(msg: Msg): boolean {
         return msg.message.at(0)?.type === 'forward'
@@ -1137,7 +1140,6 @@ export class MilkyAdapter implements AdapterInterface {
             case 'temp': return 'temp'
         }
     }
-    // TODO: 文件发送者id支持
     protected parseFiles(data: ApiType.GetGroupFilesOutput): FilesData {
         return {
             files: data.files.map(file => ({
