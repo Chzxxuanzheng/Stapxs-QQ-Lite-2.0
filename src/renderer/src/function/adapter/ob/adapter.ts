@@ -225,6 +225,12 @@ export class OneBotAdapter implements AdapterInterface {
 
     }
 
+    async getAdapterInfo(): Promise<{[key: string]: string} | undefined> {
+        // 获取适配器信息
+        const data: ObGetVersionInfo = await this.connector.send('get_version_info', {})
+        return data.data
+    }
+
     optInfo() {
         // 返回适配器信息页面的组件
         return ObInfo

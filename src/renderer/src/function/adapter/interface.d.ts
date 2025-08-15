@@ -48,6 +48,11 @@ export interface AdapterInterface {
      * 重定向到其他适配器
      */
     redirect?(): Promise<AdapterInterface | undefined>
+    /**
+     * 获取当前适配器信息
+     */
+    getAdapterInfo(): Promise<{[key: string]: string} | undefined>
+
 
     //#region == API ===============================================
     //#region  == 基础信息 =====================
@@ -232,7 +237,7 @@ export interface AdapterInterface {
     setSign?(sign: string): Promise<true|undefined>
     //#endregion
     //#endregion
-}
+}Promise
 //#region == API响应 ===============================================
 /**
  * 基本登陆信息

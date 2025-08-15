@@ -5,11 +5,6 @@ import { Session } from '../model/session'
 import { User } from '../model/user'
 import { optDefault } from '../option'
 
-export enum BotMsgType {
-    CQCode,
-    Array
-}
-
 export interface RunTimeDataElem {
     sysConfig: Record<keyof typeof optDefault, any | null>
     loginInfo: LoginInfo,
@@ -23,7 +18,6 @@ export interface RunTimeDataElem {
     plantform: {[key: string]: any},
     tags: {
         firstLoad: boolean
-        msgType: BotMsgType
         canLoadHistory: boolean
         openSideBar: boolean
         viewer: {

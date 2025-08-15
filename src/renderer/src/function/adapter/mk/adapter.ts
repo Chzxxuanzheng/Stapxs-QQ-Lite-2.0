@@ -179,6 +179,12 @@ export class MilkyAdapter implements AdapterInterface {
      */
     async redirect?(): Promise<AdapterInterface | undefined>
 
+    /**
+     * 获取当前适配器信息
+     */
+    async getAdapterInfo(): Promise<{[key: string]: string} | undefined> {
+        return await this.getImplInfoRaw()
+    }
     //#region == API ===============================================
     //#region  == 基础信息 =====================
     /**

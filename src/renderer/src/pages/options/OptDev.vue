@@ -7,41 +7,21 @@
 
 <template>
     <div class="opt-page">
-        <div class="ss-card">
+        <div v-if="!runtimeData.tags.proxyPort" class="ss-card">
             <header>{{ $t('兼容选项') }}</header>
             <div class="tip">
                 {{
                     $t('这儿是兼容性相关的高级选项，这些选项通常会自动识别，如果出现了不正确的情况你也可以手动调整。')
                 }}
             </div>
-            <div class="opt-item">
-                <font-awesome-icon :icon="['fas', 'clipboard-list']" />
-                <div>
-                    <span>{{ $t('消息类型') }}</span>
-                    <span>{{
-                        $t('[CQ:faceid=1]你好啊👋，这个选项将会强制覆盖自动检测')
-                    }}</span>
-                </div>
-                <select v-model="runtimeData.sysConfig.msg_type"
-                    name="msg_type"
-                    title="msg_type"
-                    @change="save">
-                    <option v-for="item in Object.values(BotMsgType)
-                                .filter(value => typeof value === 'number')"
-                        :key="item"
-                        :value="item">
-                        {{ getBotTypeName(item) }}
-                    </option>
-                </select>
-            </div>
-            <div v-if="!runtimeData.tags.proxyPort" class="opt-item" :class="checkDefault('proxyUrl')">
+            <div class="opt-item" :class="checkDefault('proxyUrl')">
                 <font-awesome-icon :icon="['fas', 'route']" />
                 <div>
                     <span>{{ $t('自定义跨域服务') }}</span>
                     <span>{{ $t('如果你需要使用跨域服务，请在这里输入服务地址') }}</span>
                 </div>
             </div>
-            <div v-if="!runtimeData.tags.proxyPort" class="tip cors">
+            <div class="tip cors">
                 <input
                     v-model="runtimeData.sysConfig.proxyUrl"
                     class="ss-input"
@@ -245,7 +225,6 @@ import {
 import { PopInfo, PopType } from '@renderer/function/base'
 import { runtimeData } from '@renderer/function/msg'
 import { BrowserInfo, detect } from 'detect-browser'
-import { BotMsgType } from '@renderer/function/elements/information'
 import { uptime } from '@renderer/main'
 import { useBaseDebounced } from '@renderer/function/utils/appUtil'
 import { callBackend, stdUrl } from '@renderer/function/utils/systemUtil'
@@ -255,6 +234,7 @@ import {
     watch,
     defineComponent,
 } from 'vue'
+import driver from '@renderer/function/driver'
 
 const $t = i18n.global.t
 const testUrl = 'https://api.douban.com/v2/movie/top250'
@@ -307,7 +287,6 @@ watch(() => proxyUrl.value, () => {
                 dev: import.meta.env.DEV,
 
                 checkDefault: checkDefault,
-                BotMsgType: BotMsgType,
                 runtimeData: runtimeData,
                 save: save,
                 run: run,
@@ -383,10 +362,11 @@ watch(() => proxyUrl.value, () => {
                     'Debug Info - ' +
                     new Date().toLocaleString() +
                     '\n================================\n'
-                info += 'System Info:\n'
-                info += `    OS Name           -> ${browser.os}\n`
-                info += `    Browser Name      -> ${browser.name}\n`
-                info += `    Browser Version   -> ${browser.version}\n`
+                const systemInfo = [
+                    ['OS Name', browser.os],
+                    ['Browser Name', browser.name],
+                    ['Browser Version', browser.version],
+                ] as [key: string, value: any][]
                 if (addInfo) {
                     const get = addInfo as { [key: string]: [string, string] }
                     Object.keys(get).forEach((name: string) => {
@@ -405,35 +385,57 @@ watch(() => proxyUrl.value, () => {
                                     await callBackend(undefined, 'sys:runCommand', true,
                                         'pacman -Q stapxs-qq-lite-bin',
                                     )
-                                if (pacmanInfo.success) {
-                                    info += '    Install Type      -> aur\n'
-                                } else {
+                                if (pacmanInfo.success)
+                                    systemInfo.push(['Install Type', 'aur'])
+                                else {
                                     // 也有可能是 stapxs-qq-lite，这是我自己打的原生包
                                     pacmanInfo = await runtimeData.
                                         plantform.reader.invoke(
                                             'sys:runCommand',
                                             'pacman -Q stapxs-qq-lite',
                                         )
-                                    if (pacmanInfo.success) {
-                                        info += '    Install Type      -> pacman\n'
-                                    }
+                                    if (pacmanInfo.success)
+                                        systemInfo.push(['Install Type', 'pacman'])
                                 }
                             }
                             break
                         }
                     }
                 }
+                info += 'System Info:\n'
+                info += this.createVersionInfo(systemInfo)
 
-                // TODO: botInfo改为适配器信息
+                const applicationInfo = [
+                    ['Uptime', Math.floor(((new Date().getTime() - uptime) / 1000) * 100) / 100 + ' s'],
+                    ['Package Version', packageInfo.version],
+                    ['Service Work', runtimeData.tags.sw],
+                ] as [key: string, value: any][]
+
                 info += 'Application Info:\n'
-                info += `    Uptime            -> ${Math.floor(((new Date().getTime() - uptime) / 1000) * 100) / 100} s\n`
-                info += `    Package Version   -> ${packageInfo.version}\n`
-                info += `    Service Work      -> ${runtimeData.tags.sw}\n`
+                info += this.createVersionInfo(applicationInfo)
 
-                info += 'Backend Info:\n'
+                const adapeterInfo = [
+                    ['status', !runtimeData.nowAdapter || driver.isConnected() ? 'connected' : 'not connected'],
+                ] as [key: string, value: any][]
 
-                info += 'View Info:\n'
-                info += `    Doc Width         -> ${document.getElementById('app')?.offsetWidth} px\n`
+                if (!runtimeData.nowAdapter)
+                    adapeterInfo.push(['info', 'Not connected'])
+                else {
+                    const data = await runtimeData.nowAdapter.getAdapterInfo()
+                    if (!data)
+                        adapeterInfo.push(['info', 'Get info failed'])
+                    else {
+                        for (const key in data) {
+                            adapeterInfo.push([key, data[key]])
+                        }
+                    }
+                }
+                info += 'Adapter Info:\n'
+                info += this.createVersionInfo(adapeterInfo)
+
+                const viewInfo = [
+                    ['Doc Width', document.getElementById('app')?.offsetWidth + ' px'],
+                ] as [key: string, value: any][]
 
                 // capactior：索要 safeArea
                 if (runtimeData.tags.clientType === 'capacitor') {
@@ -441,11 +443,13 @@ watch(() => proxyUrl.value, () => {
                     if (safeArea) {
                         // 按照前端习惯，这儿的 safeArea 顺序是 top, right, bottom, left
                         const safeAreaStr = safeArea.top + ', ' + safeArea.right + ', ' + safeArea.bottom + ', ' + safeArea.left
-                        info += `    Safe Area         -> ${safeAreaStr}\n`
+                        viewInfo.push(['Safe Area', safeAreaStr])
                     }
                 }
+                info += 'View Info:\n'
+                info += this.createVersionInfo(viewInfo)
 
-                info += 'Network Info:\n'
+                const networkInfo = [] as [key: string, value: any][]
                 const testList = [
                     ['Github          ', 'https://api.github.com'],
                     ['Link API        ', 'https://api.stapxs.cn'],
@@ -455,11 +459,13 @@ watch(() => proxyUrl.value, () => {
                     try {
                         await fetch(item[1], { method: 'GET' })
                         const end = new Date().getTime()
-                        info += `    ${item[0]}  -> ${end - start} ms\n`
+                        networkInfo.push([item[0], end - start + ' ms'])
                     } catch (e) {
-                        info += `    ${item[0]}  -> failed\n`
+                        networkInfo.push([item[0], 'failed'])
                     }
                 }
+                info += 'Network Info:\n'
+                info += this.createVersionInfo(networkInfo)
                 info += '```'
                 // 构建 popBox 内容
                 const popInfo = {
@@ -597,14 +603,6 @@ watch(() => proxyUrl.value, () => {
             restartapp() {
                 callBackend(undefined, 'win:relaunch', false)
             },
-            getBotTypeName(index: BotMsgType) {
-                switch (index) {
-                    case BotMsgType.CQCode:
-                        return this.$t('CQ 码')
-                    case BotMsgType.Array:
-                        return this.$t('Array 数组')
-                }
-            },
             // 查看配置文件
             rmNeedlessOption() {
                 const needless: string[] = []
@@ -621,7 +619,7 @@ watch(() => proxyUrl.value, () => {
                     return
                 }
                 const popInfo = {
-                    title: this.$t('转发消息'),
+                    title: this.$t('删除无用配置'),
                     html: `
                         <header>以下配置将被删除</header>
                         <div style="color: var(--color-red);font-weight: 700;">
@@ -647,6 +645,13 @@ watch(() => proxyUrl.value, () => {
                     ],
                 }
                 runtimeData.popBoxList.push(popInfo)
+            },
+            createVersionInfo(data: [key: string, value: any][]) {
+                let info = ''
+                for (const [ key, value ] of data) {
+                    info += `    ${key.padEnd(20)}-> ${value}\n`
+                }
+                return info
             },
         },
     })

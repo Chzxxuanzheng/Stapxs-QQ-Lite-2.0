@@ -30,7 +30,6 @@ import { reactive, markRaw, defineAsyncComponent } from 'vue'
 import { PopInfo, PopType, Logger, LogType } from './base'
 import {
     RunTimeDataElem,
-    BotMsgType,
 } from './elements/information'
 import { Notify } from './notify'
 import { Msg, SelfMsg } from './model/msg'
@@ -210,7 +209,6 @@ const baseRuntime = {
         canLoadHistory: true,
         openSideBar: true,
         viewer: { index: 0 },
-        msgType: BotMsgType.Array,
         isElectron: false,
         isCapacitor: false,
         clientType: 'web' as const,
