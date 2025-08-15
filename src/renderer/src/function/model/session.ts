@@ -13,6 +13,7 @@ import option from '../option'
 import {
     shallowRef,
     ShallowRef,
+    shallowReactive,
     ComputedRef,
     computed
 } from 'vue'
@@ -55,7 +56,7 @@ export abstract class Session {
     // 额外信息
     appendInfo?: string
     // 高亮信息
-    highlightInfo: string[] = []
+    highlightInfo: string[] = shallowReactive([])
     showNotice: boolean = false
     // 分组盒子
     boxs: SessionBox[] = []
@@ -118,7 +119,7 @@ export abstract class Session {
         this.imgList.length = 0
         this.headMsg = undefined
         this.preMessage = undefined
-        this.highlightInfo = []
+        this.highlightInfo.length = 0
         this.isActive = false
         this.activePromise = undefined
         this.newMsg = 0
@@ -422,6 +423,7 @@ export abstract class Session {
 
         this.newMsg = 0
         this.showNotice = false
+        this.highlightInfo.length = 0
 
         // 向收纳盒上报消息
         for (const box of this.boxs) {
