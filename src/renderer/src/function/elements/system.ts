@@ -5,8 +5,6 @@ export interface LoginCacheElem {
     quickLogin: { address: string, port: number }[] | null
     address: string
     token: string
-    status: boolean,
-    creating: boolean
 }
 
 export interface PopInfoElem {
@@ -14,12 +12,6 @@ export interface PopInfoElem {
     svg: string
     text: string
     autoClose?: boolean
-}
-
-export interface BotActionElem {
-    action: string
-    params?: { [key: string]: any }
-    echo?: string
 }
 
 export interface MsgIdInfoElem {

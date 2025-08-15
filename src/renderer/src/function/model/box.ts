@@ -301,7 +301,8 @@ export class SessionBox {
      */
     sessionNewMessage(session: Session, newMsg: Message): void {
         // 更新预览消息
-        this.preMessage = newMsg
+        if (session.preMessage === newMsg)
+            this.preMessage = newMsg
 
         // 置顶会话不更新是否有通知 | 高亮信息（重复显示了）
         if (session.alwaysTop) return
@@ -462,6 +463,23 @@ export class BubbleBox extends SessionBox {
     protected constructor() {
         super('群收纳盒', 'user-group', 0)
         SessionBox.sessionBoxs.pop() // 给自己删了
+
+        setTimeout(()=>{
+            // 添加到群收纳盒
+            Session.prepareActiveHook.push((session: Session) => {
+                if (!runtimeData.sysConfig.bubble_sort_user) return
+                if (session.alwaysTop) return
+                if (session.boxs.length > 0) return
+                if (!(session instanceof GroupSession)) return
+                this.putSession(session)
+            })
+
+            // 卸载时移除
+            Session.unactiveHook.push((session: Session) => {
+                if (this._content.has(session))
+                    this.removeSession(session)
+            })
+        }, 0)
     }
 
     /**
@@ -504,18 +522,3 @@ export class BubbleBox extends SessionBox {
         throw new Error('群收纳盒禁止修改颜色')
     }
 }
-
-// 添加到群收纳盒
-Session.prepareActiveHook.push((session: Session)=>{
-    if (!runtimeData.sysConfig.bubble_sort_user) return
-    if (session.alwaysTop) return
-    if (session.boxs.length > 0) return
-    if (!(session instanceof GroupSession)) return
-    BubbleBox.instance.putSession(session)
-})
-
-// 卸载时移除
-Session.unactiveHook.push((session: Session)=>{
-    if (BubbleBox.instance._content.has(session))
-        BubbleBox.instance.removeSession(session)
-})

@@ -28,19 +28,19 @@ export class Connector {
         this.logger.info('后端连接器已初始化')
     }
 
-    connect(url: string, token: string) {
+    connect(url: string) {
         if (url.indexOf('ws://') < 0 && url.indexOf('wss://') < 0) {
             url = 'wss://' + url
         }
 
         if (!this.websocket) {
             this.logger.info('正在连接到：', url)
-            this.websocket = new WebSocket(`${url}?access_token=${encodeURIComponent(token)}`)
+            this.websocket = new WebSocket(url)
         } else {
             // 如果前端发起了连接请求，说明前端在未连接状态；断开已有连接，重新连接
             // PS：这种情况一般不会发生，大部分情况是因为 debug 模式前端热重载导致的
             this.websocket.close(1000)
-            this.connect(url, token)
+            this.connect(url)
         }
 
         this.websocket.onopen = () => {
@@ -48,7 +48,6 @@ export class Connector {
             this.logger.info('已成功连接到', url)
             this.win.webContents.send('onebot:onopen', {
                 address: url,
-                token: token,
             })
         }
         this.websocket.onmessage = (e) => {
@@ -64,14 +63,12 @@ export class Connector {
                     code: e.code,
                     message: e.reason,
                     address: url,
-                    token: token,
                 })
             } else {
                 this.win.webContents.send('onebot:onclose', {
                     code: -1,
                     message: e.reason,
                     address: url,
-                    token: token,
                 })
             }
             if (this.reconnectTimes < 4) {
@@ -84,7 +81,7 @@ export class Connector {
                             url = url.replace('ws://', 'wss://')
                         }
                         this.logger.warn('连接失败，尝试重连...')
-                        this.connect(url, token)
+                        this.connect(url,)
                     }
                     this.reconnectTimes++
                 }, 1500)
@@ -94,5 +91,29 @@ export class Connector {
             this.websocket = undefined
             this.logger.error('连接错误：', e)
         }
+    }
+    static async httpRequest(
+        url: string,
+        data: Record<string, any>,
+        header: Record<string, any>,
+        method: 'GET' | 'POST'
+    ) {
+        const params = { method, headers: header } as RequestInit
+        if (method === 'GET') {
+            const urlObj = new URL(url)
+            Object.keys(data).forEach(key => {
+                urlObj.searchParams.append(key, data[key])
+            })
+            url = urlObj.toString()
+        } else {
+            params.body = JSON.stringify(data)
+            params.headers = {
+                ...params.headers,
+                'Content-Type': 'application/json',
+            }
+        }
+        const response = await fetch(url, params)
+        if (!response.ok) throw new Error('网络请求失败')
+        return await response.text()
     }
 }

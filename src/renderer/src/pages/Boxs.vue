@@ -67,7 +67,7 @@
             </div>
         </div>
         <div :class="'friend-list-space' + (runtimeData.tags.openSideBar ? ' open' : '')">
-            <div v-if="!loginInfo.status || !runtimeData.nowChat" class="ss-card">
+            <div v-if="!driver.isConnected() || !runtimeData.nowChat" class="ss-card">
                 <font-awesome-icon :icon="['fas', 'inbox']" />
                 <span>{{ $t('选择联系人开始聊天') }}</span>
             </div>
@@ -92,11 +92,11 @@ import {
 } from 'vue'
 import { runtimeData } from '@renderer/function/msg'
 import { vMenu } from '@renderer/function/utils/appUtil'
-import { login as loginInfo } from '@renderer/function/connect'
 import { Session } from '@renderer/function/model/session'
 import { vAutoFocus, vSearch } from '@renderer/function/utils/appUtil'
 import { i18n } from '@renderer/main'
 import { SessionBox, BubbleBox } from '@renderer/function/model/box'
+import driver from '@renderer/function/driver'
 
 const $t = i18n.global.t
 

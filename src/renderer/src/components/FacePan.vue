@@ -30,19 +30,40 @@
                         :icon="['fas', 'fa-rotate-right']"
                         @click="reloadRoamingStamp" />
                 </div>
-                <div class="face-stickers"
-                    @scroll="stickersScroll">
-                    <img v-for="(url, index) in runtimeData.stickerCache"
-                        v-show="url != 'end'"
-                        :key="'stickers-' + index"
-                        loading="lazy"
-                        :src="url"
-                        @click="addImgFace(url)">
-                    <div v-show="runtimeData.stickerCache && runtimeData.stickerCache.length <= 0"
-                        class="ss-card">
-                        <font-awesome-icon :icon="['fas', 'face-dizzy']" />
-                        <span>{{ $t('一无所有') }}</span>
-                    </div>
+                <div class="face-stickers">
+                    <template v-if="!support">
+                        <div class="ss-card">
+                            <font-awesome-icon :icon="['fas', 'face-dizzy']" />
+                            <span>{{ $t('当前适配器不支持漫游表情') }}</span>
+                        </div>
+                    </template>
+                    <template v-else-if="error">
+                        <div class="ss-card">
+                            <font-awesome-icon :icon="['fas', 'face-dizzy']" />
+                            <span>{{ $t('加载漫游表情失败') }}</span>
+                        </div>
+                    </template>
+                    <template v-else-if="loaderLock">
+                        <div class="ss-card">
+                            <font-awesome-icon :icon="['fas', 'spinner']" spin />
+                            <span>{{ $t('正在加载漫游表情') }}</span>
+                        </div>
+                    </template>
+                    <template v-else-if="runtimeData.stickerCache && runtimeData.stickerCache.length > 0">
+                        <img v-for="(url, index) in runtimeData.stickerCache"
+                            v-show="url != 'end'"
+                            :key="'stickers-' + index"
+                            loading="lazy"
+                            :src="url"
+                            @click="addImgFace(url)">
+                    </template>
+                    <template v-else>
+                        <div v-show="runtimeData.stickerCache && runtimeData.stickerCache.length <= 0"
+                            class="ss-card">
+                            <font-awesome-icon :icon="['fas', 'face-dizzy']" />
+                            <span>{{ $t('一无所有') }}</span>
+                        </div>
+                    </template>
                 </div>
             </div>
         </BcTab>
@@ -50,18 +71,14 @@
 </template>
 
 <script lang="ts">
-    import {
-        MsgItemElem,
-        SQCodeElem,
-    } from '@renderer/function/elements/information'
     import { defineComponent } from 'vue'
     import { runtimeData } from '@renderer/function/msg'
-    import { Connector } from '@renderer/function/connect'
     import { getFace } from '@renderer/function/utils/msgUtil'
 
     import Option from '@renderer/function/option'
 
     import BcTab from 'vue3-bcui/packages/bc-tab'
+    import { FaceSeg, ImgSeg, Seg } from '@renderer/function/model/seg'
 
     export default defineComponent({
         name: 'FacePan',
@@ -69,7 +86,7 @@
             BcTab,
         },
         props: ['display'],
-        emits: ['addSpecialMsg', 'sendMsg'],
+        emits: ['addSpecialSeg', 'sendMsg'],
         data() {
             return {
                 getFace: getFace,
@@ -77,77 +94,59 @@
                 runtimeData: runtimeData,
                 baseFaceMax: 348,
                 stickerPage: 1,
+                support: true, // 是否支持漫游表情
+                error: false, // 是否发生错误
+                loaderLock: false, // 是否正在加载
             }
         },
         mounted() {
-            // 加载漫游表情
-            if (
-                runtimeData.stickerCache === undefined &&
-                runtimeData.jsonMap.roaming_stamp
-            ) {
-                this.reloadRoamingStamp()
-            }
+            // 初次加载漫游表情
+            this.initRoamingStamp()
         },
         methods: {
-            reloadRoamingStamp() {
+            async initRoamingStamp() {
+                if (runtimeData.stickerCache) return
+
+                await this.loadRomaingStamp()
+            },
+            async reloadRoamingStamp() {
+                if (this.loaderLock) return
                 runtimeData.stickerCache = undefined
-                if (runtimeData.jsonMap.roaming_stamp.pagerType == 'full') {
-                    // 全量分页，返回所有内容
-                    Connector.send(
-                        runtimeData.jsonMap.roaming_stamp.name,
-                        { count: 48 },
-                        'getRoamingStamp_48',
-                    )
-                } else {
-                    // 默认不分页，返回所有内容
-                    Connector.send(
-                        runtimeData.jsonMap.roaming_stamp.name,
-                        {},
-                        'getRoamingStamp',
-                    )
-                }
+
+                await this.loadRomaingStamp()
             },
 
-            addSpecialMsg(json: MsgItemElem, addText: boolean) {
-                this.$emit('addSpecialMsg', {
-                    addText: addText,
-                    msgObj: json,
-                } as SQCodeElem)
+            async loadRomaingStamp() {
+                if (this.loaderLock) return
+                this.loaderLock = true
+                if (!runtimeData.nowAdapter?.getCustomFace) {
+                    this.support = false
+                    this.loaderLock = false
+                    return
+                }
+
+                const data = await runtimeData.nowAdapter.getCustomFace()
+                if (!data) {
+                    this.loaderLock = false
+                    this.error = true
+                    return
+                }
+
+                runtimeData.stickerCache = data
+                this.loaderLock = false
+            },
+
+            addSpecialSeg(seg: Seg) {
+                this.$emit('addSpecialSeg', seg)
             },
             addBaseFace(id: number) {
-                this.addSpecialMsg({ type: 'face', id: id }, true)
+                this.addSpecialSeg(new FaceSeg(id))
             },
             addImgFace(url: string) {
-                this.addSpecialMsg(
-                    { type: 'image', file: url, subType: 1 },
-                    true,
-                )
+                this.addSpecialSeg(new ImgSeg(url, true))
                 // 直接发送表情
                 if(runtimeData.sysConfig.send_face == true) {
                     this.$emit('sendMsg')
-                }
-            },
-
-            stickersScroll(e: Event) {
-                const target = e.target as HTMLDivElement
-                // 如果滚到了底部
-                if (
-                    target.scrollHeight - target.scrollTop <
-                    target.clientHeight + 0.5
-                ) {
-                    if (runtimeData.stickerCache) {
-                        if (runtimeData.jsonMap.roaming_stamp.pagerType == 'full' &&
-                            runtimeData.stickerCache[runtimeData.stickerCache.length - 1] != 'end') {
-                            const count = 48 + 48 * this.stickerPage
-                            // 全量分页，返回所有内容（napcat 行为）
-                            Connector.send(
-                                runtimeData.jsonMap.roaming_stamp.name,
-                                { count: count },
-                                'getRoamingStamp_' + count,
-                            )
-                            this.stickerPage++
-                        }
-                    }
                 }
             },
         },

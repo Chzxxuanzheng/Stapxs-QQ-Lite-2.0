@@ -10,7 +10,7 @@
 import app from '@renderer/main'
 import { Message } from './model/message'
 import { GroupSession, Session } from './model/session'
-import { Notice, SystemNotice } from './model/notice'
+import { Notice, ReceivedNotice, SystemNotice } from './model/notice'
 import { runtimeData } from './msg'
 import { Msg } from './model/msg'
 import { NotifyInfo } from './elements/system'
@@ -89,7 +89,7 @@ function needSendNotice(session: Session): boolean {
  * @returns
  */
 function hasConnectionWithImport(msg: Message): boolean {
-    if (msg instanceof Notice) {
+    if (msg instanceof ReceivedNotice) {
         for (const user of msg.users) {
             if (userIsImportant(user.user_id)) return true
         }
@@ -133,6 +133,7 @@ function sendNotify(session: Session, msg: Message, important: boolean = false):
     // 如果没有开启通知，直接返回
     if (option.get('close_notice')) return
 
+    // TODO: 通知跳转
     // 组装通知
     const msgInfo = {
         base_type: 'msg',

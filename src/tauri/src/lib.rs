@@ -205,6 +205,8 @@ pub fn run() {
             commands::onebot::onebot_connect,
             commands::onebot::onebot_send,
             commands::onebot::onebot_close,
+            commands::onebot::onebot_get,
+            commands::onebot::onebot_post,
             commands::win::win_close,
             commands::win::win_minimize,
             commands::win::win_maximize,

@@ -51,9 +51,9 @@
                     </div>
                     <div v-else-if="msgItem instanceof Notice">
                         <span
-                            v-if="msgItem instanceof RevokeNotice"
+                            v-if="msgItem instanceof RecallNotice"
                             style="color: yellow">::
-                            <span style="color: yellow; opacity: 0.7">{{ msgItem.operator.name }}</span>
+                                <span style="color: yellow; opacity: 0.7">{{ msgItem.operator.name }}</span>
                             recalled a message.</span>
                     </div>
                     <div v-else-if="msgItem.commandLine">
@@ -158,9 +158,6 @@
     import { runtimeData } from '@renderer/function/msg'
     import { getTrueLang } from '@renderer/function/utils/systemUtil'
     import {
-        SQCodeElem,
-    } from '@renderer/function/elements/information'
-    import {
         Logger,
         LogType,
         PopInfo,
@@ -170,9 +167,9 @@
     import { changeSession, closeSession, sendMsgRaw } from '@renderer/function/utils/msgUtil'
     import { uptime } from '@renderer/main'
     import { Msg } from '@renderer/function/model/msg'
-    import { ReplySeg, Seg } from '@renderer/function/model/seg'
+    import { ImgSeg, ReplySeg, Seg } from '@renderer/function/model/seg'
     import { Session } from '@renderer/function/model/session'
-    import { Notice, RevokeNotice } from '@renderer/function/model/notice'
+    import { Notice, RecallNotice } from '@renderer/function/model/notice'
     import { Message } from '@renderer/function/model/message'
 import SystemNotice from './SystemNotice.vue'
 
@@ -217,7 +214,7 @@ import SystemNotice from './SystemNotice.vue'
                 endMsg: null as null | Message,       // 尾部消息,用来和chat.messageList比对来更新cmdLines
                 Msg,
                 Notice,
-                RevokeNotice,
+                RecallNotice,
             }
         },
         watch: {
@@ -325,6 +322,7 @@ import SystemNotice from './SystemNotice.vue'
                                     // 根据 item[2] 寻找这条消息 的名字
                                     const msg = this.chat.messageList.filter(
                                         (msg) => {
+                                            if (!(msg instanceof Msg)) return false
                                             return msg.message_id == item[2]
                                         },
                                     )
@@ -499,6 +497,7 @@ import SystemNotice from './SystemNotice.vue'
                     const replySeg: ReplySeg = repItem[0] as ReplySeg
                     const repMsg: Msg[] = this.chat.messageList.filter(
                         (item) => {
+                            if (!(item instanceof Msg)) return false
                             return item.message_id === replySeg.id
                         },
                     ) as Msg[]
@@ -726,23 +725,14 @@ import SystemNotice from './SystemNotice.vue'
             },
 
             /**
-             * 添加特殊消息结构
-             * @param data obj
+             * 添加特殊消息段
+             * @param seg 特殊消息段
              */
-            addSpecialMsg(data: SQCodeElem) {
-                if (data !== undefined) {
-                    const index = this.sendCache.length
-                    this.sendCache.push(Seg.parse(data.msgObj))
-                    if (data.addText === true) {
-                        if (data.addTop === true) {
-                            this.msg = '[SQ:' + index + ']' + this.msg
-                        } else {
-                            this.msg += '[SQ:' + index + ']'
-                        }
-                    }
-                    return index
-                }
-                return -1
+            addSpecialSeg(seg: Seg) {
+                const index = this.sendCache.length
+                this.sendCache.push(seg)
+                this.msg += '[SQ:' + index + ']'
+                return index
             },
 
             addImg(event: ClipboardEvent) {
@@ -779,22 +769,15 @@ import SystemNotice from './SystemNotice.vue'
                             const base64data = reader.result as string
                             if (base64data !== null) {
                                 if (Option.get('close_chat_pic_pan') === true) {
-                                    // 在关闭图片插入面板的模式下将直接以 SQCode 插入输入框
-                                    const data = {
-                                        addText: true,
-                                        msgObj: {
-                                            type: 'image',
-                                            file:
-                                                'base64://' +
-                                                base64data.substring(
-                                                    base64data.indexOf(
-                                                        'base64,',
-                                                    ) + 7,
-                                                    base64data.length,
-                                                ),
-                                        },
-                                    }
-                                    this.addSpecialMsg(data)
+                                   // 在关闭图片插入面板的模式下将直接以 SQCode 插入输入框
+                                    const data = new ImgSeg(
+                                        'base64://' +
+                                        base64data.substring(
+                                            base64data.indexOf('base64,') + 7,
+                                            base64data.length
+                                        )
+                                    )
+                                    this.addSpecialSeg(data)
                                 } else {
                                     // 记录图片信息
                                     // 只要你内存够猛，随便 cache 图片，这边就不做限制了

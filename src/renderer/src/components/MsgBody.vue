@@ -96,15 +96,15 @@
                             <div v-else-if="item instanceof MdSeg" v-once
                                 :id="getMdHTML(item.content, 'msg-md-' + data.uuid)"
                                 class="msg-md" />
-                            <img v-else-if="item instanceof ImgSeg && item.file == 'marketface'"
-                                :class=" imgStyle(data.message.length, index, item.asface) + ' msg-mface'"
+                            <img v-else-if="item instanceof MfaceSeg"
+                                :class=" imgStyle(data.message.length, index, true) + ' msg-mface'"
                                 :src="item.src"
                                 @load="imageLoaded"
                                 @error="imgLoadFail">
                             <img v-else-if="item instanceof ImgSeg"
                                 :title="(!item.summary || item.summary == '') ? $t('预览图片') : item.summary"
                                 :alt="$t('图片')"
-                                :class=" imgStyle(data.message.length, index, item.asface)"
+                                :class=" imgStyle(data.message.length, index, item.isFace)"
                                 :src="item.src"
                                 @load="imageLoaded"
                                 @error="imgLoadFail"
@@ -121,11 +121,11 @@
                                 }" :icon="['fas', 'face-grin-wide']" />
                             </template>
                             <div v-else-if="item instanceof AtSeg"
-                                :class="getAtClass(item.qq)">
-                                <a :data-id="item.qq"
+                                :class="getAtClass(item.user_id)">
+                                <a :data-id="item.user_id"
                                     :data-group="data.session?.id"
-                                    @mouseenter="userInfoHoverHandle($event, getAtMember(item.qq))"
-                                    @mousemove="userInfoHoverHandle($event, getAtMember(item.qq))"
+                                    @mouseenter="userInfoHoverHandle($event, getAtMember(item.user_id))"
+                                    @mousemove="userInfoHoverHandle($event, getAtMember(item.user_id))"
                                     @mouseleave="userInfoHoverEnd($event)">{{ getAtName(item) }}</a>
                             </div>
                             <div v-else-if="item instanceof FileSeg" :class="{
@@ -363,22 +363,21 @@
                         v-show="getFace(Number(id)) != ''"
                         :key="'respond-' + data.uuid + '-' + id"
                         :class="{
-                            'me-send': info.meSend
+                            'me-send': info.includes(runtimeData.loginInfo.uin),
                         }"
                         @click="$emit('emojiClick', id as string, data)">
                         <img loading="lazy" :src="getFace(Number(id)) as any">
-                        <span>{{ info.count }}</span>
+                        <span>{{ info.length }}</span>
                     </div>
                 </TransitionGroup>
             </div>
         </div>
-        <code style="display: none">{{ data.raw_message }}</code>
+        <code style="display: none">{{ data.plaintext }}</code>
     </div>
 </template>
 
 <script setup lang="ts">
 import Option from '@renderer/function/option'
-import CardMessage from './msg-component/CardMessage.vue'
 import app from '@renderer/main'
 import markdownit from 'markdown-it'
 
@@ -409,16 +408,19 @@ import {
     ImgSeg,
     JsonSeg,
     MdSeg,
+    MfaceSeg,
     ReplySeg,
     TxtSeg,
     VideoSeg,
     XmlSeg
 } from '@renderer/function/model/seg'
 import { Msg, SelfMsg} from '@renderer/function/model/msg'
-import { Member, Role, IUser } from '@renderer/function/model/user'
+import { Member, IUser } from '@renderer/function/model/user'
 import { wheelMask } from '@renderer/function/utils/input'
 import { GroupSession } from '@renderer/function/model/session'
 import { UserInfoPan } from '@renderer/pages/Chat.vue'
+import { Role } from '@renderer/function/adapter/enmu'
+import CardMessage from './msg-component/CardMessage.vue'
 
 //#region == 声明变量 ================================================================
 const {
@@ -469,11 +471,10 @@ const {
 )
 //#endregion
 //#region == 工具函数 ================================================================
-function getAtMember(id: string): IUser | number {
-    const user_id = Number(id)
-    const user = data.session?.getUserById(user_id)
+function getAtMember(id: number): IUser | number {
+    const user = data.session?.getUserById(id)
     if (user) return user
-    else return user_id
+    else return id
 }
 //#endregion
 //#region == 暴露给下面的script =======================================================
@@ -554,7 +555,7 @@ defineExpose({
                 if (seg.text) return seg.text
                 if (!(this.data.session instanceof GroupSession)) return seg.plaintext
 
-                const member = this.data.session.getUserById(Number(seg.qq))
+                const member = this.data.session.getUserById(Number(seg.user_id))
                 if (member) return '@' + member.name
                 return seg.plaintext
             },
@@ -566,6 +567,7 @@ defineExpose({
             scrollToMsg(message_id: string) {
                 let uuid: string|undefined = undefined
                 for (const item of runtimeData.nowChat!.messageList) {
+                    if (!(item instanceof Msg)) continue
                     if (item.message_id === message_id) {
                         uuid = item.uuid
                         break
@@ -635,6 +637,13 @@ defineExpose({
              */
             imageLoaded(event: Event) {
                 const img = event.target as HTMLImageElement
+				// 计算图片宽度
+				const vh = document.documentElement.clientHeight || document.body.clientHeight
+				const imgHeight = img.naturalHeight || img.height
+				let imgWidth = img.naturalWidth || img.width
+				if (imgHeight > vh * 0.35)
+					imgWidth = (imgWidth * (vh * 0.35)) / imgHeight
+				img.setAttribute('style', `--width: ${imgWidth}px`)
                 // eslint-disable-next-line vue/require-explicit-emits
                 this.$emit('imageLoaded', img.offsetHeight)
             },
@@ -840,6 +849,7 @@ defineExpose({
              */
             getRepMsg(message_id: string): string | null {
                 const list = runtimeData.nowChat!.messageList.filter((item) => {
+                    if (!(item instanceof Msg)) return false
                     return item.message_id === message_id
                 })
                 if (list.length !== 1) return null
@@ -1113,6 +1123,7 @@ defineExpose({
                     return true
                 }
                 if (!process(event)) return
+                event.preventDefault()
                 // 创建遮罩
                 // 由于在窗口移动中,窗口判定箱也在移动,当指针不再窗口外,事件就断了
                 // 所以要创建一个不会动的全局遮罩来处理
@@ -1269,7 +1280,7 @@ defineExpose({
     .emoji-like-body div.me-send:hover {
         background: var(--color-font);
     }
-    .emoji-like-body span {
+    .emoji-like-body > div.me-send span {
         color: var(--color-font-r);
     }
 

@@ -20,7 +20,10 @@
                 :data="SystemNotice.time(msgIndex.time.time)" />
             <!-- [已删除]消息 -->
             <NoticeBody
-                v-if="isDeleteMsg(msgIndex)"
+                v-if="
+                    !runtimeData.sysConfig.dont_parse_delete &&
+                    msgIndex instanceof Msg &&
+                    msgIndex.isDelete"
                 :key="'delete-' + msgIndex.uuid"
                 :data="SystemNotice.delete()" />
             <!-- 消息体 -->
@@ -48,226 +51,204 @@
         </template>
     </TransitionGroup>
 </template>
-<script lang="ts">
-// TODO: 重构成setup式，标as Reactive的地方改成ref
-import { defineComponent, type PropType, Reactive } from 'vue'
+<script setup lang="ts">
+import {
+    shallowRef,
+    shallowReactive,
+} from 'vue'
 import MsgBody, { MsgBodyConfig } from './MsgBody.vue'
 import NoticeBody from './NoticeBody.vue'
 
-import { isDeleteMsg, isShowTime } from '@renderer/function/utils/msgUtil';
-import { runtimeData } from '@renderer/function/msg';
-import { Msg } from '@renderer/function/model/msg';
-import { Message } from '@renderer/function/model/message';
-import { Notice, SystemNotice } from '@renderer/function/model/notice';
-import { IUser } from '@renderer/function/model/user';
-import { MenuEventData } from '@renderer/function/elements/information';
-import app from '@renderer/main';
-import { UserInfoPan } from '@renderer/pages/Chat.vue';
+import { isShowTime } from '@renderer/function/utils/msgUtil'
+import { runtimeData } from '@renderer/function/msg'
+import { Msg } from '@renderer/function/model/msg'
+import { Message } from '@renderer/function/model/message'
+import { Notice, SystemNotice } from '@renderer/function/model/notice'
+import { IUser } from '@renderer/function/model/user'
+import { MenuEventData } from '@renderer/function/elements/information'
+import app from '@renderer/main'
+import { UserInfoPan } from '@renderer/pages/Chat.vue'
 
-export interface Config extends MsgBodyConfig {
-    canInteraction?: boolean
+//#region ====定义与导出============================================
+const {
+    msgs,
+    showMsgMenu,
+    showUserMenu,
+    config = {
+        canInteraction: true,
+        specialMe: true,
+        showIcon: true,
+        dimNonExistentMsg: true,
+    },
+    userInfoPan,
+} = defineProps<{
+    msgs: Message[],
+    showMsgMenu?: (eventData: MenuEventData, msg: Msg) => (Promise<void> | void),
+    showUserMenu?: (eventData: MenuEventData, user: IUser) => (Promise<void> | void),
+    config?: MsgBodyConfig & { canInteraction?: boolean },
+    userInfoPan?: UserInfoPan,
+}>()
+
+const emit = defineEmits<{
+    msgClick: [event: MouseEvent, msg: Msg],
+    imageLoaded: [height: number],
+    scrollToMsg: [id: string],
+    leftMove: [msg: Msg],
+    rightMove: [msg: Msg],
+    senderDoubleClick: [user: IUser],
+    emojiClick: [id: string, msg: Msg],
+}>()
+
+const allowInteraction = shallowRef<boolean>(config.canInteraction ?? true)
+const multiselectMode = shallowRef<boolean>(false)
+const multipleSelectList = shallowReactive<Set<Msg>>(new Set)
+const multipleSelectListCardNum = shallowRef<number>(0)
+const selectMsg = shallowRef<undefined|Msg>()
+
+defineExpose({
+    setAllowInteraction,
+    getAllowInteraction,
+    startMultiselect,
+    cancelMultiselect,
+    isMultiselectMode,
+    forceAddToMultiselectList,
+    getMultiselectListLength,
+    getMultiselectList,
+    multiCanForward,
+})
+//#endregion
+
+//#region ====交互相关==============================================
+/**
+ * 设置是否允许交互
+ * @param allow 是否允许交互
+ */
+function setAllowInteraction(allow: boolean) {
+    allowInteraction.value = allow
 }
+/**
+ * 获取是否允许交互
+ * @returns {boolean} true: 允许交互，false: 不允许交互
+ */
+function getAllowInteraction(): boolean {
+    return allowInteraction.value
+}
+//#endregion
 
-export default defineComponent({
-    name: 'MsgBar',
-    components: { MsgBody, NoticeBody },
-    props: {
-        msgs: {
-            type: Array as () => Message[],
-            required: true,
-        },
-        showMsgMenu: {
-            type: Function as PropType<undefined | ((eventData: MenuEventData, msg: Msg) => (Promise<void> | void))>,
-            default: () => undefined,
-            required: false,
-        },
-        showUserMenu: {
-            type: Function as PropType<undefined | ((eventData: MenuEventData, user: IUser) => (Promise<void> | void))>,
-            default: () => undefined,
-            required: false,
-        },
-        config: {
-            type: Object as PropType<Config>,
-            default: () => ({
-                canInteraction: true,
-                specialMe: true,
-                showIcon: true,
-                dimNonExistentMsg: true,
-            }),
-            required: false,
-        },
-        userInfoPan: {
-            type: Object as PropType<UserInfoPan>,
-            default: () => undefined,
-            required: false,
-        }
-    },
-    emits: {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        msgClick: (_event: MouseEvent, _msg: Msg) => true,
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        imageLoaded: (_height: number) => true,
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        scrollToMsg: (_id: string) => true,
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        leftMove: (_msg: Msg) => true,
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        rightMove: (_msg: Msg) => true,
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        senderDoubleClick: (_user: IUser) => true,
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        emojiClick: (_id: string, _msg: Msg) => true,
-    },
-    data() {
-        return {
-            multiselectMode: false,
-            multipleSelectList: new Set as Set<Msg>,
-            multipleSelectListCardNum: 0,
-			isDeleteMsg,
-			isShowTime,
-            runtimeData,
-            selectMsg: null as null | Msg,
-            Msg,
-            Notice,
-            SystemNotice,
-            allowInteraction: true
-        }
-    },
-    mounted() {
-        this.allowInteraction = this.config.canInteraction ?? true
-    },
-    methods: {
-        //#region ====外部开放==============================================
-        /**
-         * 设置是否允许交互
-         * @param allow 是否允许交互
-         */
-        setAllowInteraction(allow: boolean) {
-            this.allowInteraction = allow
-        },
-        /**
-         * 获取是否允许交互
-         * @returns {boolean} true: 允许交互，false: 不允许交互
-         */
-        getAllowInteraction(): boolean {
-            return this.allowInteraction
-        },
-        //#endregion
-
-        //#region ====消息互动相关==========================================
-        msgClick(event: MouseEvent, msg: Msg) {
-            if (this.multiselectMode) {
-                // 如果处于多选模式，添加或移除消息到多选列表
-                this.toggleMsgInMultiselectList(msg)
-            } else {
-                // 否则，触发单击事件
-                this.$emit('msgClick', event, msg)
-            }
-        },
-        openMsgMenu(eventData: MenuEventData, msg: Msg) {
-            if (!this.showMsgMenu) return
-            this.selectMsg = msg as Reactive<Msg>
-            const promise = this.showMsgMenu(eventData, msg)
-            if (!promise) return
-            promise.then(() => {
-                this.selectMsg = null
-            })
-        },
-        openUserMenu(eventData: MenuEventData, user: IUser) {
-            if (!this.showUserMenu) return
-            this.showUserMenu(eventData, user)
-        },
-        //#endregion
-
-
-        //#region ====多选模式相关==========================================
-        /**
-         * 开始多选模式
-         */
-        startMultiselect() {
-            this.multiselectMode = true
-        },
-        /**
-         * 取消多选模式
-         */
-        cancelMultiselect() {
-            this.multiselectMode = false
-            this.multipleSelectList.clear()
-            this.multipleSelectListCardNum = 0
-        },
-        /**
-         * 是否处于多选模式
-         * @returns {boolean} true: 多选模式，false: 非多选模式
-         */
-        isMultiselectMode(): boolean {
-            return this.multiselectMode
-        },
-        /**
-         * 强制添加消息到多选列表
-         * @param msg 消息对象
-         */
-        forceAddToMultiselectList(msg: Msg) {
-            if (!this.multiselectMode) throw new Error('多选模式未开启，无法添加消息到多选列表。')
-            if (!this.multipleSelectList.has(msg as Reactive<Msg>)) this.multipleSelectList.add(msg as Reactive<Msg>)
-        },
-        /**
-         * 获取多选列表长度
-         * @returns {number} 多选列表长度
-         */
-        getMultiselectListLength(): number {
-            if (!this.multiselectMode) throw new Error('多选模式未开启，无法获取多选列表长度。')
-            return this.multipleSelectList.size
-        },
-        /**
-         * 获取多选列表
-         * 该列表已经过排序,可以直接使用
-         * 如果仅需要列表长度,不要用该函数,用`getMultiselectListLength`
-         * @returns {Msg[]} 多选列表
-         */
-        getMultiselectList(): Msg[] {
-            const out: Msg[] = []
-            for (const msg of this.msgs) {
-                if (!(msg instanceof Msg)) continue
-                if (this.multipleSelectList.has(msg as Reactive<Msg>)) {
-                    out.push(msg)
-                }
-            }
-            return out
-        },
-        toggleMsgInMultiselectList(msg: Msg) {
-            if (!this.multiselectMode) {
-                throw new Error('多选模式未开启，无法添加消息到多选列表。')
-            }
-            if (!this.multipleSelectList.has(msg as Reactive<Msg>)) {
-                this.multipleSelectList.add(msg as Reactive<Msg>)
-                if (msg.hasCard()) this.multipleSelectListCardNum ++
-            }
-            else {
-                this.multipleSelectList.delete(msg as Reactive<Msg>)
-                if (msg.hasCard()) this.multipleSelectListCardNum --
-            }
-        },
-        /**
-         * 判断能否转发,并给出理由,可以转发时给出空字符串
-         * @returns {string} 不可转发原因
-         */
-        multiCanForward(): string {
-            const { $t } = app.config.globalProperties
-            if (this.multipleSelectListCardNum > 0) return $t('暂不支持转发卡片消息')
-            if (this.multipleSelectList.size === 0) return $t('请选择要转发的消息')
-            if (this.multipleSelectList.size > 99) return $t('最多只能转发99条消息')
-            return ''
-        },
-        //#endregion
-
-
-        //#region ====工具函数==============================================
-        isSelected(msg: Msg): boolean{
-            return this.multipleSelectList.has(msg as Reactive<Msg>) || this.selectMsg === msg
-        },
-        //#endregion
+//#region ====消息互动相关==========================================
+function msgClick(event: MouseEvent, msg: Msg) {
+    if (multiselectMode.value) {
+        // 如果处于多选模式，添加或移除消息到多选列表
+        toggleMsgInMultiselectList(msg)
+    } else {
+        // 否则，触发单击事件
+        emit('msgClick', event, msg)
     }
-});
+}
+function openMsgMenu(eventData: MenuEventData, msg: Msg) {
+    if (!showMsgMenu) return
+    selectMsg.value = msg
+    // 打开菜单
+    const closePromise = showMsgMenu(eventData, msg)
+    if (!closePromise) return
+    // 等待菜单关闭
+    closePromise.then(() => {
+        selectMsg.value = undefined
+    })
+}
+function openUserMenu(eventData: MenuEventData, user: IUser) {
+    if (!showUserMenu) return
+    showUserMenu(eventData, user)
+}
+//#endregion
+
+
+//#region ====多选模式相关==========================================
+/**
+ * 开始多选模式
+ */
+function startMultiselect() {
+    multiselectMode.value = true
+}
+/**
+ * 取消多选模式
+ */
+function cancelMultiselect() {
+    multiselectMode.value = false
+    multipleSelectList.clear()
+    multipleSelectListCardNum.value = 0
+}
+/**
+ * 是否处于多选模式
+ * @returns {boolean} true: 多选模式，false: 非多选模式
+ */
+function isMultiselectMode(): boolean {
+    return multiselectMode.value
+}
+/**
+ * 强制添加消息到多选列表
+ * @param msg 消息对象
+ */
+function forceAddToMultiselectList(msg: Msg) {
+    if (!multiselectMode) throw new Error('多选模式未开启，无法添加消息到多选列表。')
+    if (!multipleSelectList.has(msg)) multipleSelectList.add(msg)
+}
+/**
+ * 获取多选列表长度
+ * @returns {number} 多选列表长度
+ */
+function getMultiselectListLength(): number {
+    if (!multiselectMode) throw new Error('多选模式未开启，无法获取多选列表长度。')
+    return multipleSelectList.size
+}
+/**
+ * 获取多选列表
+ * 该列表已经过排序,可以直接使用
+ * 如果仅需要列表长度,不要用该函数,用`getMultiselectListLength`
+ * @returns {Msg[]} 多选列表
+ */
+function getMultiselectList(): Msg[] {
+    const out: Msg[] = []
+    for (const msg of msgs) {
+        if (!(msg instanceof Msg)) continue
+        if (multipleSelectList.has(msg)) {
+            out.push(msg)
+        }
+    }
+    return out
+}
+/**
+ * 判断能否转发,并给出理由,可以转发时给出空字符串
+ * @returns {string} 不可转发原因
+ */
+function multiCanForward(): string {
+    const { $t } = app.config.globalProperties
+    if (multipleSelectListCardNum.value > 0) return $t('暂不支持转发卡片消息')
+    if (multipleSelectList.size === 0) return $t('请选择要转发的消息')
+    if (multipleSelectList.size > 99) return $t('最多只能转发99条消息')
+    return ''
+}
+function toggleMsgInMultiselectList(msg: Msg) {
+    if (!multiselectMode) {
+        throw new Error('多选模式未开启，无法添加消息到多选列表。')
+    }
+    if (!multipleSelectList.has(msg)) {
+        multipleSelectList.add(msg)
+        if (msg.hasCard()) multipleSelectListCardNum.value ++
+    }
+    else {
+        multipleSelectList.delete(msg)
+        if (msg.hasCard()) multipleSelectListCardNum.value --
+    }
+}
+//#endregion
+
+
+//#region ====工具函数==============================================
+function isSelected(msg: Msg): boolean{
+    return multipleSelectList.has(msg) || selectMsg.value === msg
+}
+//#endregion
 </script>
 <style scoped>
 .disable-interaction :deep(*) {

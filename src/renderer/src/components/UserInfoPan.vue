@@ -118,7 +118,7 @@
 
 <script setup lang="ts">
 import { vUserRole } from '@renderer/function/utils/appUtil'
-import { IUser, Member, Role, User } from '@renderer/function/model/user'
+import { IUser, Member, User } from '@renderer/function/model/user'
 import {
     ref,
     type Ref,
@@ -126,6 +126,7 @@ import {
     reactive,
     Reactive,
 } from 'vue';
+import { Role } from '@renderer/function/adapter/enmu';
 
 const { data } = defineProps<{
     data: {

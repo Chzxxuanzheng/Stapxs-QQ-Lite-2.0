@@ -11,7 +11,7 @@ import WelPan from '@renderer/components/WelPan.vue'
 
 import { KeyboardInfo } from '@capacitor/keyboard'
 import { LogType, Logger, PopInfo, PopType } from '@renderer/function/base'
-import { Connector, login } from '@renderer/function/connect'
+import { loginInfo } from '../login'
 import { runtimeData } from '@renderer/function/msg'
 import {
     hslToRgb,
@@ -144,58 +144,34 @@ export function openLink(url: string, external = false) {
  */
 export async function reloadUsers(useCache: boolean = true) {
     // 加载用户列表
-    if (!login.status) return
+    if (!driver.isConnected()) return
+    if (!runtimeData.nowAdapter) return
 
     // 保存当前会话信息
     const nowChatId = runtimeData.nowChat?.id
 
     // 拉取新数据
     const task: Promise<void>[] = []
-    const friendData: any[] = []
-    const groupData: any[] = []
+    let friendData: FriendData[]|undefined
+    let groupData: GroupData[]|undefined
     // 加载群组列表
     task.push((async()=>{
-        const data = await Connector.callApi('group_list', {no_cache: !useCache})
-        for (const item of data) {
-            groupData.push({
-                group_id: item.group_id,
-                group_name: item.group_name,
-                member_count: item.member_count,
-            })
-        }
+        groupData = await runtimeData.nowAdapter!.getGroupList(useCache)
     })())
     // 加载好友列表
     task.push((async()=>{
-        let data = await Connector.callApi('friend_list', {no_cache: !useCache})
-        if (data !== undefined) {
-            for (const item of data) {
-                friendData.push({
-                    user_id: item.user_id,
-                    nickname: item.nickname,
-                    remark: item.remark,
-                    class_id: item.class_id[0],
-                    class_name: item.class_name[0],
-                })
-            }
-            return
-        }
-        // 好麻烦啊，写适配器必须提上日程
-        data = await Connector.callApi('friend_category', {})
-        for (const classItem of data) {
-            const class_id = classItem.categoryId
-            const class_name = classItem.categoryName
-            for (let i=0; i < classItem.user_ids.length; i++) {
-                friendData.push({
-                    user_id: classItem.user_ids[i],
-                    nickname: classItem.user_nicknames[i],
-                    remark: classItem.user_remark[i],
-                    class_id: class_id,
-                    class_name: class_name,
-                })
-            }
-        }
+        friendData = await runtimeData.nowAdapter!.getFriendList(useCache)
     })())
+    // 等待所有任务完成
     await Promise.all(task)
+
+	if (!groupData || !friendData) {
+		new PopInfo().add(
+			PopType.ERR,
+			app.config.globalProperties.$t('加载用户列表失败，请稍后再试。'),
+		)
+		return
+	}
 
     // 清除旧数据
     Session.clear()
@@ -246,7 +222,7 @@ export async function reloadUsers(useCache: boolean = true) {
         session.setAlwaysTop(true, false)
     }
 
-    // 设置通知开关
+    // 加载通知开关
     const noticeList = runtimeData.sysConfig?.notice_group[runtimeData.loginInfo.uin]
     if (noticeList) {
         for (const session of GroupSession.sessionList) {
@@ -270,6 +246,7 @@ export async function reloadUsers(useCache: boolean = true) {
  * 通过用户和消息 ID 跳转到对应的消息
  * @param id
  * @param msgId
+ * @deprecated 待维护
  */
 export function jumpToChat(userId: string, msgId: string) {
     const session = Session.getSessionById(Number(userId))
@@ -453,7 +430,8 @@ export function createIpc() {
     })
     addBackendListener(undefined, 'bot:logout', () => {
         option.remove('auto_connect')
-        Connector.close()
+        if (!runtimeData.nowAdapter) return
+        runtimeData.nowAdapter.close()
     })
     addBackendListener(undefined, 'bot:quickReply', (event, data) => {
         const info = data ?? event.payload
@@ -494,15 +472,13 @@ export function createIpc() {
     })
     // 后端连接模式
     addBackendListener(undefined, 'onebot:onopen', (event, data) => {
-        const info = data ?? event.payload
-        Connector.onopen(info.address, info.token)
+        backendWs._onOpen(data ?? event.payload)
     })
     addBackendListener(undefined, 'onebot:onmessage', (event, message) => {
-        Connector.onmessage(message ?? event.payload)
+        backendWs._onMessage(message ?? event.payload)
     })
     addBackendListener(undefined, 'onebot:onclose', (event, data) => {
-        const info = data ?? event.payload
-        Connector.onclose(info.code, info.reason || info.message, info.address, info.token)
+        backendWs._onClose(data ?? event.payload)
     })
 }
 
@@ -517,12 +493,25 @@ export async function loadMobile() {
         addBackendListener('Onebot', 'onebot:event', (data) => {
             const msg = JSON.parse(data.data)
             switch(data.type) {
-                case 'onopen': Connector.onopen(login.address, login.token); break
-                case 'onmessage': Connector.onmessage(data.data); break
-                case 'onclose': Connector.onclose(msg.code, msg.message, login.address, login.token); break
+                case 'onopen':
+                    backendWs._onOpen({
+                        address: loginInfo.address,
+                    })
+                    break
+                case 'onmessage':
+                    backendWs._onMessage(data.data)
+                    break
+                case 'onclose':
+                    backendWs._onClose({
+                        code: msg.code,
+                        message: msg.message
+                    })
+                    break
                 case 'onerror': {
-                    login.creating = false
-                    popInfo.add(PopType.ERR, $t('连接失败') + ': ' + msg.type, false);
+                    backendWs._onClose({
+                        code: -1,
+                        message: $t('连接失败') + ': ' + msg.type
+                    })
                     break
                 }
                 case 'onServiceFound': setQuickLogin(msg.address, msg.port); break
@@ -656,8 +645,10 @@ import verticalCss from '@renderer/assets/css/append/mobile/append_mobile_vertic
 import { ActionType, LocalNotificationSchema } from '@capacitor/local-notifications'
 import { Session } from '../model/session'
 import { MenuEventData } from '../elements/information'
-import { Role } from '../model/user'
 import { SessionBox } from '../model/box'
+import driver, { backendWs } from '../driver'
+import { Role } from '../adapter/enmu'
+import { FriendData, GroupData } from '../adapter/interface'
 // import windowsCss from '@renderer/assets/css/append/mobile/append_windows.css?raw'
 /**
 * 装载补充样式
@@ -754,8 +745,8 @@ export async function loadAppendStyle() {
 * @param port 端口
 */
 function setQuickLogin(address: string, port: number) {
-    if(login.quickLogin != null)
-        login.quickLogin.push({ address: address, port: port })
+    if(loginInfo.quickLogin != null)
+        loginInfo.quickLogin.push({ address: address, port: port })
 }
 
 /**
@@ -1037,54 +1028,6 @@ export function BackendRequest(type: 'GET' | 'POST', url: string,
 }
 
 /**
-* 加载数据解析映射表（JSON Path）
-* @param name 配置名称
-* @returns 映射表
-*/
-export function loadJsonMap(name: string) {
-    let msgPath = undefined as { [key: string]: any } | undefined
-    if (name !== undefined) {
-        try {
-            const msgPathList = import.meta.glob(
-                '@renderer/assets/pathMap/*.yaml', { eager: true })
-            const msgPathKey = Object.keys(msgPathList).find((key) => {
-                return key.includes(name)
-            })
-            if (msgPathKey) {
-                msgPath = (msgPathList[msgPathKey] as any).default
-            }
-            if(msgPath) {
-                logger.system('开发者，请稍等一下（翻找），正在为阁下加载 ' + msgPath.name + ' 的服务映射表。')
-                if (msgPath.redirect) {
-                    // eslint-disable-next-line
-                    const newMsgPathKey = Object.keys(msgPathList).find((key) => {
-                        return key.includes(msgPath?.redirect)
-                    })
-                    let newMsgPath = undefined as
-                            { [key: string]: any } | undefined
-                    if(newMsgPathKey) {
-                        newMsgPath = (msgPathList[newMsgPathKey] as any).default
-                    }
-                    // 合并映射表
-                    Object.keys(msgPath).forEach((key) => {
-                        if (newMsgPath && key != 'name' && newMsgPath[key]) {
-                            if(msgPath)
-                                newMsgPath[key] = msgPath[key]
-                        }
-                    })
-                    msgPath = newMsgPath
-                    logger.system('非常抱歉开发者，已帮阁下将映射表重定向加载为 ：' + msgPath?.name + ' （慌张）')
-                }
-            }
-            runtimeData.jsonMap = msgPath
-        } catch (ex) {
-            logger.system('很抱歉开发者，映射表加载失败 ……' + ex)
-        }
-    }
-    return msgPath
-}
-
-/**
 * UM：统计事件统一上传方法
 * @param event 事件名
 * @param data 数据
@@ -1161,19 +1104,20 @@ export function useStayEvent<T extends Event,C>(
     let startEventData: MenuEventData
     // 额外参数
     let ctx: C | undefined
-    function handle(event: T, _ctx?: C|undefined) {
+    const handle = (event: T, _ctx?: C|undefined) => {
         if (end) _acceptStartEvent(event, _ctx)
         else _acceptUpdateEvent(event)
     }
-    function handleEnd(event: T) {
+    const handleEnd = (event: T) => {
         if (end) return
         _acceptEndEvent(event)
     }
-    function _acceptStartEvent(event: T, _ctx?: C|undefined) {
+    const _acceptStartEvent = (event: T, _ctx?: C|undefined) => {
         fit = false
         end = false
         ctx = _ctx
         startPos = getPos(event) as {x: number, y: number}
+		if (!startPos) return
         startEventData = {
             x: startPos.x,
             y: startPos.y,
@@ -1184,7 +1128,7 @@ export function useStayEvent<T extends Event,C>(
             _callFit()
         }, continueTime) as unknown as number
     }
-    function _acceptUpdateEvent(event: T) {
+    const _acceptUpdateEvent = (event: T) => {
         if (end) return
         const pos = getPos(event)
         if (!pos) return
@@ -1195,20 +1139,20 @@ export function useStayEvent<T extends Event,C>(
                 _setEnd()
             }
     }
-    function _acceptEndEvent(event: T) {
+    const _acceptEndEvent = (event: T) => {
         if (end) return
         _setEnd()
         if (getPos(event)) _acceptUpdateEvent(event)
     }
     // ==工具函数=====================================
-    function _setEnd() {
+    const _setEnd = () => {
         end = true
         if (fit) _callLeave()
         else _callFail()
         // 清除定时器
         clearTimeout(timeout)
     }
-    function _callFit() {
+    const _callFit = () => {
         if (hooks.onFit?.length === 0) {
             (hooks.onFit as () => void)()
         } else if (hooks.onFit?.length === 1) {
@@ -1221,14 +1165,14 @@ export function useStayEvent<T extends Event,C>(
             (hooks.onFit as (eventData: MenuEventData, ctx?: C) => void)(startEventData, ctx)
         }
     }
-    function _callLeave() {
+    const _callLeave = () => {
         if (hooks.onLeave?.length === 0) {
             (hooks.onLeave as () => void)()
         } else if (hooks.onLeave?.length === 1) {
             (hooks.onLeave as (ctx?: C) => void)(ctx)
         }
     }
-    function _callFail() {
+    const _callFail = () => {
         if (hooks.onFail?.length === 0) {
             (hooks.onFail as () => void)()
         } else if (hooks.onFail?.length === 1) {
@@ -1342,7 +1286,7 @@ function createVMenu(): Directive<HTMLElement, (event: MenuEventData)=>void> {
     )
 
     // 创建指令
-    const out = {
+    return {
         mounted( el: HTMLElement, binding: Binding, ) {
             // 创建变量
             const prevent = binding.modifiers.prevent || false
@@ -1388,7 +1332,6 @@ function createVMenu(): Directive<HTMLElement, (event: MenuEventData)=>void> {
             delete (el as any)._vMenuController
         },
     }
-    return out
 }
 /**
  * 创建一个右键菜单指令
@@ -1408,7 +1351,7 @@ export const vAutoFocus: Directive<HTMLInputElement|HTMLTextAreaElement, undefin
             const style = window.getComputedStyle(el)
             return style.display !== 'none' &&
                    style.visibility !== 'hidden' &&
-                   style.opacity !== '0'
+                   Number(style.opacity) > 0
         }
 
         if (!isVisible()) return
@@ -1466,7 +1409,7 @@ export function createVSearch<T extends { match(query: string): boolean }>()
             }
             if (stopWatch) {
                 (stopWatch.stopWatch as WatchHandle).stop();
-                (stopWatch.stopWatchEffect as WatchHandle).stop();
+                (stopWatch.stopWatchEffect as WatchHandle).stop()
                 delete (el as any)._vStopWatch
             }
         }

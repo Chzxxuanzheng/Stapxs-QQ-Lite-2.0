@@ -9,21 +9,17 @@
 
 <template>
     <div class="opt-page">
-        <template v-if="Object.keys(runtimeData.loginInfo).length > 0">
+        <template v-if="selfInfo">
             <div class="ss-card account-info">
-                <img :src="'https://q1.qlogo.cn/g?b=qq&s=0&nk=' + runtimeData.loginInfo.uin">
+                <img :src="selfInfo.face">
                 <div>
                     <div>
                         <span>{{ runtimeData.loginInfo.nickname }}</span>
                         <span>{{ runtimeData.loginInfo.uin }}</span>
                     </div>
-                    <span>{{
-                        runtimeData.loginInfo.info &&
-                            Object.keys(runtimeData.loginInfo.info).length > 0
-                            ? runtimeData.loginInfo.info.lnick : ''
-                    }}</span>
+                    <span>{{ selfInfo.longNick }}</span>
                 </div>
-                <font-awesome-icon v-if="!sse" :icon="['fas', 'right-from-bracket']" @click="exitConnect" />
+                <font-awesome-icon :icon="['fas', 'right-from-bracket']" @click="exitConnect" />
             </div>
             <div class="ss-card">
                 <header>{{ $t('账号设置') }}</header>
@@ -33,22 +29,21 @@
                         <span>{{ $t('昵称') }}</span>
                         <span>{{ $t('就只是个名字而已 ……') }}</span>
                     </div>
-                    <input v-model="runtimeData.loginInfo.nickname"
+                    <input v-model="selfNick"
                         class="ss-input"
-                        style="width: 150px"
+                        style="width: 150px;"
                         type="text"
                         @keyup="setNick">
                 </div>
-                <div v-if="runtimeData.loginInfo.info && Object.keys(runtimeData.loginInfo.info).length > 0"
-                    class="opt-item">
+                <div class="opt-item">
                     <font-awesome-icon :icon="['fas', 'pen']" />
                     <div>
                         <span>{{ $t('签名') }}</span>
                         <span>{{ $t('啊吧啊吧（智慧的眼神）') }}</span>
                     </div>
-                    <input v-model="runtimeData.loginInfo.info.lnick"
+                    <input v-model="selfSign"
                         class="ss-input"
-                        style="width: 150px"
+                        style="width: 150px;"
                         type="text"
                         @keyup="setLNick">
                 </div>
@@ -57,169 +52,143 @@
         <template v-else>
             <div class="ss-card account-not-login">
                 <font-awesome-icon :icon="['fas', 'fish']" />
-                <span>{{ $t('还没有连接到 OneBot 耶') }}</span>
+                <span>{{ $t('还没有连接到 协议段 耶') }}</span>
                 <button class="ss-button" @click="goLogin">
                     {{ $t('去连接') }}
                 </button>
             </div>
         </template>
-        <div v-if="Object.keys(runtimeData.botInfo).length > 0"
+        <div v-if="Object.keys(implBar).length > 0"
             class="ss-card">
-            <header>{{ $t('后端信息') }}</header>
+            <header>{{ $t('适配器信息') }}</header>
             <div class="l10n-info">
                 <font-awesome-icon :icon="['fas', 'robot']" />
                 <div>
-                    <span>{{ runtimeData.botInfo.app_name
-                    }}<a>{{
-                        runtimeData.botInfo.app_version !== undefined
-                            ? runtimeData.botInfo.app_version
-                            : runtimeData.botInfo.version
-                    }}</a></span>
+                    <span>{{ nowAdapter.name }}
+                        <a>{{ nowAdapter.version }}</a>
+                    </span>
                     <span>{{ $t('这是你连接的 QQ Bot 的相关信息') }}</span>
                 </div>
             </div>
-            <div v-if="getRunStatus() != 'unknown'"
-                :class="'bot-status ' + getRunStatus()">
-                <div />
-                <span>{{
-                    $t('连接_' + getRunStatus(), {
-                        step: runtimeData.watch.heartbeatTime,
-                        timeout:
-                            (runtimeData.watch.lastHeartbeatTime ?? 0) -
-                            (runtimeData.watch.oldHeartbeatTime ?? 0),
-                    })
-                }}</span>
-            </div>
-            <div class="bot-info">
-                <div v-for="key in Object.keys(runtimeData.botInfo)"
-                    :key="'botinfo-' + key">
-                    <span
-                        v-if="key !== 'app_name' &&
-                            key !== 'app_version' &&
-                            key !== 'version'">
-                        <span>{{ key + ': ' }}</span>
-                        <span v-if="typeof runtimeData.botInfo[key] !== 'object'">
-                            {{ paseBotInfo(key, runtimeData.botInfo[key]) }}
-                        </span>
-                        <span v-for="item in Object.keys(runtimeData.botInfo[key])"
-                            v-else v-show="typeof runtimeData.botInfo[key][item] !== 'object'"
-                            :key="'botinfo-' + key + item">
-                            {{
-                                item + ': ' + paseBotInfo(item, runtimeData.botInfo[key][item])
-                            }}
-                        </span>
-                    </span>
-                </div>
-            </div>
+            <component :is="implBar" />
         </div>
     </div>
 </template>
 
-<script lang="ts">
-    import { runASWEvent as saveR, remove } from '@renderer/function/option'
-    import { runtimeData } from '@renderer/function/msg'
-    import { Connector, login } from '@renderer/function/connect'
-    import { getTrueLang } from '@renderer/function/utils/systemUtil'
+<script setup lang="ts">
+import {
+    computed,
+    markRaw,
+    shallowRef,
+    watch,
+} from 'vue'
+import { remove } from '@renderer/function/option'
+import { resetRuntime, runtimeData } from '@renderer/function/msg'
+import { PopInfo, PopType } from '@renderer/function/base'
+import { i18n } from '@renderer/main'
+import { AdapterInterface } from '@renderer/function/adapter/interface'
+import { User } from '@renderer/function/model/user'
 
-    export default {
-        name: 'ViewOptAccount',
-        props: [],
-        data() {
-            return {
-                runtimeData: runtimeData,
-                save: saveR,
-                login: login,
-                sse: import.meta.env.VITE_APP_SSE_MODE == 'true'
-            }
-        },
-        methods: {
-            /**
-             * 对 botInfo 字段部分需要处理的数据进行处理
-             * @param name 键名
-             * @param value 键值
-             */
-            paseBotInfo(name: string, value: number | string) {
-                if (
-                    typeof value == 'number' &&
-                    name.indexOf('time') > 0 &&
-                    value > 1000000000
-                ) {
-                    // 尝试转换时间戳
-                    if (value / 10000000000 < 1) {
-                        value = value * 1000
-                    }
-                    return Intl.DateTimeFormat(getTrueLang(), {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                        hour: 'numeric',
-                        minute: 'numeric',
-                        second: 'numeric',
-                    }).format(new Date(value))
-                }
-                return value
-            },
+const nowAdapter = computed(() => runtimeData.nowAdapter as AdapterInterface)
+const implBar = computed(()=>{
+    return markRaw(runtimeData.nowAdapter?.optInfo?.() ?? {})
+})
+const selfInfo = computed(() => runtimeData.selfInfo)
 
-            /**
-             * 断开连接
-             */
-            exitConnect() {
-                remove('auto_connect')
-                Connector.close()
-            },
+const selfNick = shallowRef<string>('')
+const selfSign = shallowRef<string>('')
 
-            goLogin() {
-                document.getElementById('bar-home')?.click()
-            },
+function $t(value: string, option: any = {}) {
+    return i18n.global.t(value, option)
+}
 
-            /**
-             * 设置昵称
-             * @param event 事件
-             */
-            setNick(event: KeyboardEvent) {
-                // TODO: 这玩意的返回好像永远是错误的 …… 所以干脆不处理返回了
-                if (event.key === 'Enter' && runtimeData.loginInfo.nickname !== '') {
-                    Connector.send(
-                        'set_nickname',
-                        { nickname: runtimeData.loginInfo.nickname },
-                        'setNickname',
-                    )
-                }
-            },
+updateSelfInfo()
+watch(() => runtimeData.selfInfo, () => {
+    updateSelfInfo()
+})
 
-            /**
-             * 设置签名
-             * @param event 事件
-             */
-            setLNick(event: KeyboardEvent) {
-                // TODO: 这玩意的返回好像永远是错误的 …… 所以干脆不处理返回了
-                if (event.key === 'Enter' && runtimeData.loginInfo.info.lnick !== '') {
-                    Connector.send(
-                        'set_signature',
-                        { signature: runtimeData.loginInfo.info.lnick },
-                        'setSignature',
-                    )
-                }
-            },
-
-            getRunStatus() {
-                const step = runtimeData.watch.heartbeatTime
-                const old = runtimeData.watch.oldHeartbeatTime
-                const last = runtimeData.watch.lastHeartbeatTime
-
-                if (step && old && last) {
-                    if (last - old == step) {
-                        return 'normal'
-                    } else {
-                        return 'slow'
-                    }
-                } else {
-                    if (step == 0) {
-                        return 'loading'
-                    }
-                    return 'unknown'
-                }
-            },
-        },
+function updateSelfInfo() {
+    if (runtimeData.selfInfo) {
+        selfNick.value = runtimeData.selfInfo.nickname?.toString() ?? ''
+        selfSign.value = runtimeData.selfInfo.longNick?.toString() ?? ''
+    }else {
+        selfNick.value = ''
+        selfSign.value = ''
     }
+}
+
+/**
+ * 断开连接
+ */
+function exitConnect() {
+    remove('auto_connect')
+    runtimeData.nowAdapter?.close()
+    resetRuntime(true)
+}
+
+function goLogin() {
+    document.getElementById('bar-home')?.click()
+}
+
+/**
+ * 设置昵称
+ * @param event 事件
+ */
+async function setNick(event: KeyboardEvent) {
+    // TODO: 这玩意的返回好像永远是错误的 …… 所以干脆不处理返回了
+    if (event.key === 'Enter' && selfNick.value !== '') {
+        if (!runtimeData.nowAdapter?.setNickname) {
+            new PopInfo().add(PopType.ERR, $t('当前适配器不支持设置昵称'))
+            return
+        }
+
+        const re = await runtimeData.nowAdapter?.setNickname(selfNick.value)
+
+        if (re) {
+            new PopInfo().add(PopType.INFO, $t('检查更新结果ing'))
+            await reflashSelfInfo()
+        }else {
+            new PopInfo().add(PopType.ERR, $t('个性签名设置失败'))
+        }
+    }
+}
+
+/**
+ * 设置签名
+ * @param event 事件
+ */
+async function setLNick(event: KeyboardEvent) {
+    // TODO: 这玩意的返回好像永远是错误的 …… 所以干脆不处理返回了
+    if (event.key === 'Enter' && selfSign.value !== '') {
+        if (!runtimeData.nowAdapter?.setSign) {
+            new PopInfo().add(PopType.ERR, $t('当前适配器不支持设置个性签名'))
+            return
+        }
+        const re = await runtimeData.nowAdapter?.setSign(selfSign.value)
+        if (re) {
+            new PopInfo().add(PopType.INFO, $t('检查更新结果ing'))
+            await reflashSelfInfo()
+        }else {
+            new PopInfo().add(PopType.ERR, $t('个性签名设置失败'))
+        }
+    }
+}
+
+async function reflashSelfInfo() {
+    if (!runtimeData.nowAdapter) {
+        new PopInfo().add(PopType.ERR, $t('连接中断...'))
+        return
+    }
+    const selfInfo = await runtimeData.nowAdapter.getUserInfo(runtimeData.loginInfo.uin, false)
+    if (!selfInfo) {
+        new PopInfo().add(PopType.ERR, $t('检查更新失败'))
+        return
+    }
+    if (selfInfo) {
+        runtimeData.selfInfo = new User(selfInfo)
+        new PopInfo().add(PopType.INFO, $t('设置成功'))
+    }else {
+        new PopInfo().add(PopType.ERR, $t('设置失败'))
+    }
+}
 </script>

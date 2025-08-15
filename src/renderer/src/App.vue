@@ -28,7 +28,7 @@
             <ul :style="get('fs_adaptation') > 0 ? `padding-bottom: ${get('fs_adaptation')}px;` : ''">
                 <li id="bar-home" :class="{
                     'active': tags.page === 'Home',
-                    'hiden-home': loginInfo.status,
+                    'hiden-home': driver.isConnected(),
                 }"
                     @click="changeTab('主页', 'Home', false)">
                     <font-awesome-icon :icon="['fas', 'home']" />
@@ -104,9 +104,9 @@
                                     </label>
                                 </div>
                                 <button id="connect_btn" class="ss-button" type="submit"
-                                    :disabled="loginInfo.creating"
+                                    :disabled="driver.isConnecting()"
                                     @mousemove="afd">
-                                    <template v-if="!loginInfo.creating">
+                                    <template v-if="!driver.isConnecting()">
                                         {{ $t('连接') }}
                                     </template>
                                     <template v-else>
@@ -151,7 +151,7 @@
         </div>
         <component
             :is="runtimeData.pageView.chatView"
-            v-if="loginInfo.status && runtimeData.nowChat"
+            v-if="driver.isConnected() && runtimeData.nowChat"
             v-show="tags.showChat"
             ref="chat"
             :chat="runtimeData.nowChat"
@@ -233,7 +233,6 @@ import {
     Ref,
     provide,
 } from 'vue'
-import { Connector, login as loginInfo } from '@renderer/function/connect'
 import { Logger, popList, PopInfo, LogType, PopType } from '@renderer/function/base'
 import { runtimeData } from '@renderer/function/msg'
 import { Notify } from './function/notify'
@@ -247,6 +246,8 @@ import Friends from '@renderer/pages/Friends.vue'
 import Messages from '@renderer/pages/Messages.vue'
 import Boxs from '@renderer/pages/Boxs.vue'
 import FriendMenu from '@renderer/components/FriendMenu.vue'
+import driver from './function/driver'
+import { login, loginInfo } from './function/login'
 
 const friendMenu: Ref<undefined|InstanceType<typeof FriendMenu>> = ref()
 provide('friendMenu', friendMenu)
@@ -259,7 +260,6 @@ export default defineComponent({
         return {
             dev: import.meta.env.DEV,
             sse: import.meta.env.VITE_APP_SSE_MODE == 'true',
-            Connector: Connector,
             defineAsyncComponent: defineAsyncComponent,
             save: Option.runASWEvent,
             get: Option.get,
@@ -329,7 +329,7 @@ export default defineComponent({
 
             app.config.globalProperties.$viewer = this.viewerBody
             // 初始化波浪动画
-            runtimeData.tags.loginWaveTimer = this.waveAnimation(
+            this.waveAnimation(
                 document.getElementById('login-wave'),
             )
             // AMAP：初始化高德地图
@@ -421,7 +421,7 @@ export default defineComponent({
             // 创建 popstate
             if(runtimeData.tags.platform == 'web' && (getDeviceType() === 'Android' || getDeviceType() === 'iOS')) {
                 window.addEventListener('popstate', () => {
-                    if(!loginInfo.status || runtimeData.tags.openSideBar) {
+                    if(!driver.isConnected() || runtimeData.tags.openSideBar) {
                         // 离开提醒
                         const popInfo = {
                             title: this.$t('提醒'),
@@ -512,8 +512,8 @@ export default defineComponent({
         window.onbeforeunload = () => {
             logger.system('开发者阁下—— 唔，阁下离开的太匆忙了！让我来帮开发者阁下收拾下东西吧。')
             new Notify().clear()
-            if(import.meta.env.DEV) {
-                Connector.close()
+            if (import.meta.env.DEV) {
+                driver.close()
             }
         }
     },
@@ -528,12 +528,20 @@ export default defineComponent({
         /**
          * 发起连接
          */
-        connect() {
+        async connect() {
             if(this.tags.quickLoginSelect != '') {
-                // PS：快速连接的地址只会是局域网，所以默认 ws 协议
-                this.loginInfo.address = 'ws://' + this.tags.quickLoginSelect
+                // PS：快速连接的地址只会是局域网,没ssl,milky没做适配,所以默认 ob 协议
+                this.loginInfo.address = 'ob://' + this.tags.quickLoginSelect
             }
-            Connector.create(this.loginInfo.address, this.loginInfo.token)
+            // Connector.create(this.loginInfo.address, this.loginInfo.token)
+            const re = await login(this.loginInfo.address, this.loginInfo.token)
+
+            if (!re) return
+
+            Option.save('address', this.loginInfo.address)
+            if (Option.get('save_password'))
+                Option.save('save_password', this.loginInfo.token)
+
         },
         selectQuickLogin(address: string) {
             this.tags.quickLoginSelect = address
@@ -562,7 +570,6 @@ export default defineComponent({
             const optTab = document.getElementsByClassName('opt-main-tab')[0] as HTMLDivElement
             switch (view) {
                 case 'Options': {
-                    // Connector.send('get_version_info', {}, 'getVersionInfo')
                     if (optTab) {
                         optTab.style.opacity = '1'
                     }
@@ -577,7 +584,7 @@ export default defineComponent({
             }
         },
         barMainClick() {
-            if (loginInfo.status) {
+            if (driver.isConnected()) {
                 this.changeTab('信息', 'Messages', true)
             } else {
                 this.changeTab('主页', 'Home', false)

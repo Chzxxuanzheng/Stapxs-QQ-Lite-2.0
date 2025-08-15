@@ -11,93 +11,88 @@
 
 <template>
     <div :id="'notice-' + id" class="note">
-        <!-- #region == 接收到的消息 ========================================== -->
-        <!-- 撤回 -->
-        <div v-if="data instanceof RevokeNotice" class="note-recall note-base">
-            <template v-if="data.selfRevoke">
-                <a v-user="data.user" />
-                <span>{{ $t('撤回了一条消息') }}</span>
-                <div />
+        <div class="note-base">
+            <!-- #region == 接收到的消息 ========================================== -->
+            <!-- 撤回 -->
+            <template v-if="data instanceof RecallNotice">
+                <template v-if="data.selfRevoke">
+                    <a v-user="data.user" />
+                    <span>{{ $t('撤回了一条消息') }}</span>
+                    <div />
+                </template>
+                <template v-else>
+                    <a v-user="data.operator" />
+                    <span>{{ $t('撤回了') }}</span>
+                    <a v-user="data.user" />
+                    <span>{{ $t('的消息') }}</span>
+                </template>
             </template>
-            <template v-else>
+            <!-- 禁言 -->
+            <template v-else-if="data instanceof BanNotice">
                 <a v-user="data.operator" />
-                <span>{{ $t('撤回了') }}</span>
-                <a v-user="data.user" />
-                <span>{{ $t('的消息') }}</span>
+                <span>{{ $t('禁言了') }}</span>
+                <span v-if="data.tome">{{ $t('你') }}</span>
+                <a v-else v-user="data.user" />
+                <span>{{ data.fTime }}</span>
             </template>
-        </div>
-        <!-- 禁言 -->
-        <div v-else-if="data instanceof BanNotice" class="note-ban note-base">
-            <a v-user="data.operator" />
-            <span>{{ $t('禁言了') }}</span>
-            <span v-if="data.tome">{{ $t('你') }}</span>
-            <a v-else v-user="data.user" />
-            <span>{{ data.fTime }}</span>
-        </div>
-        <!-- 解除禁言 -->
-        <div v-else-if="data instanceof BanLiftNotice" class="note-ban note-base">
-            <a v-user="data.operator" />
-            <span>{{ $t('解除了') }}</span>
-            <span v-if="data.tome">{{ $t('你') }}</span>
-            <a v-else v-user="data.user" />
-            <span>{{ $t('的禁言') }}</span>
-        </div>
-        <!-- 戳一戳 -->
-        <div v-else-if="data instanceof PokeNotice" class="note-notify note-base">
-            <a v-user="data.user" />
-            <img :src="data.img">
-            <span>{{ data.action }}</span>
-            <a v-user="data.target" />
-            <span>{{ data.suffix }}</span>
-            <div class="space" />
-        </div>
-        <div v-else-if="data instanceof JoinNotice" class="note-notify note-base">
-            <template v-if="data.join_type === 'approve'">
+            <!-- 解除禁言 -->
+            <template v-else-if="data instanceof BanLiftNotice">
                 <a v-user="data.operator" />
-                <span>{{ $t('通过了') }}</span>
-                <a v-user="data.user" />
-                <span>{{ $t('的入群申请') }}</span>
+                <span>{{ $t('解除了') }}</span>
+                <span v-if="data.tome">{{ $t('你') }}</span>
+                <a v-else v-user="data.user" />
+                <span>{{ $t('的禁言') }}</span>
             </template>
-            <template v-else-if="data.join_type === 'invite'">
-                <a v-user="data.operator" />
-                <span>{{ $t('邀请') }}</span>
+            <!-- 戳一戳 -->
+            <template v-else-if="data instanceof PokeNotice">
+                <a v-user="data.user" />
+                <img :src="data.ico">
+                <span>{{ data.action }}</span>
+                <a v-user="data.target" />
+                <span>{{ data.suffix }}</span>
+                <div class="space" />
+            </template>
+            <template v-else-if="data instanceof JoinNotice">
+                <template v-if="data.operator">
+                    <a v-user="data.operator" />
+                    <span>{{ $t('通过了') }}</span>
+                </template>
+                <template v-if="data.invitor">
+                    <a v-user="data.invitor" />
+                    <span>{{ $t('邀请') }}</span>
+                </template>
                 <a v-user="data.user" />
                 <span>{{ $t('加入了群聊') }}</span>
             </template>
-            <template v-else-if="data.join_type === 'self'">
-                <a v-user="data.user" />
-                <span>{{ $t('加入了群聊') }}</span>
+            <template v-else-if="data instanceof LeaveNotice">
+                <template v-if="data.kick">
+                    <a v-user="data.operator" />
+                    <span>{{ $t('将') }}</span>
+                    <a v-user="data.user" />
+                    <span>{{ $t('移出群聊') }}</span>
+                </template>
+                <template v-else>
+                    <a v-user="data.user" />
+                    <span>{{ $t('离开了群聊') }}</span>
+                </template>
             </template>
-        </div>
-        <div v-else-if="data instanceof LeaveNotice" class="note-notify note-base">
-            <template v-if="data.kick">
-                <a v-user="data.operator" />
-                <span>{{ $t('将') }}</span>
-                <a v-user="data.user" />
-                <span>{{ $t('移出群聊') }}</span>
-            </template>
-            <template v-else>
-                <a v-user="data.user" />
-                <span>{{ $t('离开了群聊') }}</span>
-            </template>
-        </div>
-        <!-- #endregion -->
+            <!-- #endregion -->
 
-        <!-- #region == 内部系统消息 ========================================== -->
-        <!-- 缺失消息 -->
-        <div v-else-if="data instanceof DeleteNotice" class="note-base">
-            <span>{{ $t('这条消息迷失在虚空里了') }}</span>
+            <!-- #region == 内部系统消息 ========================================== -->
+            <!-- 缺失消息 -->
+            <template v-else-if="data instanceof DeleteNotice">
+                <span>{{ $t('这条消息迷失在虚空里了') }}</span>
+            </template>
+            <!-- 时间 -->
+            <template v-else-if="data instanceof TimeNotice && data.time != undefined">
+                <span>{{ pastTime }}</span>
+            </template>
+            <!-- 通知 -->
+            <template v-else-if="data instanceof InfoNotice">
+                <span>{{ data.message }}</span>
+            </template>
+            <!-- #endregion -->
         </div>
-        <!-- 时间 -->
-        <div v-else-if="data instanceof TimeNotice && data.time != undefined"
-            class="note-time note-base">
-            <span>{{ pastTime }}</span>
-        </div>
-        <!-- 通知 -->
-        <div v-else-if="data instanceof InfoNotice" class="note-base">
-            <span>{{ data.message }}</span>
-        </div>
-        <!-- #endregion -->
     </div>
 </template>
 
@@ -108,7 +103,7 @@ import {
     DeleteNotice,
     BanLiftNotice,
     PokeNotice,
-    RevokeNotice,
+    RecallNotice,
     TimeNotice,
     LeaveNotice,
     JoinNotice,

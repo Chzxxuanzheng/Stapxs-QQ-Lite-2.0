@@ -47,6 +47,121 @@ export class TimeoutSet<T> {
 }
 
 /**
+ * 限制长度的通道
+ */
+export class Channel<T> {
+    private data: T[] = []
+    private size: number
+    constructor(size: number = 10) {
+        this.size = size
+    }
+    push(item: T): void {
+        this.data.push(item)
+        if (this.data.length > this.size) this.data.shift()
+    }
+    async pop(timeout: number=5): Promise<T | undefined> {
+        let intervalId: ReturnType<typeof setInterval>
+        let timeoutId: ReturnType<typeof setTimeout>
+        return new Promise((resolve) => {
+            timeoutId = setTimeout(()=>{
+                clearInterval(intervalId)
+                resolve(undefined)
+            }, timeout * 1000)
+            intervalId = setInterval(() => {
+                if (this.data.length > 0) {
+                    clearTimeout(timeoutId)
+                    clearInterval(intervalId)
+                    resolve(this.data.shift())
+                }
+            }, 100)
+        })
+    }
+    clear(): void {
+        this.data = []
+    }
+    get length(): number {
+        return this.data.length
+    }
+    get maxLength(): number {
+        return this.size
+    }
+}
+
+export class URL {
+    // SSL白名单,这些协议一定不是SSL协议,其他的看是不是s结尾,是的话就是采用ssl
+    private static SSL_WHITE_LIST = ['ws']
+    private _protocol: string = ''
+    private _host: string = ''
+    private _port: number | null = null
+    private _path: string = ''
+    private _query: Record<string, string> = {}
+    private _hash: string = ''
+    private _ssl: boolean = false
+
+    constructor(url: string) {
+        this.parse(url)
+    }
+
+    private parse(url: string): void {
+        try {
+            const parsedUrl = new globalThis.URL(url)
+            this.parseProtocol(parsedUrl.protocol)
+            this._host = parsedUrl.hostname
+            this._port = parsedUrl.port ? parseInt(parsedUrl.port) : null
+            this._path = parsedUrl.pathname
+            this._hash = parsedUrl.hash.replace('#', '')
+            this._query = {}
+            parsedUrl.searchParams.forEach((value, key) => {
+                this._query[key] = value
+            })
+        } catch (error) {
+            throw new Error(`无效的URL  ${url}`)
+        }
+    }
+
+    private parseProtocol(originProtocol: string): void {
+        const protocol = originProtocol.replace(':', '')
+        if (URL.SSL_WHITE_LIST.includes(protocol)) {
+            this._ssl = false
+            this._protocol = protocol
+            return
+        }
+
+        if (protocol.endsWith('s')) {
+            this._ssl = true
+            this._protocol = protocol.slice(0, -1)
+        } else {
+            this._ssl = false
+            this._protocol = protocol
+        }
+    }
+
+    get protocol(): string {
+        return this._protocol
+    }
+
+    get host(): string {
+        return this._host
+    }
+
+    get port(): number | null {
+        return this._port
+    }
+
+    get path(): string {
+        return this._path
+    }
+
+    get hash(): string {
+        return this._hash
+    }
+
+    get ssl(): boolean {
+        return this._ssl
+    }
+}
+
+/**
  * 包含拼音的名称类
  * 可以通过matchStr方法来匹配字符串
  * 支持中文、拼音、首字母等匹配方式

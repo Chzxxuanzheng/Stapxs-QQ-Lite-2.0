@@ -1,1 +1,2 @@
 src/tauri/crates/user-notify/** linguist-vendored -diff
+src/renderer/milky-types/** linguist-vendored -diff

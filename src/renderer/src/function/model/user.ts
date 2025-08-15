@@ -12,8 +12,10 @@ import app from '@renderer/main'
 import { runtimeData } from '../msg'
 import { stdUrl } from '../utils/systemUtil'
 import { Name, Time } from './data'
-import { UserSession } from './session'
+import { GroupSession, Session, TempSession, UserSession } from './session'
 import { computed } from 'vue'
+import { ForwardSenderData, MemberData, SenderData, UserData } from '@renderer/function/adapter/interface'
+import { Gender, Role } from '../adapter/enmu'
 
 export interface IUser {
     user_id: number
@@ -27,29 +29,10 @@ export interface IUser {
     role?: Role
 }
 
-interface memberData {
-    age: number
-    area: string
-    card?: string
-    card_changeable: boolean
-    group_id: number
-    join_time: number
-    last_sent_time: number
-    level: string
-    nickname?: string
-    role: string
-    sex: string
-    title: string
-    title_expire_time: number
-    user_id: number
-    unfriendly: boolean
-}
-
 /**
  * 群成员
  */
 export class Member implements IUser {
-    area: string
     _card?: Name
     join_time: Time
     last_sent_time: Time
@@ -72,8 +55,7 @@ export class Member implements IUser {
      * 是否离开了群
      */
     leave: boolean = false
-    constructor(data: memberData) {
-        this.area = data.area
+    constructor(data: MemberData) {
         if (data.card) this._card = new Name(data.card)
         this.join_time = new Time(data.join_time)
         this.last_sent_time = new Time(data.last_sent_time)
@@ -129,6 +111,9 @@ export class Member implements IUser {
         this._banTime = undefined
     }
 
+    /**
+     * 获取禁言剩余时间
+     */
     get banTime(): Time | undefined {
         if (!this._banTime) return undefined
         if (this._banTime < Date.now()) return undefined
@@ -228,7 +213,6 @@ export class Member implements IUser {
         if (newData._card) this._card = newData._card
         if (newData._nickname) this._nickname = newData._nickname
         if (newData._title) this._title = newData._title
-        this.area = newData.area
         this.join_time = newData.join_time
         this.last_sent_time = newData.last_sent_time
         this.level = newData.level
@@ -237,34 +221,15 @@ export class Member implements IUser {
     }
 }
 
-interface UserData {
-    longNick: string
-    qid: string
-    country?: string
-    province?: string
-    city?: string
-    regTime: number | string
-    qqLevel: number
-    birthday_year?: number
-    birthday_month?: number
-    birthday_day?: number
-    age: number
-
-    // 需自己补充
-    id: number
-    remark?: string
-    nickname: string
-}
-
 /**
  * 好友|用户
  */
 export class User implements IUser {
     user_id: number
-    _nickname: Name
+    _nickname?: Name
     _remark?: Name
     _longNick?: Name
-    qid: string
+    qid?: string
     country?: string
     province?: string
     city?: string
@@ -274,9 +239,10 @@ export class User implements IUser {
     birthday_month?: number
     birthday_day?: number
     age: number
+    sex: Gender
     constructor(data: UserData) {
         this.user_id = data.id
-        this._nickname = new Name(data.nickname)
+        if(data.nickname) this._nickname = new Name(data.nickname)
         if(data.remark) this._remark = new Name(data.remark)
         if(data.longNick) this._longNick = new Name(data.longNick)
         this.qid = data.qid
@@ -289,9 +255,10 @@ export class User implements IUser {
         this.birthday_day = data.birthday_day
         this.age = data.age
         this.regTime = new Time(data.regTime)
+        this.sex = data.sex
     }
 
-    get nickname(): Name {
+    get nickname(): Name|undefined {
         return this._nickname
     }
 
@@ -320,14 +287,14 @@ export class User implements IUser {
 
     get name(): string {
         return this._remark?.toString()
-            ?? this._nickname.toString()
+            ?? this._nickname?.toString()
             ?? this._longNick?.toString()
             ?? this.user_id.toString()
     }
 
     get namePy(): string {
         const name = this._remark?.py
-            ?? this._nickname.py
+            ?? this._nickname?.py
             ?? this._longNick?.py
             ?? this.user_id.toString()
         return name
@@ -344,7 +311,7 @@ export class User implements IUser {
     }
 
     match(search: string): boolean {
-        if (this._nickname.matchStr(search)) return true
+        if (this._nickname?.matchStr(search)) return true
         if (this._remark?.matchStr(search)) return true
         if (this._longNick?.matchStr(search)) return true
         if (this.user_id.toString().includes(search)) return true
@@ -395,41 +362,18 @@ export class BaseUser {
      * 解析数据
      * @param data 数据
      */
-    static parse(data: object): BaseUser {
-        const base = new BaseUser(Number(data['user_id']), data['nickname'])
-        if (data['nickname']) base.nickname = data['nickname']
-        if (data['card']) base.card = data['card']
-        if (data['sex']) {
-            switch (data['sex']) {
-                case 'male':
-                    base.sex = Gender.Male
-                    break
-                case 'female':
-                    base.sex = Gender.Female
-                    break
-                default:
-                    base.sex = Gender.Unknown
-                    break
-            }
-        }
-        if (data['age']) base.age = Number(data['age'])
-        if (data['area']) base.area = data['area']
-        if (data['level']) base.level = Number(data['level'])
-        if (data['role']) {
-            switch (data['role']) {
-                case 'owner':
-                    base.role = Role.Owner
-                    break
-                case 'admin':
-                    base.role = Role.Admin
-                    break
-                default:
-                    base.role = Role.User
-                    break
-            }
-        }
-        if (data['title']) base.title = data['title']
-        if (data['is_robot'] === true) base.role = Role.Bot
+    static parse(data: SenderData): BaseUser {
+        const base = new BaseUser(data.id, data.nickname)
+
+        if (data.card) base.card = data.card
+        if (data.title) base.title = data.title
+
+        base.sex = data.sex
+        base.age = data.age
+        base.area = data.area
+        base.level = data.level
+        base.role = data.role
+
         return base
     }
 
@@ -523,19 +467,6 @@ export class BaseUser {
     }
 }
 
-export enum Gender {
-    Male = 'male',
-    Female = 'female',
-    Unknown = 'unknown'
-}
-
-export enum Role {
-    Owner = 'owner',
-    Admin = 'admin',
-    User = 'user',
-    Bot = 'bot'
-}
-
 function canAdmin(target: Role, other: Role): boolean {
     if (target === Role.Owner) return true
     if (target === Role.Admin) {
@@ -554,4 +485,47 @@ function canBeAdmined(target: Role, other: Role): boolean {
     }
     if (other === Role.User || other === Role.Bot) return false
     return true
+}
+
+export class ForwardSender implements IUser{
+    user_id = 0
+    _nickname: Name
+    face: string
+    constructor(data: ForwardSenderData) {
+        this._nickname = new Name(data.nickname)
+        this.face = stdUrl(data.face)
+    }
+    get nickname(): string {
+        return this._nickname.toString()
+    }
+    set nickname(value: string) {
+        this._nickname = new Name(value)
+    }
+    get name(): string {
+        return this.nickname
+    }
+    get namePy(): string {
+        return this._nickname.py
+    }
+    match(search: string): boolean {
+        return this._nickname.matchStr(search)
+    }
+}
+
+/**
+ * 获取发送者信息
+ * @param sender 发送者数据
+ * @param session? 来源会话
+ */
+export function getSender(sender: SenderData): BaseUser
+export function getSender(sender: SenderData, session: GroupSession): Member | BaseUser
+export function getSender(sender: SenderData, session: UserSession | TempSession): User | BaseUser
+export function getSender(sender: SenderData, session?: Session): IUser
+export function getSender(sender: SenderData, session?: Session): IUser {
+    if (!session) return BaseUser.parse(sender)
+    else {
+        const user = session.getUserById(sender.id)
+        if (user) return user
+        return BaseUser.parse(sender)
+    }
 }

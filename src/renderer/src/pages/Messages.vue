@@ -85,7 +85,7 @@
             </TransitionGroup>
         </div>
         <div :class="'friend-list-space' + (runtimeData.tags.openSideBar ? ' open' : '')">
-            <div v-if="!loginInfo.status || !runtimeData.nowChat" class="ss-card">
+            <div v-if="!driver.isConnected() || !runtimeData.nowChat" class="ss-card">
                 <font-awesome-icon :icon="['fas', 'inbox']" />
                 <span>{{ $t('选择联系人开始聊天') }}</span>
             </div>
@@ -113,7 +113,7 @@ import {
 import { runtimeData } from '@renderer/function/msg'
 import { getRaw as getOpt, run as runOpt } from '@renderer/function/option'
 import { library } from '@fortawesome/fontawesome-svg-core'
-import { login as loginInfo } from '@renderer/function/connect'
+import { loginInfo as loginInfo } from '@renderer/function/login'
 
 import {
     faThumbTack,
@@ -127,6 +127,7 @@ import { Message } from '@renderer/function/model/message'
 import { vMenu } from '@renderer/function/utils/appUtil'
 import { SessionBox, BubbleBox } from '@renderer/function/model/box'
 import BoxBody from '@renderer/components/BoxBody.vue'
+import driver from '@renderer/function/driver'
 
 const emit = defineEmits<{
     userClick: [session: Session, fromBox?: SessionBox]

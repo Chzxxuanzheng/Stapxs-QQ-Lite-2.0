@@ -209,7 +209,7 @@ div.rotate > div > svg {
     margin: -10px;
 }
 .msg-img.face {
-    max-width: calc(50% + 20px);
+	width: calc(var(--width) / 2 + 20px);
 }
 
 .msg-face {
@@ -564,65 +564,20 @@ span.user-title.robot {
     border-radius: calc(3rem + 30px);
     background: var(--color-card-1);
     align-items: center;
-    padding: 7px 30px;
+    padding: 5px 30px;
     font-size: 0.8rem;
     display: flex;
 }
-.note-base > a {
-    color: var(--color-font);
-}
-.note-ban > a {
-    color: var(--color-main);
-    font-weight: bold;
-}
-.note-time {
-    color: var(--color-font-2) !important;
-    display: block;
-}
-.note-nomsg {
-    color: var(--color-font-2);
-    text-align: center;
-    margin: 40px auto;
-    display: block;
-    opacity: 0.5;
-    width: 80%;
-}
-.note-nomsg > a {
-    background: var(--color-card);
-    color: var(--color-font);
-    position: relative;
-    font-size: 0.8rem;
-    padding: 0 20px;
-    z-index: 1;
-}
-.note-nomsg > hr {
-    border-style: inset !important;
-    border: 0 !important;
-    border-bottom: 1px solid var(--color-main) !important;
-    opacity: 0.5;
-    margin-bottom: -0.5rem;
-}
-.note-recall > a {
-    color: var(--color-main);
-    font-weight: bold;
-    max-width: 19vw;
-    display: inline-block;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    margin: 0 5px;
-}
-
-.note-notify {
+.note-base {
     transition: border 0.5s;
     border: 1px solid transparent;
 }
-.note-notify img {
+.note-base img {
     display: inline-block;
     width: 1rem;
     margin: 0 3px;
 }
-.note-notify a {
+.note-base a {
     margin: 0 3px;
     color: var(--color-main);
     font-weight: bold;

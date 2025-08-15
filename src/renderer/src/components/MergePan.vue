@@ -115,7 +115,7 @@
 
     import { defineComponent, nextTick, Reactive } from 'vue'
     import { runtimeData } from '@renderer/function/msg'
-    import { isDeleteMsg, isShowTime } from '@renderer/function/utils/msgUtil'
+    import { isShowTime } from '@renderer/function/utils/msgUtil'
     import { wheelMask } from '@renderer/function/utils/input'
     import { Msg } from '@renderer/function/model/msg'
     import ForwardPan from './ForwardPan.vue'
@@ -144,7 +144,6 @@
                 stack,
                 nowData: stack.at(-1),
                 isShowTime,
-                isDeleteMsg,
                 positionCache: [] as number[],
                 addMode: true,
                 chatMove: {
@@ -248,6 +247,7 @@
                     return true
                 }
                 if (!process(event)) return
+                event.preventDefault()
                 // 创建遮罩
                 // 由于在窗口移动中,窗口判定箱也在移动,当指针不再窗口外,事件就断了
                 // 所以要创建一个不会动的全局遮罩来处理
@@ -453,7 +453,7 @@
                 if (!msg) return
 
                 const popInfo = new PopInfo()
-                app.config.globalProperties.$copyText(msg.raw_message).then(
+                app.config.globalProperties.$copyText(msg.plaintext).then(
                     () => {
                         popInfo.add(PopType.INFO, this.$t('复制成功'), true)
                     },

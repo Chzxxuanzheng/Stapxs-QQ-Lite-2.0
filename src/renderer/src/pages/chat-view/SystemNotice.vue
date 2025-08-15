@@ -95,7 +95,6 @@
     import { defineComponent } from 'vue'
 
     import { runtimeData } from '@renderer/function/msg'
-    import { Connector } from '@renderer/function/connect'
     import { getTrueLang } from '@renderer/function/utils/systemUtil'
 
     export default defineComponent({
@@ -122,14 +121,14 @@
              * @param deal 同意 / 拒绝
              */
             dealFriend(notice: { flag: string }, deal: boolean) {
-                Connector.send(
-                    'set_friend_add_request',
-                    {
-                        flag: notice.flag,
-                        approve: deal,
-                    },
-                    'setFriendAdd_' + notice.flag,
-                )
+                // Connector.send(
+                //     'set_friend_add_request',
+                //     {
+                //         flag: notice.flag,
+                //         approve: deal,
+                //     },
+                //     'setFriendAdd_' + notice.flag,
+                // )
             },
 
             /**
@@ -141,15 +140,15 @@
                 notice: { flag: string; sub_type: string },
                 deal: boolean,
             ) {
-                Connector.send(
-                    'set_group_add_request',
-                    {
-                        flag: notice.flag,
-                        approve: deal,
-                        sub_type: notice.sub_type,
-                    },
-                    'setGroupAdd_' + notice.flag,
-                )
+                // Connector.send(
+                //     'set_group_add_request',
+                //     {
+                //         flag: notice.flag,
+                //         approve: deal,
+                //         sub_type: notice.sub_type,
+                //     },
+                //     'setGroupAdd_' + notice.flag,
+                // )
             },
 
             getName(id: number) {

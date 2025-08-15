@@ -46,7 +46,7 @@ import TinySessionBody from './TinySessionBody.vue'
 
 import { runtimeData } from '@renderer/function/msg'
 import { markRaw } from 'vue'
-import { Msg, SelfMergeMsg, SelfMsg, SelfPreMergeMsg, SelfPreMsg } from '@renderer/function/model/msg'
+import { Msg, SelfMsg, SelfPreMergeMsg, SelfPreMsg } from '@renderer/function/model/msg'
 import { Session } from '@renderer/function/model/session'
 import {
     shallowRef,
@@ -215,7 +215,7 @@ function createMergePreview(msgs: Msg[]): SelfPreMergeMsg[]{
 function createMergeSendMsg(msgs: Msg[]): SelfMsg[]{
     const out: SelfMsg[] = []
     for (const chat of selected.value) {
-        out.push(new SelfMergeMsg(msgs, chat))
+        out.push(SelfMsg.createMerge(msgs, chat))
     }
     return out
 }
@@ -223,7 +223,7 @@ function createSingleSendMsgs(msgs: Msg[]): SelfMsg[]{
     const out: SelfMsg[] = []
     for (const chat of selected.value) {
         for (const msg of msgs) {
-            out.push(new SelfMsg(msg.message, chat))
+            out.push(SelfMsg.create(msg.message, chat))
         }
     }
     return out
