@@ -659,6 +659,7 @@ export class MilkyAdapter implements AdapterInterface {
             sender: sender,
             time: data.time,
             message: message,
+            isDelete: this.isDelete(data),
         }
     }
     /**
@@ -1188,6 +1189,9 @@ export class MilkyAdapter implements AdapterInterface {
     protected getUidFromForward(face: string): number {
         const url = URL.parse(face)
         return Number(url?.searchParams.get('nk') ?? '0')
+    }
+    protected isDelete(msg: IncomingMessage): boolean {
+        return msg.sender_id === 0
     }
     //#endregion
 }

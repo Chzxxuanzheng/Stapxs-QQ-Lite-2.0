@@ -27,14 +27,44 @@ type IconData = { icon: string, rotate: boolean, desc: string, color: string }
 @autoReactive
 export class Msg extends Message {
     readonly type = 'message'
+    /**
+     * 消息ID
+     */
     message_id?: string
+    /**
+     * 消息段列表
+     */
     message: Seg[]
+    /**
+     * 消息发送者
+     */
     sender: IUser
+    /**
+     * 是否提及了自己
+     */
     atme: boolean = false
+    /**
+     * 是否提及全体成员
+     */
     atall: boolean = false
+    /**
+     * 包含的图片信息
+     */
     imgList: {url: string, id: string}[] = []
+    /**
+     * 对应的会话
+     */
     session?: Session
-    emojis: { [key: string]: number[] } = {}
+    /**
+     * 表情回应
+     * key: 表情id
+     * value: 操作者uid列表
+     */
+    emojis: { [emojiId: string]: number[] } = {}
+    /**
+     * 是否为已删除消息
+     */
+    isDelete: boolean = false
     constructor(data: MsgData)
     constructor(segs: Seg[], sender: IUser, session?: Session, senderTime?: Time)
     constructor(arg1: Seg[] | MsgData, arg2?: IUser, arg3?: Session, arg4?: Time) {
@@ -54,10 +84,10 @@ export class Msg extends Message {
             super(data)
             // 消息id
             this.message_id = data.message_id
-
             // 补充消息段
             this.message = Msg.parseSegs(data['message'])
-
+            // 补充已删除
+            this.isDelete = data.isDelete
             // 判断提及自己
             this.message.forEach(seg => {
                 if (seg.type === 'atall') this.atall = true

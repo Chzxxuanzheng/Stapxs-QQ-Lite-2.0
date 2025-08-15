@@ -461,6 +461,7 @@ export class OneBotAdapter implements AdapterInterface {
             sender: sender,
             time: data.time,
             message: message,
+            isDelete: this.isDelete(data),
         }
     }
     parseSession(data: ObMessageEvent | ObMsg): SessionData {
@@ -907,6 +908,8 @@ export class OneBotAdapter implements AdapterInterface {
         // 重置缓存
         this.friendListCache = null
     }
+
+    protected isDelete(_: ObMsg): boolean {return false}
 }
 
 export class LagrangeOneBot extends OneBotAdapter implements AdapterInterface {
@@ -1076,9 +1079,7 @@ export class LagrangeOneBot extends OneBotAdapter implements AdapterInterface {
 
     @api
     async getHistoryMsg(session: Session, count: number, start?: Msg): Promise<MsgData[] | undefined> {
-        let out: MsgData[] = []
         let type: 'user' | 'group'
-        let startId: string | undefined = start?.message_id
         const id = session.id.toString()
 
         if (session instanceof UserSession)
@@ -1088,25 +1089,25 @@ export class LagrangeOneBot extends OneBotAdapter implements AdapterInterface {
         else
             throw new Error('LgrV1不支持临时会话')
 
-        while (out.length < count) {
-            // 拉消息
-            const data: MsgData[] | undefined = await this._getHistoryMsg(
-                type,
-                id,
-                count - out.length,
-                startId
-            )
-            if (!data || data.length === 0) break
+        let data: LgrObGetHistoryMsg
 
-            // 保存头部消息
-            startId = data[0].message_id
-            // 过滤掉已删除消息
-            const dataFilter = data.filter(msg => !this.isDeletedMsg(msg))
-
-            out = [...dataFilter, ...out]
+        if (type === 'user') {
+            data = await this.connector.send('get_friend_msg_history', {
+                user_id: id,
+                count: count,
+                message_id: start,
+            })
+        } else {
+            data = await this.connector.send('get_group_msg_history', {
+                group_id: id,
+                count: count,
+                message_id: start,
+            })
         }
 
-        return out
+        const out: Promise<MsgData>[] = data.data.messages.map(msg => this.parseMsg(msg))
+
+        return await Promise.all(out)
     }
     @api
     async sendGroupPoke(session: GroupSession, target: Member): Promise<true | undefined> {
@@ -1350,43 +1351,6 @@ export class LagrangeOneBot extends OneBotAdapter implements AdapterInterface {
         return false
     }
 
-    /**
-     * 对[已删除]不过滤的获取历史消息
-     * @param session
-     * @param count
-     * @param start
-     * @returns
-     */
-    @api
-    private async _getHistoryMsg(
-        type: 'user' | 'group',
-        id: string,
-        count: number,
-        start_id?: string
-    ): Promise<MsgData[] | undefined> {
-        let data: LgrObGetHistoryMsg
-        if (type === 'user') {
-            data = await this.connector.send('get_friend_msg_history', {
-                user_id: id,
-                count: count,
-                message_id: start_id,
-            })
-        } else {
-            data = await this.connector.send('get_group_msg_history', {
-                group_id: id,
-                count: count,
-                message_id: start_id,
-            })
-        }
-
-        const out: Promise<MsgData>[] = []
-        for (const msg of data.data.messages) {
-            out.push(this.parseMsg(msg))
-        }
-
-        return await Promise.all(out)
-    }
-
     override get selfInfo(): {[key: string]: string} {
         if (!this.botInfo.value) return {}
         return {
@@ -1395,14 +1359,15 @@ export class LagrangeOneBot extends OneBotAdapter implements AdapterInterface {
         }
     }
 
-    private isDeletedMsg(msg: MsgData): boolean {
+    override isDelete(msg: ObMsg): boolean {
         // 判断消息是否为[已删除]消息
-        if (msg.message.length !== 1)return false
-        if (msg.sender.id !== runtimeData.loginInfo.uin) return false
+        if (msg.message.length !== 1) return false
+        if (
+            (msg.sender as ObPrivateSender | ObGroupSender).user_id !== runtimeData.loginInfo.uin
+        ) return false
         if (msg.message[0].type !== 'text') return false
-        if ((msg.message[0] as TextSegData).text !== '[已删除]') return false
+        if ((msg.message[0] as ObTextSeg).data.text !== '[已删除]') return false
         return true
-
     }
 }
 

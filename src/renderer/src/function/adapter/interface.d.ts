@@ -483,6 +483,7 @@ export interface MsgData {
     sender: SenderData          // 发送者信息
     time?: number         		// 发送时间戳
     message: SegData[]   		// 消息内容段
+    isDelete: boolean           // 是否是已删除消息
 }
 
 /**

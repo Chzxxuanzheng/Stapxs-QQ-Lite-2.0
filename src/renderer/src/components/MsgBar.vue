@@ -19,12 +19,15 @@
                 :key="'notice-time-' + (msgIndex.time.time / ( 4 * 60 )).toFixed(0)"
                 :data="SystemNotice.time(msgIndex.time.time)" />
             <!-- [已删除]消息 -->
-            <!-- <NoticeBody
-                v-if="isDeleteMsg(msgIndex)"
+            <NoticeBody
+                v-if="
+                    !runtimeData.sysConfig.dont_parse_delete &&
+                    msgIndex instanceof Msg &&
+                    msgIndex.isDelete"
                 :key="'delete-' + msgIndex.uuid"
-                :data="SystemNotice.delete()" /> -->
+                :data="SystemNotice.delete()" />
             <!-- 消息体 -->
-            <MsgBody v-if="msgIndex instanceof Msg"
+            <MsgBody v-else-if="msgIndex instanceof Msg"
                 :key="'msg-' + msgIndex.uuid"
                 :selected="isSelected(msgIndex)"
                 :data="msgIndex"
