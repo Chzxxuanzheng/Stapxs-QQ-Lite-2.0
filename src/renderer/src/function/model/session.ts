@@ -281,10 +281,13 @@ export abstract class Session {
         // 激活消息
         if (!this.isActive) await this.activate()
 
+        const lastMsg = this.messageList.at(-1)
+
         // 去重
         if (
             (msg instanceof Msg) &&
-            (this.messageList.at(-1) as Msg | undefined)?.message_id === msg.message_id
+            (lastMsg instanceof Msg) &&
+            lastMsg.message_id === msg.message_id
         ) return
 
         // 消息其他处理
