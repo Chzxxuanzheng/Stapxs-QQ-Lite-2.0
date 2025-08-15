@@ -4,10 +4,9 @@ import { MsgBodyFuns } from './msg-body'
 import { getFace } from '../utils/msgUtil'
 import { PopInfo, PopType } from '../base'
 import { downloadFile } from '../utils/appUtil'
-import { Msg } from './msg'
+import { ForwardMsg, Msg } from './msg'
 import { v4 as uuid } from 'uuid'
 import type { AtAllSegData, AtSegData, FaceSegData, FileSegData, ForwardSegData, ImgSegData, MdSegData, MfaceSegData, PokeSegData, ReplySegData, SegData, TextSegData, UnknownSegData, VideoSegData } from '../adapter/interface'
-import { getSender } from './user'
 import { Resource } from './ressource'
 
 export const segType = {}
@@ -342,11 +341,7 @@ export class ForwardSeg extends Seg {
             super()
             const data = arg1 as ForwardSegData
             this.id = data.id
-			this.content = data.content.map(item => {
-                const sender = getSender(item.sender)
-                const segs = Msg.parseSegs(item.content)
-                return new Msg(segs, sender)
-            })
+			this.content = data.content.map(item => new ForwardMsg(item))
         }
     }
 

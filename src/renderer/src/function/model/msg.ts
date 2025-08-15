@@ -12,11 +12,11 @@ import app from '@renderer/main'
 import { Time, TimeoutSet } from './data'
 import { AtSeg, ForwardSeg, ReplySeg, Seg } from './seg'
 import { autoReactive } from './utils'
-import { BaseUser, getSender, Member, type IUser } from './user'
+import { BaseUser, ForwardSender, getSender, Member, type IUser } from './user'
 import { Message } from './message'
 import { GroupSession, Session } from './session'
 import { delay } from '../utils/systemUtil'
-import { EssenceData, MsgData, SegData } from '../adapter/interface'
+import { EssenceData, ForwardNodeData, MsgData, SegData } from '../adapter/interface'
 import { reactive } from 'vue'
 
 type IconData = { icon: string, rotate: boolean, desc: string, color: string }
@@ -85,7 +85,7 @@ export class Msg extends Message {
             // 消息id
             this.message_id = data.message_id
             // 补充消息段
-            this.message = Msg.parseSegs(data['message'])
+            this.message = Msg.parseSegs(data.message)
             // 补充已删除
             this.isDelete = data.isDelete
             // 判断提及自己
@@ -413,5 +413,17 @@ export class EssenceMsg extends Msg {
         super(segs, sender, session, new Time(data.sender_time))
         this.operator = getSender(data.operator, session) as BaseUser | Member
         this.operatorTime = new Time(data.operator_time)
+    }
+}
+
+/**
+ * 合并转发消息
+ */
+export class ForwardMsg extends Msg {
+    declare sender: ForwardSender
+    constructor(data: ForwardNodeData) {
+        const sender = new ForwardSender(data.sender)
+        const message = Msg.parseSegs(data.content)
+        super(message, sender)
     }
 }

@@ -586,7 +586,10 @@ export class OneBotAdapter implements AdapterInterface {
     }
     async nodeParser(data: ObForwardNodeSeg): Promise<ForwardNodeData> {
         return {
-            sender: createSender(Number(data.data.user_id), data.data.nickname),
+            sender: {
+                nickname: data.data.nickname,
+                face: `https://q1.qlogo.cn/g?b=qq&s=0&nk=${data.data.user_id}`,
+            },
             content: await this.parseSeg(data.data.content),
         }
     }

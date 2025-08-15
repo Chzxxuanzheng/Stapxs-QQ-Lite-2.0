@@ -14,7 +14,7 @@ import { stdUrl } from '../utils/systemUtil'
 import { Name, Time } from './data'
 import { GroupSession, Session, TempSession, UserSession } from './session'
 import { computed } from 'vue'
-import { MemberData, SenderData, UserData } from '@renderer/function/adapter/interface'
+import { ForwardSenderData, MemberData, SenderData, UserData } from '@renderer/function/adapter/interface'
 import { Gender, Role } from '../adapter/enmu'
 
 export interface IUser {
@@ -485,6 +485,31 @@ function canBeAdmined(target: Role, other: Role): boolean {
     }
     if (other === Role.User || other === Role.Bot) return false
     return true
+}
+
+export class ForwardSender implements IUser{
+    user_id = 0
+    _nickname: Name
+    face: string
+    constructor(data: ForwardSenderData) {
+        this._nickname = new Name(data.nickname)
+        this.face = stdUrl(data.face)
+    }
+    get nickname(): string {
+        return this._nickname.toString()
+    }
+    set nickname(value: string) {
+        this._nickname = new Name(value)
+    }
+    get name(): string {
+        return this.nickname
+    }
+    get namePy(): string {
+        return this._nickname.py
+    }
+    match(search: string): boolean {
+        return this._nickname.matchStr(search)
+    }
 }
 
 /**

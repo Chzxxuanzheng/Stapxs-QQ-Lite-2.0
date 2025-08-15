@@ -587,7 +587,14 @@ export interface UnknownSegData extends SegData {
  * 合并转发节点
  */
 export interface ForwardNodeData {
-    sender: SenderData          // 发送者信息
+    sender: ForwardSenderData   // 发送者信息
     content: SegData[]          // 消息内容段
+}
+/**
+ * 合并转发发送者消息
+ */
+export interface ForwardSenderData {
+    nickname: string            // 发送者昵称
+    face: string                // 发送者头像链接
 }
 //#endregion

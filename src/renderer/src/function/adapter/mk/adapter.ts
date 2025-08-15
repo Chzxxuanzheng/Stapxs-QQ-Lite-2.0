@@ -552,7 +552,6 @@ export class MilkyAdapter implements AdapterInterface {
             Api.GetForwardedMessagesInput.parse({ forward_id: id }),
             Api.GetForwardedMessagesOutput
         )
-        console.log(data)
         return Promise.all(data.messages.map(node => this.nodeParser(node)))
     }
     //#endregion
@@ -810,7 +809,10 @@ export class MilkyAdapter implements AdapterInterface {
     }
     async nodeParser(data: Message.IncomingForwardedMessage): Promise<ForwardNodeData> {
         return {
-            sender: createSender(this.getUidFromForward(data.avatar_url), data.sender_name),
+            sender: {
+                nickname: data.sender_name,
+                face: data.avatar_url,
+            },
             content: await this.parseSeg(data.segments),
         }
     }
