@@ -53,22 +53,16 @@
                 <div class="space" />
             </template>
             <template v-else-if="data instanceof JoinNotice">
-                <template v-if="data.join_type === 'approve'">
+                <template v-if="data.operator">
                     <a v-user="data.operator" />
                     <span>{{ $t('通过了') }}</span>
-                    <a v-user="data.user" />
-                    <span>{{ $t('的入群申请') }}</span>
                 </template>
-                <template v-else-if="data.join_type === 'invite'">
-                    <a v-user="data.operator" />
+                <template v-if="data.invitor">
+                    <a v-user="data.invitor" />
                     <span>{{ $t('邀请') }}</span>
-                    <a v-user="data.user" />
-                    <span>{{ $t('加入了群聊') }}</span>
                 </template>
-                <template v-else-if="data.join_type === 'self'">
-                    <a v-user="data.user" />
-                    <span>{{ $t('加入了群聊') }}</span>
-                </template>
+                <a v-user="data.user" />
+                <span>{{ $t('加入了群聊') }}</span>
             </template>
             <template v-else-if="data instanceof LeaveNotice">
                 <template v-if="data.kick">

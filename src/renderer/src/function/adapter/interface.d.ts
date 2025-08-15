@@ -452,8 +452,8 @@ export interface PokeEventData extends MessageEventData {
 export interface JoinEventData extends MessageEventData {
     type: 'join'                    // 事件类型
     user: SenderData                // 加入的用户信息
-    operator: SenderData            // 操作员信息
-    join_type: 'approve' | 'invite' // 加入类型
+    operator?: SenderData           // 操作员信息
+    invitor?: SenderData            // 邀请者信息
 }
 /**
  * 群成员离开事件

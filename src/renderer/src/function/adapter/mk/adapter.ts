@@ -552,6 +552,7 @@ export class MilkyAdapter implements AdapterInterface {
             Api.GetForwardedMessagesInput.parse({ forward_id: id }),
             Api.GetForwardedMessagesOutput
         )
+        console.log(data)
         return Promise.all(data.messages.map(node => this.nodeParser(node)))
     }
     //#endregion
@@ -998,7 +999,6 @@ export class MilkyAdapter implements AdapterInterface {
         }
         return await queueWait(process(data), `${data.message_scene}-${data.peer_id}`)
     }
-    // TODO: 邀请员和操作员分开，支持非审核入群
     async groupMemberIncreaseEvent(
         event: Event.Event,
         data: Event.GroupMemberIncreaseEvent
@@ -1010,8 +1010,8 @@ export class MilkyAdapter implements AdapterInterface {
                 type: 'group',
             },
             user: createSender(data.user_id),
-            operator: createSender(data.invitor_id ?? data.operator_id ?? data.user_id),
-            join_type: data.invitor_id ? 'invite' : 'approve',
+            operator: data.operator_id ? createSender(data.operator_id) : undefined,
+            invitor: data.invitor_id ? createSender(data.invitor_id) : undefined,
             time: event.time,
         }
     }

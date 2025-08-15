@@ -181,24 +181,27 @@ export class PokeNotice extends ReceivedNotice {
 export class JoinNotice extends ReceivedNotice {
     override readonly type = 'join'
     declare session: GroupSession
-    join_type: 'approve' | 'invite' | 'self'
     user!: IUser
-    operator!: IUser
+    operator?: IUser
+    invitor?: IUser
     private user_info: SenderData
-    private operator_info: SenderData
+    private operator_info?: SenderData
+    private invitor_info?: SenderData
     constructor(data: JoinEventData) {
         super(data)
-        this.join_type = data.join_type
         this.user_info = data.user
-        this.operator_info = data.operator
 
-        this.user = this.getUser(this.user_info)
-        this.operator = this.getUser(this.operator_info)
-        this.users.push(this.user, this.operator)
+        this.user = getSender(this.user_info)
 
-        if (this.operator.user_id === 0) {
-            this.operator.user_id = this.user.user_id
-            this.join_type = 'self'
+        if (data.operator) {
+            this.operator_info = data.operator
+            this.operator = this.getUser(this.operator_info)
+            this.users.push(this.operator)
+        }
+        if (data.invitor) {
+            this.invitor_info = data.invitor
+            this.invitor = this.getUser(this.invitor_info)
+            this.users.push(this.invitor)
         }
     }
 
@@ -207,17 +210,19 @@ export class JoinNotice extends ReceivedNotice {
      * 因为刚加群时没他的信息
      */
     refreshUserData(){
-        this.users.length = 0
         this.user = this.getUser(this.user_info)
-        this.operator = this.getUser(this.operator_info)
-        this.users.push(this.user, this.operator)
+        this.users.push(this.user)
     }
 
     override get preMsg(): string {
         const { $t } = app.config.globalProperties
-        if (this.join_type === 'self') return this.user.name + $t('加入了群聊')
-        if (this.join_type === 'approve') return this.operator.name + $t('通过了') + this.user.name + $t('的入群申请')
-        return this.operator.name + $t('邀请') + this.user.name + $t('加入了群聊')
+        let out = ''
+        if (this.operator)
+            out += this.operator.name + $t('通过了')
+        if (this.invitor)
+            out += this.invitor.name + $t('邀请')
+        out += this.user.name + $t('加入了群聊')
+        return out
     }
 }
 

@@ -785,15 +785,19 @@ export class OneBotAdapter implements AdapterInterface {
         )
     }
     async groupIncreaseEvent(event: ObGroupIncreaseEvent): Promise<JoinEventData> {
+        const user = event.user_id
+        const eventOperator = event.operator_id === event.user_id ? undefined : event.operator_id
+        const operator = event.sub_type === 'approve' ? eventOperator : undefined
+        const invitor = event.sub_type === 'invite' ? eventOperator : undefined
         return {
             type: 'join',
             session: {
                 id: event.group_id,
                 type: 'group',
             },
-            user: createSender(event.user_id),
-            operator: createSender(event.operator_id),
-            join_type: event.sub_type,
+            user: createSender(user),
+            operator: operator ? createSender(operator) : undefined,
+            invitor: invitor ? createSender(invitor) : undefined,
             time: event.time,
         }
     }
