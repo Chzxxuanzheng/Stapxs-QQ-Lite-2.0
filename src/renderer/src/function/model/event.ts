@@ -17,7 +17,9 @@ import type {
     MessageEventType,
     MsgEventData,
     PokeEventData,
-    RecallEventData
+    RecallEventData,
+    ResponseEventData,
+    SessionEventType
 } from '../adapter/interface'
 import { GroupSession, Session } from './session'
 import { Msg } from './msg'
@@ -29,7 +31,7 @@ import {
     PokeNotice,
     RecallNotice
 } from './notice'
-import { Member } from './user'
+import { BaseUser, getSender, Member } from './user'
 
 type EventConstructor = { new (...args: any[]): Event }
 const eventType: Map<string, EventConstructor> = new Map()
@@ -49,7 +51,7 @@ function registerEventType(type: EventType): ClassDecorator {
  * 事件类
  */
 export abstract class Event {
-    abstract readonly type: EventType // 事件类型
+    abstract readonly type: EventType
 
     static parse(data: EventData): Event {
         const Constructor = eventType.get(data.type) ?? UnknownEvent
@@ -58,17 +60,44 @@ export abstract class Event {
     }
 }
 
+export abstract class SessionEvent extends Event {
+    abstract override readonly type: SessionEventType
+    session: Session
+
+    constructor(session: Session) {
+        super()
+        this.session = session
+    }
+}
+
+@registerEventType('response')
+export class ResponseEvent extends SessionEvent {
+    override readonly type = 'response'
+    declare session: GroupSession
+    msg: Msg
+    operator: Member | BaseUser
+    emojiId: string
+    add: boolean
+    constructor(data: ResponseEventData) {
+        super(Session.getSession(data.session))
+        const msg = this.session.getMsgById(data.message_id)
+        if (!msg) throw new Error('找不到对应的消息')
+        this.msg = msg
+        this.operator = getSender(data.operator, this.session)
+        this.emojiId = data.emojiId
+        this.add = data.add
+    }
+}
+
 /**
  * 消息事件
  * 该事件会携带一个Message对象和一个Session对象
  */
-export abstract class MessageEvent extends Event {
+export abstract class MessageEvent extends SessionEvent {
     abstract override readonly type: MessageEventType
-    session: Session
     message: Message
     constructor(session: Session, message: Message) {
-        super()
-        this.session = session
+        super(session)
         this.message = message
     }
 }

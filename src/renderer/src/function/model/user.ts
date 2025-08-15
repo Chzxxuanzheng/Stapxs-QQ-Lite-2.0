@@ -12,7 +12,7 @@ import app from '@renderer/main'
 import { runtimeData } from '../msg'
 import { stdUrl } from '../utils/systemUtil'
 import { Name, Time } from './data'
-import { Session, UserSession } from './session'
+import { GroupSession, Session, TempSession, UserSession } from './session'
 import { computed } from 'vue'
 import { MemberData, SenderData, UserData } from '@renderer/function/adapter/interface'
 import { Gender, Role } from '../adapter/enmu'
@@ -492,6 +492,10 @@ function canBeAdmined(target: Role, other: Role): boolean {
  * @param sender 发送者数据
  * @param session? 来源会话
  */
+export function getSender(sender: SenderData): BaseUser
+export function getSender(sender: SenderData, session: GroupSession): Member | BaseUser
+export function getSender(sender: SenderData, session: UserSession | TempSession): User | BaseUser
+export function getSender(sender: SenderData, session?: Session): IUser
 export function getSender(sender: SenderData, session?: Session): IUser {
     if (!session) return BaseUser.parse(sender)
     else {

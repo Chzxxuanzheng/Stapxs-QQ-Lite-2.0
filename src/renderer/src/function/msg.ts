@@ -85,24 +85,6 @@ const noticeFunctions = {
         }
     },
 
-    /**
-     * 表情回应
-     */
-    group_msg_emoji_like: (_: string, msg: { [key: string]: any }) => {
-        const msgId = msg.message_id
-        const emojiList = msg.likes
-        // 寻找消息
-        for (const session of Session.activeSessions) {
-            for (const msg of session.messageList) {
-                if (msg.message_id === msgId) {
-                    if (msg instanceof Msg) {
-                        msg.emojis = emojiList
-                    }
-                }
-            }
-        }
-    },
-
     input_status: (_: string, msg: { [key: string]: any }) => {
         const { $t } = app.config.globalProperties
         const session = Session.getSessionById(msg.user_id)

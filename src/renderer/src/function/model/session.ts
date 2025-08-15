@@ -443,6 +443,16 @@ export abstract class Session {
         await this.runHook('rmMessageHook', msg)
     }
 
+    /**
+     * 根据 message_id 查找消息
+     * @param message_id
+     */
+    getMsgById(message_id: string): Msg | undefined {
+        return this.messageList.find(msg => {
+            if (!(msg instanceof Msg)) return false
+            return msg.message_id === message_id
+        }) as Msg | undefined
+    }
     //#endregion
 
     //#region == 钩子相关 ==============================================================

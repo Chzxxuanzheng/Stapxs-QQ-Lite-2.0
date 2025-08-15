@@ -1098,7 +1098,7 @@ const userInfoPanFunc: UserInfoPan = {
                     return
                 }
 
-                const hasSend = msg?.emojis[id]?.meSend ?? false
+                const hasSend = msg?.emojis[id]?.includes(runtimeData.loginInfo.uin) ?? false
 
                 // lgr 贴表情不会根据是否已经有了做判断,而且我拿不到 emoji_id,不知道也没有已经贴上去了
                 // 所以采用这个逻辑,添加成功按贴表情成功处理,否则尝试移除表情
@@ -1109,7 +1109,7 @@ const userInfoPanFunc: UserInfoPan = {
                 )
 
                 if (!re) return
-                msg.setEmoji(id, !hasSend)
+                msg.setEmoji(id, runtimeData.loginInfo.uin, !hasSend)
             },
 
             /**

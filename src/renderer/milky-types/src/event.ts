@@ -75,7 +75,7 @@ export const GroupMessageReactionEvent = z.object({
   user_id: ZInt64.describe('发送回应者 QQ 号'),
   message_seq: ZInt64.describe('消息序列号'),
   face_id: ZString.describe('表情 ID'),
-  is_add: ZBoolean.optional().describe('是否为添加，`false` 表示取消回应'),
+  is_add: ZBoolean.describe('是否为添加，`false` 表示取消回应'),
 }).describe('群消息反应事件');
 
 // 群禁言事件
@@ -118,7 +118,7 @@ export const Event = z.discriminatedUnion('event_type', [
     self_id: ZInt64.describe('机器人 QQ 号'),
     data: BotOfflineEvent,
   }).describe('机器人离线事件'),
-  
+
   // 消息接收事件
   z.object({
     event_type: z.literal('message_receive'),
@@ -126,7 +126,7 @@ export const Event = z.discriminatedUnion('event_type', [
     self_id: ZInt64.describe('机器人 QQ 号'),
     data: IncomingMessage,
   }).describe('消息接收事件'),
-  
+
   // 消息撤回事件
   z.object({
     event_type: z.literal('message_recall'),
@@ -134,7 +134,7 @@ export const Event = z.discriminatedUnion('event_type', [
     self_id: ZInt64.describe('机器人 QQ 号'),
     data: MessageRecallEvent,
   }).describe('消息撤回事件'),
-  
+
   // 好友请求事件
   z.object({
     event_type: z.literal('friend_request'),
@@ -142,7 +142,7 @@ export const Event = z.discriminatedUnion('event_type', [
     self_id: ZInt64.describe('机器人 QQ 号'),
     data: FriendRequest,
   }).describe('好友请求事件'),
-  
+
   // 群请求事件
   z.object({
     event_type: z.literal('group_request'),
@@ -150,7 +150,7 @@ export const Event = z.discriminatedUnion('event_type', [
     self_id: ZInt64.describe('机器人 QQ 号'),
     data: GroupRequest,
   }).describe('群请求事件'),
-  
+
   // 群邀请事件
   z.object({
     event_type: z.literal('group_invitation'),
@@ -158,7 +158,7 @@ export const Event = z.discriminatedUnion('event_type', [
     self_id: ZInt64.describe('机器人 QQ 号'),
     data: GroupInvitation,
   }).describe('群邀请事件'),
-  
+
   // 好友戳一戳事件
   z.object({
     event_type: z.literal('friend_nudge'),
@@ -166,7 +166,7 @@ export const Event = z.discriminatedUnion('event_type', [
     self_id: ZInt64.describe('机器人 QQ 号'),
     data: FriendNudgeEvent,
   }).describe('好友戳一戳事件'),
-  
+
   // 好友文件上传事件
   z.object({
     event_type: z.literal('friend_file_upload'),
@@ -174,7 +174,7 @@ export const Event = z.discriminatedUnion('event_type', [
     self_id: ZInt64.describe('机器人 QQ 号'),
     data: FriendFileUploadEvent,
   }).describe('好友文件上传事件'),
-  
+
   // 群管理员变更事件
   z.object({
     event_type: z.literal('group_admin_change'),
@@ -182,7 +182,7 @@ export const Event = z.discriminatedUnion('event_type', [
     self_id: ZInt64.describe('机器人 QQ 号'),
     data: GroupAdminChangeEvent,
   }).describe('群管理员变更事件'),
-  
+
   // 群精华消息变更事件
   z.object({
     event_type: z.literal('group_essence_message_change'),
@@ -190,7 +190,7 @@ export const Event = z.discriminatedUnion('event_type', [
     self_id: ZInt64.describe('机器人 QQ 号'),
     data: GroupEssenceMessageChangeEvent,
   }).describe('群精华消息变更事件'),
-  
+
   // 群成员增加事件
   z.object({
     event_type: z.literal('group_member_increase'),
@@ -198,7 +198,7 @@ export const Event = z.discriminatedUnion('event_type', [
     self_id: ZInt64.describe('机器人 QQ 号'),
     data: GroupMemberIncreaseEvent,
   }).describe('群成员增加事件'),
-  
+
   // 群成员减少事件
   z.object({
     event_type: z.literal('group_member_decrease'),
@@ -206,7 +206,7 @@ export const Event = z.discriminatedUnion('event_type', [
     self_id: ZInt64.describe('机器人 QQ 号'),
     data: GroupMemberDecreaseEvent,
   }).describe('群成员减少事件'),
-  
+
   // 群名称变更事件
   z.object({
     event_type: z.literal('group_name_change'),
@@ -214,7 +214,7 @@ export const Event = z.discriminatedUnion('event_type', [
     self_id: ZInt64.describe('机器人 QQ 号'),
     data: GroupNameChangeEvent,
   }).describe('群名称变更事件'),
-  
+
   // 群消息表情回应事件
   z.object({
     event_type: z.literal('group_message_reaction'),
@@ -222,7 +222,7 @@ export const Event = z.discriminatedUnion('event_type', [
     self_id: ZInt64.describe('机器人 QQ 号'),
     data: GroupMessageReactionEvent,
   }).describe('群消息表情回应事件'),
-  
+
   // 群禁言事件
   z.object({
     event_type: z.literal('group_mute'),
@@ -230,7 +230,7 @@ export const Event = z.discriminatedUnion('event_type', [
     self_id: ZInt64.describe('机器人 QQ 号'),
     data: GroupMuteEvent,
   }).describe('群禁言事件'),
-  
+
   // 群全体禁言事件
   z.object({
     event_type: z.literal('group_whole_mute'),
@@ -238,7 +238,7 @@ export const Event = z.discriminatedUnion('event_type', [
     self_id: ZInt64.describe('机器人 QQ 号'),
     data: GroupWholeMuteEvent,
   }).describe('群全体禁言事件'),
-  
+
   // 群戳一戳事件
   z.object({
     event_type: z.literal('group_nudge'),
@@ -246,7 +246,7 @@ export const Event = z.discriminatedUnion('event_type', [
     self_id: ZInt64.describe('机器人 QQ 号'),
     data: GroupNudgeEvent,
   }).describe('群戳一戳事件'),
-  
+
   // 群文件上传事件
   z.object({
     event_type: z.literal('group_file_upload'),

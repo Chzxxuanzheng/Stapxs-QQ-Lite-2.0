@@ -30,6 +30,7 @@ import {
     PokeEventData,
     RecallEventData,
     ReplySegData,
+    ResponseEventData,
     SegData,
     SenderData,
     SessionData,
@@ -146,6 +147,7 @@ export class MilkyAdapter implements AdapterInterface {
         this.eventProcessers['group_mute'] = this.groupBanEvent.bind(this)
         this.eventProcessers['message_recall'] = this.recallEvent.bind(this)
         this.eventProcessers['group_nudge'] = this.pokeEvent.bind(this)
+        this.eventProcessers['group_message_reaction'] = this.groupMessageReaction.bind(this)
     }
 
     optInfo(): Component {
@@ -1084,7 +1086,23 @@ export class MilkyAdapter implements AdapterInterface {
             time: event.time,
         }
     }
-
+    async groupMessageReaction(
+        event: Event.Event,
+        data: Event.GroupMessageReactionEvent
+    ): Promise<ResponseEventData> {
+        return {
+            type: 'response',
+            session: {
+                id: data.group_id,
+                type: 'group',
+            },
+            operator: createSender(data.user_id),
+            message_id: data.message_seq.toString(),
+            emojiId: data.face_id,
+            add: data.is_add,
+            time: event.time,
+        }
+    }
 
     async handleEvent(json: string): Promise<void> {
         const data = Event.Event.parse(JSON.parse(json))

@@ -365,14 +365,36 @@ export interface SessionData {
 
 //#region == 事件 ==================================================
 export type MessageEventType = 'msg' | 'recall' | 'ban' | 'banLift' | 'poke' | 'join' | 'leave'
-export type EventType = MessageEventType | 'unknown'
+export type SessionEventType = 'response' | MessageEventType
+export type EventType = SessionEventType | 'unknown'
 export interface EventData {
-    type: string                // 事件类型
+    type: EventType             // 事件类型
     time: number                // 事件发生时间戳
 }
-export interface MessageEventData extends EventData {
-    type: MessageEventType      // 事件类型
+/**
+ * 和会话绑定的事件数据
+ */
+export interface SessionEventData extends EventData {
+    type: SessionEventType      // 事件类型
     session: SessionData        // 事件发生的会话
+}
+
+/**
+ * 表情回应事件数据
+ */
+export interface ResponseEventData extends SessionEventData {
+    type: 'response'            // 事件类型
+    operator: SenderData       // 操作者
+    message_id: string          // 被响应的消息ID
+    emojiId: string             // 表情ID
+    add: boolean                // 是否添加表情,如果为false则表示删除表情
+}
+
+/**
+ * 携带有 Message 的事件数据
+ */
+export interface MessageEventData extends SessionEventData {
+    type: MessageEventType      // 事件类型
 }
 /**
  * 新消息事件

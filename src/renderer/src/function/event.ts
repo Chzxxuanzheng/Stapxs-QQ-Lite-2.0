@@ -13,7 +13,7 @@ import {
     EventData,
     EventType
 } from './adapter/interface'
-import { BanEvent, BanLiftEvent, Event, JoinEvent, LeaveEvent, MsgEvent, PokeEvent, RecallEvent } from './model/event'
+import { BanEvent, BanLiftEvent, Event, JoinEvent, LeaveEvent, MsgEvent, PokeEvent, RecallEvent, ResponseEvent } from './model/event'
 import { newMsg, recallMsg } from './msg'
 
 type EventHook<T extends Event> = ((event: T) => void | Promise<void>)
@@ -84,4 +84,9 @@ eventHandle('join', async (event: JoinEvent) => {
 eventHandle('leave', async (event: LeaveEvent) => {
     await event.session.reloadUserList()
     event.session.addMessage(event.message)
+})
+
+// 表情回应
+eventHandle('response', async (event: ResponseEvent) => {
+    event.msg.setEmoji(event.emojiId, event.operator.user_id, event.add)
 })

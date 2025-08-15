@@ -363,11 +363,11 @@
                         v-show="getFace(Number(id)) != ''"
                         :key="'respond-' + data.uuid + '-' + id"
                         :class="{
-                            'me-send': info.meSend
+                            'me-send': info.includes(runtimeData.loginInfo.uin),
                         }"
                         @click="$emit('emojiClick', id as string, data)">
                         <img loading="lazy" :src="getFace(Number(id)) as any">
-                        <span>{{ info.count }}</span>
+                        <span>{{ info.length }}</span>
                     </div>
                 </TransitionGroup>
             </div>
@@ -1280,7 +1280,7 @@ defineExpose({
     .emoji-like-body div.me-send:hover {
         background: var(--color-font);
     }
-    .emoji-like-body span {
+    .emoji-like-body > div.me-send span {
         color: var(--color-font-r);
     }
 
