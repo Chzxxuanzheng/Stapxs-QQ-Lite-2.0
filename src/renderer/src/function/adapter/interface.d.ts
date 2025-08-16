@@ -132,7 +132,7 @@ export interface AdapterInterface {
      * @param mem
      * @param title
      */
-    setMemberTitle?(group: GroupSession, mem: Member, title?: string): Promise<true|undefined>
+    setMemberTitle?(group: GroupSession, mem: Member, title: string): Promise<true|undefined>
     /**
      * 群禁言
      * @param group 群组

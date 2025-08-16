@@ -336,11 +336,11 @@ export class OneBotAdapter implements AdapterInterface {
         return true
     }
     @api
-    async setMemberTitle(group: GroupSession, mem: Member, title?: string): Promise<true> {
+    async setMemberTitle(group: GroupSession, mem: Member, title: string): Promise<true> {
         await this.connector.send('set_group_special_title', {
             group_id: group.id,
             user_id: mem.user_id,
-            special_title: title || '',
+            special_title: title,
         })
         return true
     }
