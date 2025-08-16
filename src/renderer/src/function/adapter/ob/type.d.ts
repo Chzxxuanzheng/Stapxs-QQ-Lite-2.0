@@ -704,3 +704,80 @@ export interface LgrObPokeEvent extends ObPokeEvent {
     action_img_url: string      // 戳一戳动作图片
 }
 //#endregion
+
+//#region == NAPCAT =============================================
+export type NcObGetFriendsWithCategory = ObResponse<{
+    categoryId: number
+    categorySortId: number
+    categoryName: string
+    categoryMbCount: number
+    onlineCount: number
+    buddyList: {
+        birthday_year: number
+        birthday_month: number
+        birthday_day: number
+        user_id: number
+        age: number
+        phone_num: string
+        email: string
+        category_id: number
+        nickname: string
+        remark: string
+        sex: 'unknown' | 'male' | 'female'
+        level: number
+    }[]
+}[]>
+
+export type NcObGetStrangerInfo = ObResponse<{
+    user_id: number
+    uid: string
+    uin: string
+    nickname: string
+    age: number
+    qid: string
+    qqLevel: number
+    sex: 'unknown' | 'male' | 'female'
+    long_nick: string
+    reg_time: number
+    is_vip: boolean
+    is_years_vip: boolean
+    vip_level: number
+    remark: string
+    status: number
+    login_days: number
+    country: string
+    province: string
+    city: string
+    birthday_year: number
+    birthday_month: number
+    birthday_day: number
+}>
+export type NcObGetGroupNotices = ObResponse<{
+    notice_id: string
+    sender_id: number
+    publish_time: number
+    message: {
+        text: string
+        image: {
+            id: string,
+            width: number,
+            height: number,
+        }[]
+    }
+}[]>
+export type NcObGetEssenceMsgList = ObResponse<{
+    msg_seq: number
+    msg_random: number
+    sender_id: number
+    sender_nick: string
+    operator_id: number
+    operator_nick: string
+    message_id: number
+    operator_time: number
+    content: ObSeg<string, any>[]
+}[]>
+export type NcObFetchCustomFace = ObResponse<string[]>
+export type NcObGetHistoryMsg = ObResponse<{
+    messages: ObMsg[]
+}>
+//#endregion
