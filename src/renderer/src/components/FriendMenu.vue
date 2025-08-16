@@ -23,6 +23,10 @@
                 <div><font-awesome-icon :icon="['fas', 'fa-trash-can']" /></div>
                 <a>{{ $t('卸载') }}</a>
             </div>
+            <div v-if="displayTag.reload" @click="clickReload">
+                <div><font-awesome-icon :icon="['fas', 'fa-undo']" /></div>
+                <a>{{ $t('重载') }}</a>
+            </div>
             <div v-if="displayTag.readed" @click="clickReaded">
                 <div><font-awesome-icon :icon="['fas', 'fa-check-to-slot']" /></div>
                 <a>{{ $t('标记已读') }}</a>
@@ -89,6 +93,7 @@ const displayTag: ShallowReactive<{
     top: boolean,
     cancelTop: boolean,
     remove: boolean,
+    reload: boolean,
     readed: boolean,
     read: boolean,
     noticeOpen: boolean,
@@ -101,6 +106,7 @@ const displayTag: ShallowReactive<{
     top: false,
     cancelTop: false,
     remove: false,
+    reload: false,
     readed: false,
     read: false,
     noticeOpen: false,
@@ -170,14 +176,17 @@ function checkSessionMenuConfig(
         displayTag.cancelTop = false
     }
     // 删除
-    if (fromComponent === 'message') {
-        if (session.isActive) {
-            displayTag.remove = true
-        } else {
+    if (fromComponent === 'message' && session.isActive) {
+        if (runtimeData.nowChat?.id === session.id) {
             displayTag.remove = false
+            displayTag.reload = true
+        } else {
+            displayTag.remove = true
+            displayTag.reload = false
         }
     } else {
         displayTag.remove = false
+        displayTag.reload = false
     }
     // 已读与未读
     if (fromComponent === 'message') {
@@ -313,6 +322,14 @@ function clickCancelTop() {
 function clickRemove() {
     getTarget().unactive()
     close()
+}
+function clickReload() {
+    const target = getTarget() as Session
+    target.unactive()
+    close()
+    setTimeout(() => {
+        target.activate()
+    }, 1000)
 }
 function clickReaded() {
     getTarget().setRead()
