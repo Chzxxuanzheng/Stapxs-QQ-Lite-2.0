@@ -22,6 +22,9 @@
                             <div>
                                 <a>{{ data.user.name }}</a>
                                 <span v-user-role="data.user.role">
+                                    <template v-if="data.user.role === Role.Bot">
+                                        <font-awesome-icon :icon="['fas', 'robot']" />
+                                    </template>
                                     <template v-if="data.user.level">
                                         {{ 'Lv.' + data.user.level }}
                                     </template>

@@ -73,7 +73,8 @@ export class Member implements IUser {
                 this.role = Role.Admin
                 break
             default:
-                this.role = Role.User
+                if (isRobot(data.user_id)) this.role = Role.Bot
+                else this.role = Role.User
                 break
         }
         switch (data.sex) {
@@ -487,6 +488,17 @@ function canBeAdmined(target: Role, other: Role): boolean {
     return true
 }
 
+function isRobot(id: number): boolean {
+    if (id >= 4010000000 && id <= 4019999999) return true
+    if (id >= 2854196301 && id <= 2854216399) return true
+    if (id >= 3889000000 && id <= 3889999999) return true
+    if (id === 66600000) return true
+    return false
+}
+
+/**
+ * 合并转发的发送者
+ */
 export class ForwardSender implements IUser{
     user_id = 0
     _nickname: Name

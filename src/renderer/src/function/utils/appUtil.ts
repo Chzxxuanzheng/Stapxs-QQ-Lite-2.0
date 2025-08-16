@@ -1250,7 +1250,7 @@ export const vUserRole: Directive<HTMLSpanElement, Role> = {
                 el.classList.add('admin')
                 break
             case Role.Bot:
-                el.classList.add('bot')
+                el.classList.add('robot')
                 break
         }
     }

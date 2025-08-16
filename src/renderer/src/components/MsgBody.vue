@@ -39,6 +39,9 @@
             <!-- 一帮头衔之类的 -->
             <template v-if="data.sender instanceof Member && !needSpecialMe()">
                 <span v-user-role="data.sender.role">
+                    <template v-if="data.sender.role === Role.Bot">
+                        <font-awesome-icon :icon="['fas', 'robot']" />
+                    </template>
                     <template v-if="data.sender.level">
                         {{ 'Lv.' + data.sender.level }}
                     </template>
