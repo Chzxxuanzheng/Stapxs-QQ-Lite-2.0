@@ -137,7 +137,7 @@ export interface AdapterInterface {
      * 群禁言
      * @param group 群组
      * @param mem 被禁言的成员
-     * @param time 禁言时间
+     * @param time 禁言时间 (s)
      */
     banMember?(group: GroupSession, mem: Member, time: number): Promise<true|undefined>
     /**

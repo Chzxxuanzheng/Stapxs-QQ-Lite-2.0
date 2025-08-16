@@ -9,6 +9,7 @@ import {
     BanEventData,
     BanLiftEventData,
     EssenceData,
+    EssenceSeg,
     EventData,
     FaceSegData,
     FilesData,
@@ -341,12 +342,50 @@ export class MilkyAdapter implements AdapterInterface {
      * 获取群公告信息
      * @param group
      */
-    async getGroupAnnouncement?(group: GroupSession): Promise<GroupAnnouncementData[] | undefined>
+    async getGroupAnnouncement(group: GroupSession): Promise<GroupAnnouncementData[]> {
+        const data = await this.callApi(
+            'get_group_announcement_list',
+            Api.GetGroupAnnouncementListInput.parse({
+                group_id: group.id,
+            }),
+            Api.GetGroupAnnouncementListOutput
+        )
+        return data.announcements.map(item => ({
+            content: item.content,
+            img_id: item.image_url,
+            time: item.time,
+            sender: item.user_id,
+        }))
+    }
     /**
      * 获取群精华消息
      * @param group
+     * @todo TODO:加分页
      */
-    async getGroupEssence?(group: GroupSession): Promise<EssenceData[] | undefined>
+    async getGroupEssence(group: GroupSession): Promise<EssenceData[]> {
+        const data = await this.callApi(
+            'get_group_essence_messages',
+            Api.GetGroupEssenceMessagesInput.parse({
+                group_id: group.id,
+                page_index: 0,
+                page_size: 999,
+            }),
+            Api.GetGroupEssenceMessagesOutput
+        )
+
+        const out: Promise<EssenceData>[] = []
+        for (const item of data.messages) {
+            out.push((async () => ({
+                sender: createSender(item.sender_id, item.sender_name),
+                sender_time: item.message_time,
+                operator: createSender(item.operator_id, item.operator_name),
+                operator_time: item.operation_time,
+                content: (await this.parseSeg(item.segments)) as EssenceSeg[],
+            }))())
+        }
+
+        return await Promise.all(out)
+    }
     /**
      * 获取用户自定义表情
      * @param userId
@@ -360,39 +399,96 @@ export class MilkyAdapter implements AdapterInterface {
      * @param group 群组
      * @param name 新名称
      */
-    async setGroupName?(group: GroupSession, name: string): Promise<true | undefined>
+    async setGroupName(group: GroupSession, name: string): Promise<true> {
+        await this.callApi(
+            'set_group_name',
+            Api.SetGroupNameInput.parse({
+                group_id: group.id,
+                new_group_name: name,
+            })
+        )
+        return true
+    }
     /**
      * 为群成员设置新的群内名称
      * @param group 群组
      * @param mem 群成员
      * @param card 新名称
      */
-    async setMemberCard?(group: GroupSession, mem: Member, card: string): Promise<true | undefined>
+    async setMemberCard(group: GroupSession, mem: Member, card: string): Promise<true> {
+        await this.callApi(
+            'set_group_member_card',
+            Api.SetGroupMemberCardInput.parse({
+                group_id: group.id,
+                user_id: mem.user_id,
+                card: card,
+            })
+        )
+        return true
+    }
     /**
      * 为群成员设置头衔,头衔为''或者没有时表示清除头衔
      * @param group
      * @param mem
      * @param title
      */
-    async setMemberTitle?(group: GroupSession, mem: Member, title?: string): Promise<true | undefined>
+    async setMemberTitle(group: GroupSession, mem: Member, title: string): Promise<true> {
+        await this.callApi(
+            'set_group_member_special_title',
+            Api.SetGroupMemberSpecialTitleInput.parse({
+                group_id: group.id,
+                user_id: mem.user_id,
+                special_title: title,
+            })
+        )
+        return true
+    }
     /**
      * 群禁言
      * @param group 群组
      * @param mem 被禁言的成员
      * @param time 禁言时间
      */
-    async banMember?(group: GroupSession, mem: Member, time: number): Promise<true | undefined>
+    async banMember(group: GroupSession, mem: Member, time: number): Promise<true> {
+        await this.callApi(
+            'set_group_member_mute',
+            Api.SetGroupMemberMuteInput.parse({
+                group_id: group.id,
+                user_id: mem.user_id,
+                duration: time,
+            })
+        )
+        return true
+    }
     /**
      * 踢出群成员
      * @param group 群组
      * @param mem 群成员
      */
-    async kickMember?(group: GroupSession, mem: Member): Promise<true | undefined>
+    async kickMember(group: GroupSession, mem: Member): Promise<true> {
+        await this.callApi(
+            'kick_group_member',
+            Api.KickGroupMemberInput.parse({
+                group_id: group.id,
+                user_id: mem.user_id,
+                reject_add_request: false,
+            })
+        )
+        return true
+    }
     /**
      * 退出群组
      * @param group 群组
      */
-    async leaveGroup?(group: GroupSession): Promise<true | undefined>
+    async leaveGroup(group: GroupSession): Promise<true> {
+        await this.callApi(
+            'quit_group',
+            Api.QuitGroupInput.parse({
+                group_id: group.id,
+            })
+        )
+        return true
+    }
     //#endregion
 
     //#region == 消息相关 ======================
@@ -401,7 +497,18 @@ export class MilkyAdapter implements AdapterInterface {
      * @param session 目标会话
      * @param msg 目标消息
      */
-    async setMsgReaded?(session: Session, msg: Msg): Promise<true | undefined>
+    async setMsgReaded(session: Session, msg: Msg): Promise<true> {
+        await this.callApi(
+            'mark_message_as_read',
+            Api.MarkMessageAsReadInput.parse({
+                message_scene: this.getScene(session.type),
+                peer_id: session.id,
+                message_seq: Number(msg.message_id)
+            })
+        )
+
+        return true
+    }
     /**
      * 获取消息
      * @param session 会话
@@ -441,7 +548,8 @@ export class MilkyAdapter implements AdapterInterface {
             if (!data || data.messages.length === 0) break
 
             // 保存头部消息
-            startId = data.messages.at(0)?.message_seq
+            startId = data.next_message_seq ?? data.messages.at(0)?.message_seq
+            if (!startId) break
 
             out = [...data.messages, ...out]
         }
@@ -614,7 +722,7 @@ export class MilkyAdapter implements AdapterInterface {
      * @param file 要下载的文件
      */
     @api
-    async getGroupFileUrl?(file: GroupFile): Promise<string>{
+    async getGroupFileUrl(file: GroupFile): Promise<string>{
         const data = await this.callApi(
             'get_group_file_download_url',
             Api.GetGroupFileDownloadUrlInput.parse({
