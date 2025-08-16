@@ -33,7 +33,6 @@ export default defineConfig({
     resolve: {
         alias: {
             '@renderer': resolve(__dirname, 'src/renderer/src'),
-            '@milky/types': resolve(__dirname, 'src/renderer/milky-types/src'),
             fs: 'rollup-plugin-node-polyfills/polyfills/empty',
         }
     },

@@ -5,9 +5,6 @@
     "src/renderer/src/**/*",
     "src/renderer/src/**/*.vue",
     "src/preload/*.d.ts",
-
-    // milky-types
-    "src/renderer/milky-types/**/*.ts"
   ],
   "compilerOptions": {
     "composite": true,
@@ -15,9 +12,6 @@
     "paths": {
       "@renderer/*": [
         "src/renderer/src/*"
-      ],
-      "@milky/types/*": [
-        "src/renderer/milky-types/src/*"
       ],
     },
     "emitDecoratorMetadata": true,

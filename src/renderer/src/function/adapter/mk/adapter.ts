@@ -42,10 +42,15 @@ import {
 } from '../interface'
 import driver from '@renderer/function/driver'
 
-import * as ApiType from '@milky/types/api'
-import * as Message from '@milky/types/message'
-import { IncomingMessage } from '@milky/types/message'
-import * as Event from '@milky/types/event'
+import * as MilkyType from '@saltify/milky-types'
+import {
+    IncomingMessage,
+    IncomingSegment,
+    IncomingForwardedMessage,
+    OutgoingSegment,
+    OutgoingForwardedMessage,
+    Event
+} from '@saltify/milky-types'
 import * as ISeg from './incomeSeg'
 import * as OSeg from './outgoingSeg'
 import z from 'zod'
@@ -58,23 +63,37 @@ import { Component } from 'vue'
 import MkInfo from './MkInfo.vue'
 import { Resource } from '@renderer/function/model/ressource'
 
-const Api: typeof ApiType = {} as any
 
-for (const api of Object.keys(ApiType)) {
-    Api[api] = ApiType[api].strict()
-}
-
-type ExtractZodTypes<T, Suffix extends string> = {
-    [K in keyof T]: K extends `${string}${Suffix}`
+// 提取输出类型的工具类型
+type ExtractMilkyTypes<T, suffix extends string> = {
+    [K in keyof T]: K extends `${string}${suffix}`
     ? T[K] extends z.ZodType<infer U>
     ? U
     : never
     : never
 }[keyof T]
 
-type ApiOut = ExtractZodTypes<typeof Api, 'Output'>
+// 从MilkyType中提取所有输出类型
+type MilkyApiOutputTypes = ExtractMilkyTypes<typeof MilkyType, 'Output'>
 
-interface MkOkResponse<T extends ApiOut> {
+// 动态创建API对象，支持包的变更
+const createApiSchemas = <T extends Record<string, any>>(schemas: T) => {
+    const result = {} as Record<string, any>
+
+    for (const [key, schema] of Object.entries(schemas)) {
+        if ((key.endsWith('Input') || key.endsWith('Output')) && schema && typeof schema.strict === 'function') {
+            result[key] = schema.strict()
+        }
+    }
+
+    return result as {
+        [K in keyof T]: T[K]
+    }
+}
+
+// 动态生成的API schemas
+const Api = createApiSchemas(MilkyType)
+interface MkOkResponse<T extends MilkyApiOutputTypes> {
     status: 'ok'
     retcode: 0
     data: T
@@ -86,7 +105,7 @@ interface MkErrorResponse {
     message: string
 }
 
-type MkResponse<T extends ApiOut> = MkOkResponse<T> | MkErrorResponse
+type MkResponse<T extends MilkyApiOutputTypes> = MkOkResponse<T> | MkErrorResponse
 
 const logger = new Logger()
 
@@ -215,7 +234,7 @@ export class MilkyAdapter implements AdapterInterface {
         }
     }
     @api
-    async getImplInfoRaw(): Promise<ApiType.GetImplInfoOutput> {
+    async getImplInfoRaw(): Promise<z.infer<typeof Api.GetImplInfoOutput>> {
         const data = await this.callApi(
             'get_impl_info',
             {},
@@ -435,7 +454,7 @@ export class MilkyAdapter implements AdapterInterface {
      */
     @api
     async sendMsg(msg: Msg): Promise<string> {
-        let data: ApiType.SendGroupMessageOutput | ApiType.SendPrivateMessageOutput
+        let data: z.infer<typeof Api.SendGroupMessageOutput> | z.infer<typeof Api.SendPrivateMessageOutput>
         if (msg.session?.type === 'group') {
             data = await this.callApi(
                 'send_group_message',
@@ -693,14 +712,14 @@ export class MilkyAdapter implements AdapterInterface {
      * @param msg 消息
      * @returns 发送消息数据
      */
-    async serializeMsg(msg: Msg): Promise<Message.OutgoingSegment[]> {
+    async serializeMsg(msg: Msg): Promise<OutgoingSegment[]> {
         return await Promise.all(msg.message.map(seg => this.serializeSeg(seg)))
     }
     //#region == 反序列化 ===========================
     segParsers: Record<string, ((data: any)=>Promise<SegData>)> = {}
-    async parseSeg(data: Message.IncomingSegment): Promise<SegData>
-    async parseSeg(data: Message.IncomingSegment[]): Promise<SegData[]>
-    async parseSeg(data: Message.IncomingSegment | Message.IncomingSegment[]): Promise<SegData | SegData[]> {
+    async parseSeg(data: IncomingSegment): Promise<SegData>
+    async parseSeg(data: IncomingSegment[]): Promise<SegData[]>
+    async parseSeg(data: IncomingSegment | IncomingSegment[]): Promise<SegData | SegData[]> {
         if (Array.isArray(data)) {
             return await Promise.all(data.map(d => this.parseSeg(d)))
         } else {
@@ -800,14 +819,14 @@ export class MilkyAdapter implements AdapterInterface {
         }
     }
 
-    unknownParser(data: Message.IncomingSegment): UnknownSegData {
+    unknownParser(data: IncomingSegment): UnknownSegData {
         return {
             type: 'unknown',
             segType: data.type,
             data: data
         }
     }
-    async nodeParser(data: Message.IncomingForwardedMessage): Promise<ForwardNodeData> {
+    async nodeParser(data: IncomingForwardedMessage): Promise<ForwardNodeData> {
         return {
             sender: {
                 nickname: data.sender_name,
@@ -819,10 +838,10 @@ export class MilkyAdapter implements AdapterInterface {
     //#endregion
 
     //#region == 序列化 =============================
-    segSerializer: Record<string, ((data: any) => Promise<Message.OutgoingSegment>)> = {}
-    async serializeSeg(seg: Seg): Promise<Message.OutgoingSegment>
-    async serializeSeg(seg: Seg[]): Promise<Message.OutgoingSegment[]>
-    async serializeSeg(seg: Seg | Seg[]): Promise<Message.OutgoingSegment | Message.OutgoingSegment[]> {
+    segSerializer: Record<string, ((data: any) => Promise<OutgoingSegment>)> = {}
+    async serializeSeg(seg: Seg): Promise<OutgoingSegment>
+    async serializeSeg(seg: Seg[]): Promise<OutgoingSegment[]>
+    async serializeSeg(seg: Seg | Seg[]): Promise<OutgoingSegment | OutgoingSegment[]> {
         if (Array.isArray(seg)) {
             return Promise.all(seg.map(d => this.serializeSeg(d)))
         } else {
@@ -933,18 +952,18 @@ export class MilkyAdapter implements AdapterInterface {
     async jsonSerializer(_: JsonSeg): Promise<OSeg.LightAppSeg> {
         throw new Error('不支持发送json消息')
     }
-    async unknownSerializer(seg: UnknownSeg): Promise<Message.OutgoingSegment> {
-        return seg.data as Message.OutgoingSegment
+    async unknownSerializer(seg: UnknownSeg): Promise<OutgoingSegment> {
+        return seg.data as OutgoingSegment
     }
 
-    async nodeSerializer(msg: Msg): Promise<Message.OutgoingForwardedMessage> {
+    async nodeSerializer(msg: Msg): Promise<OutgoingForwardedMessage> {
         return {
                 sender_name: msg.sender.name,
                 user_id: msg.sender.user_id,
                 segments: await this.serializeSeg(msg.message),
         }
     }
-    unmatchSerializer(seg: Seg): Message.OutgoingSegment {
+    unmatchSerializer(seg: Seg): OutgoingSegment {
         const data = {}
         for (const key in seg) {
             if (key === 'type') continue
@@ -983,9 +1002,9 @@ export class MilkyAdapter implements AdapterInterface {
     //#endregion
 
     //#region == 事件处理 ===========================================
-    eventProcessers: Record<Event.Event['event_type'], (event: Event.Event, data: any) => Promise<EventData | undefined>> = {} as any
+    eventProcessers: Record<Event['event_type'], (event: Event, data: any) => Promise<EventData | undefined>> = {} as any
     async messageReceiveEvent(
-        event: Event.Event,
+        event: Event,
         data: IncomingMessage
     ): Promise<MsgEventData> {
         const process = async (data: IncomingMessage) => {
@@ -1002,8 +1021,8 @@ export class MilkyAdapter implements AdapterInterface {
         return await queueWait(process(data), `${data.message_scene}-${data.peer_id}`)
     }
     async groupMemberIncreaseEvent(
-        event: Event.Event,
-        data: Event.GroupMemberIncreaseEvent
+        event: Event,
+        data: MilkyType.GroupMemberIncreaseEvent
     ): Promise<JoinEventData> {
         return {
             type: 'join',
@@ -1018,8 +1037,8 @@ export class MilkyAdapter implements AdapterInterface {
         }
     }
     async groupMemberDecreaseEvent(
-        event: Event.Event,
-        data: Event.GroupMemberDecreaseEvent
+        event: Event,
+        data: MilkyType.GroupMemberDecreaseEvent
     ): Promise<LeaveEventData> {
         return {
             type: 'leave',
@@ -1033,8 +1052,8 @@ export class MilkyAdapter implements AdapterInterface {
         }
     }
     async groupBanEvent(
-        event: Event.Event,
-        data: Event.GroupMuteEvent
+        event: Event,
+        data: MilkyType.GroupMuteEvent
     ): Promise<BanEventData|BanLiftEventData> {
         if (data.duration > 0) {
             return {
@@ -1062,8 +1081,8 @@ export class MilkyAdapter implements AdapterInterface {
         }
     }
     async recallEvent (
-        event: Event.Event,
-        data: Event.MessageRecallEvent
+        event: Event,
+        data: MilkyType.MessageRecallEvent
     ): Promise<RecallEventData> {
         return {
             type: 'recall',
@@ -1078,8 +1097,8 @@ export class MilkyAdapter implements AdapterInterface {
         }
     }
     async pokeEvent(
-        event: Event.Event,
-        data: Event.GroupNudgeEvent
+        event: Event,
+        data: MilkyType.GroupNudgeEvent
     ): Promise<PokeEventData> {
         return {
             type: 'poke',
@@ -1096,8 +1115,8 @@ export class MilkyAdapter implements AdapterInterface {
         }
     }
     async groupMessageReaction(
-        event: Event.Event,
-        data: Event.GroupMessageReactionEvent
+        event: Event,
+        data: MilkyType.GroupMessageReactionEvent
     ): Promise<ResponseEventData> {
         return {
             type: 'response',
@@ -1114,7 +1133,7 @@ export class MilkyAdapter implements AdapterInterface {
     }
 
     async handleEvent(json: string): Promise<void> {
-        const data = Event.Event.parse(JSON.parse(json))
+        const data = Event.parse(JSON.parse(json))
         const processor = this.eventProcessers[data.event_type]
         if (!processor) return
         const eventData = await processor(data, data.data)
@@ -1125,8 +1144,8 @@ export class MilkyAdapter implements AdapterInterface {
 
     //#region == 私有工具 ===========================================
     protected async callApi(apiName: string, args: object): Promise<void>
-    protected async callApi<T extends ApiOut>(apiName: string, args: object, type: z.ZodType<T>): Promise<T>
-    protected async callApi<T extends ApiOut>(apiName: string, args: object, type?: z.ZodType<T>): Promise<T | void> {
+    protected async callApi<T extends MilkyApiOutputTypes>(apiName: string, args: object, type: z.ZodType<T>): Promise<T>
+    protected async callApi<T extends MilkyApiOutputTypes>(apiName: string, args: object, type?: z.ZodType<T>): Promise<T | void> {
         const json = await driver.post(`api/${apiName}`, args)
         if (!json) throw new Error('未与协议段连接')
         const data = JSON.parse(json) as MkResponse<T>
@@ -1139,7 +1158,7 @@ export class MilkyAdapter implements AdapterInterface {
         throw new Error(`API调用失败: ${data.message} (retcode: ${data.retcode})`)
     }
     @api
-    protected async _getHistoryMsg(session: Session, startId: number | undefined, limit: number): Promise<ApiType.GetHistoryMessagesOutput> {
+    protected async _getHistoryMsg(session: Session, startId: number | undefined, limit: number): Promise<z.infer<typeof Api.GetHistoryMessagesOutput>> {
         const data = await this.callApi(
             'get_history_messages',
             Api.GetHistoryMessagesInput.parse({
@@ -1168,7 +1187,7 @@ export class MilkyAdapter implements AdapterInterface {
             case 'temp': return 'temp'
         }
     }
-    protected parseFiles(data: ApiType.GetGroupFilesOutput): FilesData {
+    protected parseFiles(data: z.infer<typeof Api.GetGroupFilesOutput>): FilesData {
         return {
             files: data.files.map(file => ({
                 file_id: file.file_id,
@@ -1187,10 +1206,6 @@ export class MilkyAdapter implements AdapterInterface {
                 creater_id: folder.creator_id,
             })),
         }
-    }
-    protected getUidFromForward(face: string): number {
-        const url = URL.parse(face)
-        return Number(url?.searchParams.get('nk') ?? '0')
     }
     protected isDelete(msg: IncomingMessage): boolean {
         return msg.sender_id === 0
