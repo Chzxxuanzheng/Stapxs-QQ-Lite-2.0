@@ -43,7 +43,7 @@ import {
     shallowReactive,
 } from 'vue'
 import { useInterval } from '@renderer/function/utils/appUtil'
-import { GetImplInfoOutput } from '@milky/types/api'
+import { GetImplInfoOutput } from '@saltify/milky-types'
 
 const adapter = computed<MilkyAdapter>(() => markRaw(runtimeData.nowAdapter as MilkyAdapter))
 const status = shallowReactive<{delay?: string, delayType: string, info?: GetImplInfoOutput}>(

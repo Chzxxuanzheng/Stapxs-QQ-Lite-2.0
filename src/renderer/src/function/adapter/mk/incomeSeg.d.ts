@@ -1,4 +1,4 @@
-import { IncomingSegment } from '@milky/types/message'
+import { IncomingSegment } from '@saltify/milky-types'
 
 // 具体的接收消息段类型
 export type TextSeg = Extract<IncomingSegment, { type: 'text' }>;
