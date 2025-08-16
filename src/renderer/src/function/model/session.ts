@@ -731,6 +731,7 @@ export class GroupSession extends Session {
      * @returns 成员对象
      */
     getUserById(id: number): Member | undefined {
+        if (!this.activate) throw new Error('未激活的群组会话无法获取成员')
         return this.memberList.find(item => item.user_id === id)
     }
 
