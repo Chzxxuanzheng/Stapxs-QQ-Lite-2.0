@@ -649,6 +649,8 @@ input {
 /* 群成员下边区域 */
 .member-info > div:first-child > div:nth-child(2).member {
     display: flex;
+    margin-top: 10px;
+    align-items: center;
 }
 .member-info > div:first-child > div:nth-child(2).member > :nth-child(1) {
     width: 60px;

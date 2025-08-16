@@ -454,7 +454,7 @@ function openMoreConfig(mem: Member) {
     configMember.value = mem
     configCard.value = mem.card?.toString() ?? ''
     configTitle.value = mem.title?.toString() ?? ''
-    configBanMin.value = (mem.banTime?.time ?? 0) / 1000 / 60
+    configBanMin.value = Math.ceil((mem.banTime?.time ?? 0) / 1000 / 60)
 }
 
 function clickMember(mem: Member) {
