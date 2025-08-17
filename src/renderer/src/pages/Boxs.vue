@@ -120,7 +120,8 @@ function newBox() {
     popBox({
         title: $t('新建收纳盒'),
         template: markRaw(ConfigBox),
-        templateValue: { baseBox: markRaw(newBox), init: true },
+        templateValue: { init: true },
+        templateModel: markRaw(newBox),
         button: [
             {
                 text: $t('取消'),

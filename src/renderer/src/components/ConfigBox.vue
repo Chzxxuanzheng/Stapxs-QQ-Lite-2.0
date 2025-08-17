@@ -52,12 +52,6 @@
 </template>
 
 <script setup lang="ts">
-/* eslint-disable vue/no-mutating-props */
-// TODO:原有弹窗系统不支持v-model,重写
-// 其他期望功能:
-// * esc 自动退出
-// * enter执行master按钮
-// * 支持嵌套
 import TinySessionBody from './TinySessionBody.vue'
 import BoxBody from './BoxBody.vue'
 
@@ -68,6 +62,7 @@ import {
     shallowRef,
     shallowReactive,
     computed,
+    onUnmounted,
 } from 'vue'
 import { Session } from '@renderer/function/model/session'
 import { vSearch } from '@renderer/function/utils/appUtil'
@@ -119,16 +114,22 @@ const allIcons = [
 //         ]
 //     }
 // }
-const { baseBox, init=false } = defineProps<{
-    baseBox: SessionBox
+const { init=false } = defineProps<{
     init?: boolean
 }>()
 
+const baseBox = defineModel<SessionBox>({required: true})
+
 // 初始化新收纳盒数据
 if (init) {
-    baseBox.color = randomNum(0, 360)
-    baseBox.icon = randomChoice(...allIcons)
+    baseBox.value.color = randomNum(0, 360)
+    baseBox.value.icon = randomChoice(...allIcons)
 }
+
+onUnmounted(() => {
+    // 保存数据
+    SessionBox.saveData()
+})
 
 // 设置颜色
 function setColor(event: MouseEvent|TouchEvent) {
@@ -141,17 +142,17 @@ function setColor(event: MouseEvent|TouchEvent) {
         x = event.touches[0].clientX
     }
     x -= target.getBoundingClientRect().left
-    baseBox.color = (x / width) * 360
+    baseBox.value.color = (x / width) * 360
 }
-const originalName = baseBox.showName
+const originalName = baseBox.value.showName
 // 设置名称
 function setName(event: Event) {
     const input = event.target as HTMLInputElement
     const value = input.value.trim()
     if (value === '')
-        baseBox.name = originalName
+        baseBox.value.name = originalName
     else
-        baseBox.name = value
+        baseBox.value.name = value
 }
 
 
@@ -164,7 +165,7 @@ const searchInfo = shallowReactive({
 })
 // 初始化已选择的会话
 for (const [index, session] of [...searchInfo.originList].entries()) {
-    if (!session.boxs.includes(baseBox)) continue
+    if (!session.boxs.find(item => item.id === baseBox.value.id)) continue
     selectedSession.value.push(session)
     searchInfo.originList.splice(index, 1)
 }
@@ -184,7 +185,7 @@ function select(session: Session) {
     if (selectedSession.value.includes(session)) return
 
     // 放入到收纳盒里
-    baseBox.putSession(session)
+    baseBox.value.putSession(session)
 
     // 从搜索列表中移除
     selectedSession.value.push(session)
@@ -204,7 +205,7 @@ function unselect(session: Session) {
     if (!selectedSession.value.includes(session)) return
 
     // 从收纳盒中移除
-    baseBox.removeSession(session)
+    baseBox.value.removeSession(session)
 
     // 放回到搜索列表中
     selectedSession.value.splice(selectedSession.value.indexOf(session), 1)
@@ -213,4 +214,5 @@ function unselect(session: Session) {
     // 刷新显示列表
     reflashDisplaySession.value ++
 }
+//#endregion
 </script>

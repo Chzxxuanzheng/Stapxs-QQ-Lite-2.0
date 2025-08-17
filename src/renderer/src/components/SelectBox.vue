@@ -29,6 +29,7 @@ import {
     shallowRef,
     shallowReactive,
     computed,
+    onUnmounted,
 } from 'vue'
 import { vSearch } from '@renderer/function/utils/appUtil'
 import TinySessionBody from './TinySessionBody.vue'
@@ -43,6 +44,12 @@ const searchInfo = shallowReactive({
     query: shallowReactive([]),
     isSearch: false,
 })
+
+// 保存数据
+onUnmounted(()=>{
+    SessionBox.saveData()
+})
+
 // 初始化选择和未选择的盒子
 for (const box of SessionBox.sessionBoxs) {
     if (session.boxs.includes(box))

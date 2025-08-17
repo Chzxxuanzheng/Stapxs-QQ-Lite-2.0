@@ -358,12 +358,6 @@ function clickPutInBox() {
             {
                 text: $t('确定'),
                 master: true,
-                fun: () => {
-                    // 更新群组->收纳盒映射
-                    // TODO: 这个操作容易遗忘，看看能不能放进设置界面里
-                    // 注：新建收纳盒也在用这个
-                    SessionBox.saveData()
-                },
             },
         ],
     })
@@ -373,16 +367,10 @@ function clickConfigBox() {
     popBox({
         title: $t('收纳盒设置'),
         template: markRaw(ConfigBox),
-        templateValue: { baseBox: markRaw(getTarget()) },
+        templateModel: markRaw(getTarget()),
         button: [{
             text: $t('确定'),
             master: true,
-            fun: () => {
-                // 更新群组->收纳盒映射
-                // TODO: 这个操作容易遗忘，看看能不能放进设置界面里
-                // 注：新建收纳盒也在用这个
-                SessionBox.saveData()
-            },
         },],
     })
     close()
