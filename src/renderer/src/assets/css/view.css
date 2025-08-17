@@ -926,15 +926,26 @@ textarea:focus {
     top: 0;
 }
 .pop-box > div:last-child {
+    opacity: 0.0;
+    height: 100%;
+    width: 100%;
+}
+.pop-box-background {
+    position: absolute;
+    z-index: 20;
+    left: 0;
+    top: 0;
     background: var(--color-card-2);
     opacity: 0.7;
     height: 100%;
     width: 100%;
+    pointer-events: none;
+    transition: opacity 0.2s ease-in-out;
 }
 .pop-box-body {
     transform: translate(-50%, -50%);
     flex-direction: column;
-    transition: all 0.3s;
+    transition: all 0.2s;
     margin-top: 50vh;
     position: absolute;
     width: fit-content;
@@ -1023,6 +1034,17 @@ textarea:focus {
 }
 .pop-box-more > div.hid {
     height: 0;
+}
+
+.pop-box-enter-active,
+.pop-box-leave-active {
+    transition: all 0.2s ease-in-out;
+    animation: none 0.2s;
+}
+
+.pop-box-enter-from,
+.pop-box-leave-to{
+    opacity: 0.0
 }
 
 .update-info {
@@ -1621,7 +1643,7 @@ textarea:focus {
     /* 全局通用弹窗 */
     .pop-box-body {
         max-height: calc(100vh - 80px);
-        transform: unset !important;
+        transform: unset;
         width: calc(100% - 80px);
         min-width: unset;
         margin: 20px;
@@ -1630,6 +1652,17 @@ textarea:focus {
     .pop-box-more {
         display: none;
     }
+
+    .pop-box-enter-active > div.pop-box-body,
+    .pop-box-leave-active > div.pop-box-body {
+        transform-origin: bottom;
+    }
+
+    .pop-box-enter-from > div.pop-box-body,
+    .pop-box-leave-to > div.pop-box-body {
+        transform: scaleY(0);
+    }
+
     /* 二级侧栏 */
     .friend-list {
         width: 100% !important;

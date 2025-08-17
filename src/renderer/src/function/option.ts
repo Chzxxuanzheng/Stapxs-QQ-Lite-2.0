@@ -30,6 +30,7 @@ import {
 } from '@renderer/function/utils/systemUtil'
 import { GroupSession, Session } from './model/session'
 import { BubbleBox } from './model/box'
+import { textPopBox } from './utils/popBox'
 
 let cacheConfigs: { [key: string]: any }
 
@@ -486,7 +487,7 @@ function loadOptData(data: { [key: string]: any }) {
 			false,
 		)
 	}
-    
+
     // 保存
     if (optChanged) {
         saveAll(options)
@@ -652,14 +653,8 @@ export function runASWEvent(event: Event) {
     // 有些设置项需要重启/刷新
     if (sender.dataset.reload == 'true') {
         const { $t } = app.config.globalProperties
-        const html =
-            '<span>' +
-            $t('此操作将在重启应用后生效，现在就要重启吗？') +
-            '</span>'
-
-        const popInfo = {
+        textPopBox($t('此操作将在重启应用后生效，现在就要重启吗？') , {
             svg: 'trash-arrow-up',
-            html: html,
             title: $t('重启应用'),
             button: [
                 {
@@ -675,13 +670,9 @@ export function runASWEvent(event: Event) {
                 {
                     text: app.config.globalProperties.$t('取消'),
                     master: true,
-                    fun: () => {
-                        runtimeData.popBoxList.shift()
-                    },
                 },
             ],
-        }
-        runtimeData.popBoxList.push(popInfo)
+        })
     }
 }
 

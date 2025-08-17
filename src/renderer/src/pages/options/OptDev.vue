@@ -235,6 +235,7 @@ import {
     defineComponent,
 } from 'vue'
 import driver from '@renderer/function/driver'
+import { ensurePopBox, htmlPopBox } from '@renderer/function/utils/popBox'
 
 const $t = i18n.global.t
 const testUrl = 'https://api.douban.com/v2/movie/top250'
@@ -468,14 +469,13 @@ watch(() => proxyUrl.value, () => {
                 info += this.createVersionInfo(networkInfo)
                 info += '```'
                 // 构建 popBox 内容
-                const popInfo = {
+                htmlPopBox('<textarea class="debug-info">' + info + '</textarea>', {
                     svg: 'screwdriver-wrench',
-                    html:
-                        '<textarea class="debug-info">' + info + '</textarea>',
                     title: this.$t('调试信息'),
                     button: [
                         {
                             text: app.config.globalProperties.$t('复制'),
+                            noClose: true,
                             fun: () => {
                                 app.config.globalProperties.$copyText(info)
                                 new PopInfo().add(
@@ -487,26 +487,22 @@ watch(() => proxyUrl.value, () => {
                         {
                             text: app.config.globalProperties.$t('确定'),
                             master: true,
-                            fun: () => {
-                                runtimeData.popBoxList.shift()
-                            },
                         },
                     ],
-                }
-                runtimeData.popBoxList.push(popInfo)
+                })
             },
             printSetUpInfo() {
                 const json = JSON.stringify(runtimeData.sysConfig)
-                const popInfo = {
-                    svg: 'download',
-                    html:
-                        '<textarea style="width: calc(100% - 40px);min-height: 90px;background: var(--color-card-1);color: var(--color-font);border: 0;padding: 20px;border-radius: 7px;margin-top: -10px;">' +
+                htmlPopBox(
+                    '<textarea style="width: calc(100% - 40px);min-height: 90px;background: var(--color-card-1);color: var(--color-font);border: 0;padding: 20px;border-radius: 7px;margin-top: -10px;">' +
                         json +
-                        '</textarea>',
+                        '</textarea>', {
+                    svg: 'download',
                     title: this.$t('导出设置项'),
                     button: [
                         {
                             text: app.config.globalProperties.$t('复制'),
+                            noClose: true,
                             fun: () => {
                                 app.config.globalProperties.$copyText(json)
                                 new PopInfo().add(
@@ -518,25 +514,18 @@ watch(() => proxyUrl.value, () => {
                         {
                             text: app.config.globalProperties.$t('确定'),
                             master: true,
-                            fun: () => {
-                                runtimeData.popBoxList.shift()
-                            },
                         },
                     ],
-                }
-                runtimeData.popBoxList.push(popInfo)
+                })
             },
             importSetUpInfo() {
-                const popInfo = {
+                htmlPopBox(
+                    '<textarea id="importSetUpInfoTextArea" style="width: calc(100% - 40px);min-height: 90px;background: var(--color-card-1);color: var(--color-font);border: 0;padding: 20px;border-radius: 7px;margin-top: -10px;"></textarea>',{
                     svg: 'upload',
-                    html: '<textarea id="importSetUpInfoTextArea" style="width: calc(100% - 40px);min-height: 90px;background: var(--color-card-1);color: var(--color-font);border: 0;padding: 20px;border-radius: 7px;margin-top: -10px;"></textarea>',
                     title: this.$t('导入设置项'),
                     button: [
                         {
                             text: app.config.globalProperties.$t('取消'),
-                            fun: () => {
-                                runtimeData.popBoxList.shift()
-                            },
                         },
                         {
                             text: app.config.globalProperties.$t('确定'),
@@ -563,42 +552,22 @@ watch(() => proxyUrl.value, () => {
                             },
                         },
                     ],
-                }
-                runtimeData.popBoxList.push(popInfo)
+                })
             },
-            resetApp() {
-                const popInfo = {
-                    svg: 'trash-arrow-up',
-                    html:
-                        '<span>' +
-                        this.$t(
-                            '确认要重置应用吗，重置应用将会失去所有设置内容（包括设置的置顶群组），但是可能可以解决一些因为浏览器缓存导致的奇怪问题。',
-                        ) +
-                        '</span>',
-                    title: this.$t('重置应用'),
-                    button: [
-                        {
-                            text: app.config.globalProperties.$t('确定'),
-                            fun: () => {
-                                localStorage.clear()
-                                document.cookie.split(';').forEach((c) => {
-                                    document.cookie = c.replace(/^ +/, '')
-                                        .replace(/=.*/,'=;expires=' + new Date().toUTCString() + ';path=/')
-                                })
-                                callBackend(undefined, 'opt:clearAll', false)
-                                location.reload()
-                            },
-                        },
-                        {
-                            text: app.config.globalProperties.$t('取消'),
-                            master: true,
-                            fun: () => {
-                                runtimeData.popBoxList.shift()
-                            },
-                        },
-                    ],
-                }
-                runtimeData.popBoxList.push(popInfo)
+            async resetApp() {
+                const ensure = await ensurePopBox(this.$t(
+                    '确认要重置应用吗，重置应用将会失去所有设置内容（包括设置的置顶群组），但是可能可以解决一些因为浏览器缓存导致的奇怪问题。',
+                ))
+
+                if (!ensure) return
+
+                localStorage.clear()
+                document.cookie.split(';').forEach((c) => {
+                    document.cookie = c.replace(/^ +/, '')
+                        .replace(/=.*/,'=;expires=' + new Date().toUTCString() + ';path=/')
+                })
+                callBackend(undefined, 'opt:clearAll', false)
+                location.reload()
             },
             restartapp() {
                 callBackend(undefined, 'win:relaunch', false)
@@ -618,19 +587,15 @@ watch(() => proxyUrl.value, () => {
                     )
                     return
                 }
-                const popInfo = {
-                    title: this.$t('删除无用配置'),
-                    html: `
+                htmlPopBox(`
                         <header>以下配置将被删除</header>
                         <div style="color: var(--color-red);font-weight: 700;">
-                    ` + needless.join('<br>') + `</div>`,
+                    ` + needless.join('<br>') + `</div>`, {
+                    title: this.$t('删除无用配置'),
                     button: [
                         {
                             text: this.$t('取消'),
                             master: true,
-                            fun: () => {
-                                runtimeData.popBoxList.shift()
-                            },
                         },
                         {
                             text: this.$t('确定'),
@@ -639,12 +604,10 @@ watch(() => proxyUrl.value, () => {
                                     delete runtimeData.sysConfig[key]
                                 }
                                 saveAll(runtimeData.sysConfig)
-                                runtimeData.popBoxList.shift()
                             },
                         },
                     ],
-                }
-                runtimeData.popBoxList.push(popInfo)
+                })
             },
             createVersionInfo(data: [key: string, value: any][]) {
                 let info = ''

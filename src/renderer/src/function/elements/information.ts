@@ -1,3 +1,4 @@
+import { Component, Raw } from 'vue'
 import { AdapterInterface, LoginInfo } from '../adapter/interface'
 import { SessionBox } from '../model/box'
 import { ForwardSeg } from '../model/seg'
@@ -59,24 +60,7 @@ export interface RunTimeDataElem {
     nowAdapter?: AdapterInterface // 当前适配器
     img_list: {url: string, id: string}[]
     color_mod: 'light' | 'dark'
-    popBoxList: {
-        // 通用弹窗
-        svg?: string // 弹窗图标
-        title?: string // 弹窗标题（缺省将没有标题栏和关闭按钮）
-        html?: string // 填充 html（和下面的模板必须有一个）
-        template?: any // 填充模板（如果都有，优先填充 html）
-        templateValue?: any // 模板 props
-        data?: any // 模板的附加传参，只有这一个
-        full?: boolean // 是否填充整个页面
-        button?: {
-            // 按钮
-            master?: boolean // 是否高亮（主按钮）
-            fun?: (value: any) => void // 按钮回调
-            text: string // 按钮文本
-        }[]
-        allowQuickClose?: boolean // 是否允许快速关闭
-        allowClose?: boolean // 是否允许关闭
-    }[],
+    popBoxList: { id: string, data: PopBoxData }[],
 }
 
 
@@ -138,4 +122,24 @@ export interface MenuEventData {
     x: number
     y: number
     target: HTMLElement
+}
+
+export interface PopBoxData {
+    // 通用弹窗
+    svg?: string // 弹窗图标
+    title?: string // 弹窗标题（缺省将没有标题栏和关闭按钮）
+    template: Raw<Component> // 填充模板
+    templateValue?: any // 模板 props
+    templateModel?: any // 模板 v-model
+    full?: boolean // 是否填充整个页面
+    button?: {
+        // 按钮
+        master?: boolean // 是否高亮（主按钮）
+        fun?: (() => void | Promise<void>)
+            | ((event: Event) => void | Promise<void>) // 按钮回调
+        text: string // 按钮文本
+        noClose?: boolean // 是否不退出弹窗
+    }[]
+    allowAutoClose?: boolean // 是否允许自带的关闭操作
+    onClose?: () => void // 关闭回调
 }

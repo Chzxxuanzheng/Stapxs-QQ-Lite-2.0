@@ -60,7 +60,7 @@
                     <div class="home-body">
                         <div class="login-pan-card ss-card">
                             <font-awesome-icon :icon="['fas', 'circle-nodes']" />
-                            <p>{{ $t('连接到 OneBot') }}</p>
+                            <p>{{ $t('连接到 协议端') }}</p>
                             <form @submit.prevent @submit="connect">
                                 <template v-if="loginInfo.quickLogin == null || loginInfo.quickLogin.length == 0">
                                     <label v-if="!sse">
@@ -167,43 +167,14 @@
             </div>
         </TransitionGroup>
         <!-- 弹窗列表 -->
-        <Transition>
-            <div v-if="runtimeData.popBoxList.length > 0" class="pop-box">
-                <div :class="'pop-box-body ss-card' +
-                         (runtimeData.popBoxList[0].full ? ' full' : '') +
-                         (get('option_view_no_window') == true ? '' : ' window')"
-                    :style="'transform: translate(-50%, calc(-50% - ' +
-                        (runtimeData.popBoxList.length > 3 ?
-                            3 : runtimeData.popBoxList.length) * 10 + 'px));' +
-                        (get('fs_adaptation') > 0 ?
-                            ` margin-bottom: ${40 + Number(get('fs_adaptation'))}px;` : '')">
-                    <header v-show="runtimeData.popBoxList[0].title != undefined">
-                        <div v-if="runtimeData.popBoxList[0].svg != undefined">
-                            <font-awesome-icon :icon="['fas', runtimeData.popBoxList[0].svg]" />
-                        </div>
-                        <a>{{ runtimeData.popBoxList[0].title }}</a>
-                        <font-awesome-icon v-if="runtimeData.popBoxList[0].allowClose != false"
-                            :icon="['fas', 'xmark']" @click="removePopBox" />
-                    </header>
-                    <div v-if="runtimeData.popBoxList[0].html" v-html="runtimeData.popBoxList[0].html" />
-                    <component :is="runtimeData.popBoxList[0].template" v-else :data="runtimeData.popBoxList[0].data"
-                        v-bind="runtimeData.popBoxList[0].templateValue" />
-                    <div v-show="runtimeData.popBoxList[0].button" class="button">
-                        <button v-for="(button, index) in runtimeData.popBoxList[0].button"
-                            :key="'pop-box-btn' + index" :class="'ss-button' + (button.master == true ? ' master' : '')"
-                            @click="button.fun">
-                            {{ button.text }}
-                        </button>
-                    </div>
-                    <div class="pop-box-more">
-                        <div v-for="index in runtimeData.popBoxList.length" :key="'pop-more-' + index" :data-id="index"
-                            :class="index > runtimeData.popBoxList.length - 1 ? 'hid' : '' "
-                            :style="'margin:-' + 2 * (index - 1) + 'px ' + (20 * index - 1 - 2 * (index - 1)) + 'px 0 ' + (20 * index - 1 - 2 * (index - 1)) + 'px;'" />
-                    </div>
-                </div>
-                <div @click="popQuickClose(runtimeData.popBoxList[0].allowQuickClose != false && runtimeData.popBoxList[0].allowClose != false)" />
-            </div>
-        </Transition>
+        <div
+            v-hide="runtimeData.popBoxList.length === 0"
+            class="pop-box-background" />
+        <TransitionGroup name="pop-box">
+            <template v-for="pop in runtimeData.popBoxList" :key="'pop-box-' + pop.id">
+                <PopBox :props="pop" />
+            </template>
+        </TransitionGroup>
         <viewer v-show="runtimeData.tags.viewer.show" ref="viewer" class="viewer"
             :options="viewerOpt"
             :images="runtimeData.mergeMessageImgList ?? runtimeData.img_list"
@@ -248,6 +219,9 @@ import Boxs from '@renderer/pages/Boxs.vue'
 import FriendMenu from '@renderer/components/FriendMenu.vue'
 import driver from './function/driver'
 import { login, loginInfo } from './function/login'
+import PopBox from './components/PopBox.vue'
+import { ensurePopBox, noticePopBox } from './function/utils/popBox'
+import { vHide } from './function/utils/appUtil'
 
 const friendMenu: Ref<undefined|InstanceType<typeof FriendMenu>> = ref()
 provide('friendMenu', friendMenu)
@@ -423,28 +397,13 @@ export default defineComponent({
                 window.addEventListener('popstate', () => {
                     if(!driver.isConnected() || runtimeData.tags.openSideBar) {
                         // 离开提醒
-                        const popInfo = {
-                            title: this.$t('提醒'),
-                            html: `<span>${this.$t('离开 Stapxs QQ Lite？')}</span>`,
-                            button: [
-                                {
-                                    text: this.$t('取消'),
-                                    fun: () => {
-                                        runtimeData.popBoxList.shift()
-                                        history.pushState('ssqqweb', '', location.href)
-                                    },
-                                },
-                                {
-                                    text: this.$t('离开'),
-                                    master: true,
-                                    fun: () => {
-                                        runtimeData.popBoxList.shift()
-                                        history.back()
-                                    },
-                                },
-                            ],
-                        }
-                        runtimeData.popBoxList.push(popInfo)
+                        ensurePopBox(
+                            this.$t('离开 Stapxs QQ Lite？'),
+                            this.$t('离开')
+                        ).then(ensure => {
+                            if (ensure) history.back()
+                            else history.pushState('ssqqweb', '', location.href)
+                        })
                     } else {
                         // 内部的页面返回处理，此处使用 watch backTimes 监听
                         runtimeData.watch.backTimes += 1
@@ -674,20 +633,7 @@ export default defineComponent({
             if (value) {
                 Option.save('save_password', true)
                 // 创建提示弹窗
-                const popInfo = {
-                    title: this.$t('提醒'),
-                    html: `<span>${this.$t('连接密钥将以明文存储在浏览器 Cookie 中，请确保设备安全以防止密钥泄漏。')}</span>`,
-                    button: [
-                        {
-                            text: app.config.globalProperties.$t('知道了'),
-                            master: true,
-                            fun: () => {
-                                runtimeData.popBoxList.shift()
-                            },
-                        },
-                    ],
-                }
-                runtimeData.popBoxList.push(popInfo)
+                noticePopBox(this.$t('连接密钥将以明文存储在浏览器 Cookie 中，请确保设备安全以防止密钥泄漏。'))
             } else {
                 Option.remove('save_password')
             }

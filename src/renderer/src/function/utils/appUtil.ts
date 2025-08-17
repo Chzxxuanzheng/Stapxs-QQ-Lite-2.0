@@ -18,7 +18,8 @@ import {
     callBackend,
     rgbToHsl,
     addBackendListener,
-    pastTimeFormat
+    pastTimeFormat,
+    stdUrl
 } from '@renderer/function/utils/systemUtil'
 import { changeSession, sendMsgRaw } from './msgUtil'
 import { parseMsg } from '../sender'
@@ -33,6 +34,7 @@ import {
     toRaw,
     Directive,
     watchEffect,
+    onMounted,
     onUnmounted,
     ComputedRef,
     computed,
@@ -80,56 +82,40 @@ export function scrollToMsg(seqName: string, showAnimation: boolean, showHighlig
  */
 export function openLink(url: string, external = false) {
     // 判断是不是 Electron，是的话打开内嵌 iframe
+    url = stdUrl(url)
     if (['electron', 'tauri'].includes(runtimeData.tags.clientType)) {
         if (!external && !runtimeData.sysConfig.close_browser) {
             runtimeData.popBoxList = []
-            if(runtimeData.tags.proxyPort) {
-                // 存在本地代理服务器
-                url = 'http://localhost:' + runtimeData.tags.proxyPort + '/proxy?url=' + encodeURIComponent(url)
-            }
-            const popInfo = {
-                html: `<iframe src="${url}" class="view-iframe"></iframe>`,
+            htmlPopBox(`<iframe src="${url}" class="view-iframe"></iframe>`, {
                 full: true,
                 button: [
                     {
                         text: app.config.globalProperties.$t(
                             '请不要在内嵌页面中输入敏感信息，内嵌页面并不安全。',
                         ),
-                        fun: () => undefined,
+                        noClose: true,
                     },
                     {
                         text: app.config.globalProperties.$t('打开…'),
                         fun: () => {
                             const shell = window.electron?.shell
-                            if (shell) {
+                            if (shell)
                                 shell.openExternal(url)
-                            } else {
-                                if(runtimeData.tags.proxyPort) {
-                                    url = decodeURIComponent(url.replace(`http://localhost:${runtimeData.tags.proxyPort}/proxy?url=`, ''))
-                                }
+                            else
                                 callBackend('', 'sys:openInBrowser', false, url)
-                            }
-                            runtimeData.popBoxList.shift()
                         },
                     },
                     {
                         text: app.config.globalProperties.$t('关闭'),
                         master: true,
-                        fun: () => {
-                            runtimeData.popBoxList.shift()
-                        },
                     },
                 ],
-            }
-            runtimeData.popBoxList.push(popInfo)
+            })
         } else {
             const shell = window.electron?.shell
             if (shell) {
                 shell.openExternal(url)
             } else {
-                if(runtimeData.tags.proxyPort) {
-                    url = decodeURIComponent(url.replace(`http://localhost:${runtimeData.tags.proxyPort}/proxy?url=`, ''))
-                }
                 callBackend('', 'sys:openInBrowser', false, url)
             }
         }
@@ -444,13 +430,12 @@ export function createIpc() {
     })
     // 应用功能
     addBackendListener(undefined, 'app:about', () => {
-            const popInfo = {
+            popBox({
                 title: app.config.globalProperties.$t('关于') + ' ' +
                         app.config.globalProperties.$t('Stapxs QQ Lite'),
                 template: AboutPan,
-                allowQuickClose: false,
-            }
-            runtimeData.popBoxList.push(popInfo)
+                allowAutoClose: false,
+            })
         })
     addBackendListener(undefined, 'sys:handleUri', (event, data) => {
         logger.info(JSON.stringify(data ?? event.payload))
@@ -649,6 +634,7 @@ import { SessionBox } from '../model/box'
 import driver, { backendWs } from '../driver'
 import { Role } from '../adapter/enmu'
 import { FriendData, GroupData } from '../adapter/interface'
+import { htmlPopBox, popBox } from './popBox'
 // import windowsCss from '@renderer/assets/css/append/mobile/append_windows.css?raw'
 /**
 * 装载补充样式
@@ -827,16 +813,17 @@ function showReleaseLog(data: any, isUpdated: boolean) {
     const buttonGoUpdate = (runtimeData.tags.clientType != 'web') ? [
               {
                   text: $t('知道了'),
-                  fun: () => runtimeData.popBoxList.shift(),
               },
               {
                   text: $t('下载更新…'),
                   master: true,
+                  noClose: true,
                   fun: () => openLink(data.html_url, true),
               },
           ]: [
               {
                   text: $t('查看…'),
+                  noClose: true,
                   fun: () => openLink(data.html_url),
               },
               {
@@ -845,24 +832,21 @@ function showReleaseLog(data: any, isUpdated: boolean) {
                   fun: () => location.reload(),
               },
           ]
-    const popInfo = {
+    popBox({
         template: UpdatePan,
         templateValue: toRaw(info),
         button: isUpdated? [
                   {
                       text: $t('查看…'),
+                      noClose: true,
                       fun: () => openLink(data.html_url, true),
                   },
                   {
                       text: $t('知道了'),
                       master: true,
-                      fun: () => {
-                          runtimeData.popBoxList.shift()
-                      },
                   },
               ]: buttonGoUpdate,
-    }
-    runtimeData.popBoxList.push(popInfo)
+    })
 }
 
 /**
@@ -884,16 +868,12 @@ export function checkOpenTimes() {
             html += `<span>${$t('好耶！Stapxs QQ Lite 已经被打开 {times} 次了！', { times: getTimes })}</span>`
             html += `<span>${$t('真的不去点个 star 吗 ……')}</span>`
             html += '</div>'
-            const popInfo = {
+            htmlPopBox(html, {
                 title: $t('好耶'),
                 svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><path d="M316.9 18C311.6 7 300.4 0 288.1 0s-23.4 7-28.8 18L195 150.3 51.4 171.5c-12 1.8-22 10.2-25.7 21.7s-.7 24.2 7.9 32.7L137.8 329 113.2 474.7c-2 12 3 24.2 12.9 31.3s23 8 33.8 2.3l128.3-68.5 128.3 68.5c10.8 5.7 23.9 4.9 33.8-2.3s14.9-19.3 12.9-31.3L438.5 329 542.7 225.9c8.6-8.5 11.7-21.2 7.9-32.7s-13.7-19.9-25.7-21.7L381.2 150.3 316.9 18z"/></svg>',
-                html: html,
                 button: [
                     {
                         text: $t('不要'),
-                        fun: () => {
-                            runtimeData.popBoxList.shift()
-                        },
                     },
                     {
                         text: $t('好喔'),
@@ -902,12 +882,10 @@ export function checkOpenTimes() {
                             openLink(
                                 'https://github.com/Stapxs/Stapxs-QQ-Lite-2.0',
                             )
-                            runtimeData.popBoxList.shift()
                         },
                     },
                 ],
-            }
-            runtimeData.popBoxList.push(popInfo)
+            })
         }
     } else {
         localStorage.setItem('times', '1')
@@ -917,12 +895,10 @@ export function checkOpenTimes() {
     const guideVersion = 1
     if (guide != guideVersion.toString()) {
         // 首次打开，显示首次打开引导信息
-        const popInfo = {
+        popBox({
             template: WelPan,
-            allowClose: false,
-            button: [],
-        }
-        runtimeData.popBoxList.push(popInfo)
+            allowAutoClose: false,
+        })
         localStorage.setItem('guide', guideVersion.toString())
     }
 }
@@ -975,35 +951,29 @@ export function checkNotice() {
                     for (let i = 0; i < notice.pops.length; i++) {
                         // 添加弹窗
                         const info = notice.pops[i]
-                        const popInfo = {
+                        htmlPopBox(info.html ? info.html : '', {
                             title: info.title,
-                            html: info.html ? info.html : '',
-                            button: [
-                                {
-                                    text:
-                                        notice.pops.length > 1 &&
-                                        i != notice.pops.length - 1? app.config.globalProperties.$t(
-                                                  '继续',
-                                              ): app.config.globalProperties.$t(
-                                                  '确定',
-                                              ),
-                                    master: true,
-                                    fun: () => {
-                                        // 添加已读记录
-                                        if (noticeShow.indexOf(notice.id) < 0) {
-                                            noticeShow.push(notice.id)
-                                        }
-                                        localStorage.setItem(
-                                            'notice_show',
-                                            noticeShow.toString(),
-                                        )
-                                        // 关闭弹窗
-                                        runtimeData.popBoxList.shift()
-                                    },
+                            button: [{
+                                text: (
+                                    notice.pops.length > 1 && i != notice.pops.length - 1
+                                ) ? app.config.globalProperties.$t(
+                                    '继续',
+                                ): app.config.globalProperties.$t(
+                                    '确定',
+                                ),
+                                master: true,
+                                fun: () => {
+                                    // 添加已读记录
+                                    if (noticeShow.indexOf(notice.id) < 0) {
+                                        noticeShow.push(notice.id)
+                                    }
+                                    localStorage.setItem(
+                                        'notice_show',
+                                        noticeShow.toString(),
+                                    )
                                 },
-                            ],
-                        }
-                        runtimeData.popBoxList.push(popInfo)
+                            },],
+                        })
                     }
                 }
             })
@@ -1230,6 +1200,22 @@ export function usePasttime(time: number): ComputedRef<string> {
         return pastTimeFormat(time)
     })
 }
+
+/**
+ * 使用事件监听器
+ * @param target 目标dom
+ * @param event 事件
+ * @param callback 回调
+ */
+export function useEventListener<T extends keyof DocumentEventMap>(
+    target: Document,
+    event: T,
+    callback: (event: DocumentEventMap[T]) => void) {
+    // 如果你想的话，
+    // 也可以用字符串形式的 CSS 选择器来寻找目标 DOM 元素
+    onMounted(() => target.addEventListener(event, callback))
+    onUnmounted(() => target.removeEventListener(event, callback))
+}
 //#endregion
 
 //#region == v命令封装 ======================================
@@ -1360,6 +1346,24 @@ export const vAutoFocus: Directive<HTMLInputElement|HTMLTextAreaElement, undefin
     }
 }
 
+export const vFocus: Directive<HTMLElement, boolean | undefined> = {
+    mounted(el: HTMLElement, binding: DirectiveBinding<boolean | undefined>) {
+        if (binding.value === false) return
+
+        // 检查元素是否可见
+        const isVisible = () => {
+            const style = window.getComputedStyle(el)
+            return style.display !== 'none' &&
+                style.visibility !== 'hidden' &&
+                Number(style.opacity) > 0
+        }
+
+        if (!isVisible()) return
+
+        el.focus()
+    }
+}
+
 export interface SearchBinding<T extends { match(query: string): boolean }> {
   originList: Iterable<T>
   isSearch: boolean
@@ -1471,6 +1475,56 @@ export const vOverflowHide: Directive<HTMLElement, undefined> = {
         data.observer.disconnect()
         data.controller.abort()
         delete (el as any)._vOverflowHideController
+    }
+}
+/**
+ * 是否隐藏元素
+ * 如果值为 true，则隐藏元素（通过设置 opacity 为 0）
+ * 如果值为 false，则显示元素（通过清除 opacity）
+ * @example v-hide="true"
+ */
+export const vHide: Directive<HTMLElement, boolean> = {
+    mounted(el: HTMLElement, binding: DirectiveBinding<boolean>) {
+        if (binding.value)
+            el.style.opacity = '0'
+        else
+            el.style.opacity = ''
+    },
+    updated(el: HTMLElement, binding: DirectiveBinding<boolean>) {
+        if (binding.value)
+            el.style.opacity = '0'
+        else
+            el.style.opacity = ''
+    }
+}
+/**
+ * 监听 Esc 键按下事件
+ * 当按下 Esc 键时，执行绑定的函数
+ * @example v-esc="退出函数"
+ */
+export const vEsc: Directive<HTMLElement, () => void> = {
+    mounted(el: HTMLElement, binding: DirectiveBinding<() => void>) {
+        const controller = new AbortController()
+        const options = { signal: controller.signal }
+
+        // 监听键盘事件
+        const keydownHandler = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                event.stopPropagation()
+                binding.value()
+            }
+        }
+        document.addEventListener('keydown', keydownHandler, options)
+
+        // 保存控制器以便卸载时清理
+        ;(el as any)._vEscController = controller
+    },
+    unmounted(el: HTMLElement) {
+        const controller = (el as any)._vEscController
+        if (controller) {
+            document.removeEventListener('keydown', controller.signal)
+            delete (el as any)._vEscController
+        }
     }
 }
 //#endregion

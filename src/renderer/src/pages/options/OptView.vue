@@ -293,6 +293,7 @@
 
     import languages from '../../assets/l10n/_l10nconfig.json'
     import { sendStatEvent } from '@renderer/function/utils/appUtil'
+    import { closePopBox, textPopBox } from '@renderer/function/utils/popBox'
 
     export default defineComponent({
         name: 'ViewOptTheme',
@@ -361,45 +362,39 @@
 
             scaleSave(event: Event) {
                 save(event)
+                let makeSureBoxId: string
                 // 5 秒后自动取消防止误操作导致无法恢复
                 const timerId = setTimeout(() => {
                     (event.target as HTMLInputElement).value = '0.85'
                     runtimeData.sysConfig.initial_scale = 0.85
                     this.initialScaleShow = 0.85
                     save(event)
-                    runtimeData.popBoxList.pop()
-                    const popInfo = {
+                    closePopBox(makeSureBoxId)
+
+                    textPopBox(this.$t('缩放比例调整已取消，已恢复默认缩放比例。'), {
                         svg: 'up-down-left-right',
-                        html: '<span>' + this.$t('缩放比例调整已取消，已恢复默认缩放比例。') + '</span>',
                         title: this.$t('确认缩放比例'),
                         button: [
                             {
                                 text: this.$t('取消'),
                                 master: true,
-                                fun: () => {
-                                    runtimeData.popBoxList.pop()
-                                },
                             }
                         ],
-                    }
-                    runtimeData.popBoxList.push(popInfo)
+                    })
                 }, 5000)
                 // 保存提醒
-                const popInfo = {
+                makeSureBoxId = textPopBox(this.$t('点击确认以应用缩放比例，预览将在 5 秒后取消……'), {
                     svg: 'up-down-left-right',
-                    html: '<span>' + this.$t('点击确认以应用缩放比例，预览将在 5 秒后取消……') + '</span>',
                     title: this.$t('确认缩放比例'),
                     button: [
                         {
                             text: this.$t('确定'),
                             fun: () => {
-                                runtimeData.popBoxList.pop()
                                 clearTimeout(timerId)
                             },
                         }
                     ],
-                }
-                runtimeData.popBoxList.push(popInfo)
+                })
             },
 
             setInitialScaleShow(event: Event) {

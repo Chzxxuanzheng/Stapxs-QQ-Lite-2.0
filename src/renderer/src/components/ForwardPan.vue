@@ -58,6 +58,7 @@ import { delay } from '@renderer/function/utils/systemUtil'
 import app from '@renderer/main'
 import { changeSession } from '@renderer/function/utils/msgUtil'
 import { vSearch } from '@renderer/function/utils/appUtil'
+import { popBox } from '@renderer/function/utils/popBox'
 
 //#region == 声明/导出变量 ===========================================================
 // 变量
@@ -142,7 +143,8 @@ function runForward(){
         previewMsg = createMergePreview(msgs.value)
         whileSendMsg = createMergeSendMsg(msgs.value)
     }
-    const popInfo = {
+
+    popBox({
         title: title,
         template: markRaw(MsgBar),
         templateValue: markRaw({ msgs: previewMsg, config: {
@@ -150,24 +152,15 @@ function runForward(){
             showIcon: false,
             dimNonExistentMsg: false,
         } }),
-        button: [
-            {
-                text: $t('取消'),
-                fun: () => {
-                    runtimeData.popBoxList.shift()
-                },
-            },
-            {
-                text: $t('确定'),
-                master: true,
-                fun: () => {
-                    sendMsg(whileSendMsg)
-                    runtimeData.popBoxList.shift()
-                },
-            },
-        ],
-    }
-    runtimeData.popBoxList.push(popInfo)
+        button: [{
+            text: $t('取消'),
+        }, {
+            text: $t('确定'),
+            master: true,
+            fun: () => sendMsg(whileSendMsg),
+        },],
+    })
+
     if(!runtimeData.sysConfig.jump_forward)return
     if(selected.value.length > 1)return
     const chat = selected.value[0]

@@ -487,6 +487,7 @@ const userInfoPanFunc: UserInfoPan = {
     import { Message } from '@renderer/function/model/message'
     import { Time } from '@renderer/function/model/data'
     import { Role } from '@renderer/function/adapter/enmu'
+import { closePopBox, ensurePopBox, textPopBox } from '@renderer/function/utils/popBox'
 
     export interface UserInfoPan {
         open: (user: IUser|number, x: number, y: number) => void
@@ -1115,43 +1116,30 @@ const userInfoPanFunc: UserInfoPan = {
             /**
              * 移出群聊
              */
-            removeUser() {
+            async removeUser() {
                 const user = this.menuSelectedUser
                 if (!user) return
-                const popInfo = {
-                    title: this.$t('提醒'),
-                    html: `<span>${this.$t('真的要将 {user} 移出群聊吗', { user: user.name })}</span>`,
-                    button: [
-                        {
-                            text: app.config.globalProperties.$t('确定'),
-                            fun: async () => {
-                                this.closeUserMenu()
-                                runtimeData.popBoxList.shift()
-                                if (!runtimeData.nowAdapter?.kickMember) {
-                                    new PopInfo().add(
-                                        PopType.ERR,
-                                        this.$t('当前适配器不支持移除成员'),
-                                        true,
-                                    )
-                                    return
-                                }
+                const ensure = ensurePopBox(
+                    this.$t('真的要将 {user} 移出群聊吗', { user: user.name })
+                )
 
-                                await runtimeData.nowAdapter.kickMember(
-                                    this.chat as GroupSession,
-                                    user as Member,
-                                )
-                            },
-                        },
-                        {
-                            text: app.config.globalProperties.$t('取消'),
-                            master: true,
-                            fun: () => {
-                                runtimeData.popBoxList.shift()
-                            },
-                        },
-                    ],
+                if (!ensure) return
+
+                this.closeUserMenu()
+
+                if (!runtimeData.nowAdapter?.kickMember) {
+                    new PopInfo().add(
+                        PopType.ERR,
+                        this.$t('当前适配器不支持移除成员'),
+                        true,
+                    )
+                    return
                 }
-                runtimeData.popBoxList.push(popInfo)
+
+                await runtimeData.nowAdapter.kickMember(
+                    this.chat as GroupSession,
+                    user as Member,
+                )
             },
 
             /**
@@ -1264,8 +1252,9 @@ const userInfoPanFunc: UserInfoPan = {
             },
             /**
              * 选择文件
+             * @todo TODO: 重写发送文件逻辑
              */
-            selectFile(event: Event) {
+            async selectFile(event: Event) {
                 this.tags.showMoreDetail = false
                 const sender = event.target as HTMLInputElement
                 if (sender.files != null) {
@@ -1274,29 +1263,14 @@ const userInfoPanFunc: UserInfoPan = {
                     const size = file.size
                     // 如果文件大于 1G，提醒一下
                     if (size > 1073741824) {
-                        const popInfo = {
-                            title: this.$t('提醒'),
-                            html: `<span>${this.$t('文件大于 1GB。发送速度可能会非常缓慢；确认要发送吗？')}</span>`,
-                            button: [
-                                {
-                                    text: this.$t('发送'),
-                                    fun: () => {
-                                        runtimeData.popBoxList.shift()
-                                    },
-                                },
-                                {
-                                    text: this.$t('取消'),
-                                    master: true,
-                                    fun: () => {
-                                        runtimeData.popBoxList.shift()
-                                    },
-                                },
-                            ],
-                        }
-                        runtimeData.popBoxList.push(popInfo)
-                    } else {
-                        this.sendFile(file, fileName)
+                        const ensure = await ensurePopBox(
+                            this.$t('文件大于 1GB。发送速度可能会非常缓慢；确认要发送吗？'),
+                            this.$t('发送')
+                        )
+                        if (!ensure) return
                     }
+
+                    this.sendFile(file, fileName)
 
                     // 清空 input
                     sender.value = ''
@@ -1320,14 +1294,12 @@ const userInfoPanFunc: UserInfoPan = {
                 )
 
                 // 提示
-                const popInfo = {
+                const popId = textPopBox(this.$t('正在发送文件中……'), {
                     title: this.$t('提醒'),
-                    html: `<span>${this.$t('正在发送文件中……')}</span>`,
-                    allowClose: false
-                }
-                runtimeData.popBoxList.push(popInfo)
+                    allowAutoClose: false,
+                })
                 await selfMsg.send()
-                runtimeData.popBoxList.shift()
+                closePopBox(popId)
             },
 
             /**

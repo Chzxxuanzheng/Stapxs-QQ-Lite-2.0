@@ -418,6 +418,7 @@ export function pastTimeFormat(time: number): string {
 /**
  * 标准化url,处理通信协议,加http
  * @param url
+ * @todo TODO: url改正响应式对象 已经标准还的重复url验证
  */
 export function stdUrl(url: string){
     const $t = i18n.global.t
@@ -445,7 +446,6 @@ export function stdUrl(url: string){
     // 包装 url
     if (proxyUrl)
         url = proxyUrl.replace('{url}', encodeURIComponent(url))
-    // TODO: url改正响应式对象
     return url
 }
 

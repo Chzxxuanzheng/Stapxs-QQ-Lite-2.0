@@ -197,77 +197,71 @@
     </div>
 </template>
 
-<script lang="ts">
-    import DepPan from './DepPan.vue'
-    import packageInfo from '../../../../package.json'
+<script setup lang="ts">
+import DepPan from './DepPan.vue'
+import packageInfo from '../../../../package.json'
 
-    import { defineComponent } from 'vue'
-    import { openLink, sendStatEvent } from '@renderer/function/utils/appUtil'
-    import { ContributorElem } from '@renderer/function/elements/system'
+import { shallowReactive, onMounted } from 'vue'
+import { openLink, sendStatEvent } from '@renderer/function/utils/appUtil'
+import { ContributorElem } from '@renderer/function/elements/system'
+import { popBox } from '@renderer/function/utils/popBox'
+import app from '@renderer/main'
 
-    import { runtimeData } from '@renderer/function/msg'
+const {
+    showUI
+} = defineProps<{
+    showUI: boolean
+}>()
 
-    export default defineComponent({
-        name: 'AboutPan',
-        props: {
-            showUI: {
-                type: Boolean,
-                default: false,
-            },
-        },
-        data() {
-            return {
-                packageInfo: packageInfo,
-                openLink: openLink,
-                constList: [] as ContributorElem[],
-            }
-        },
-        mounted() {
-            const superThanks = ['doodlehuang']
-            // 加载贡献者信息
-            fetch('https://api.github.com/repos/stapxs/stapxs-qq-lite-2.0/contributors')
-                .then((response) => response.json())
-                .then((data: { [key: string]: string }[]) => {
-                    for (let i = 0; i < data.length; i++) {
-                        this.constList.push({
-                            url: data[i].avatar_url,
-                            link: data[i].html_url,
-                            title: data[i].login,
-                            isMe: data[i].login == 'Stapxs',
-                            isSuperThakns: superThanks.includes(data[i].login),
-                        })
-                    }
+const emit = defineEmits<{
+    closePopBox: []
+}>()
+
+const constList = shallowReactive<ContributorElem[]>([])
+
+onMounted(() => {
+    const superThanks = ['doodlehuang']
+    // 加载贡献者信息
+    fetch('https://api.github.com/repos/stapxs/stapxs-qq-lite-2.0/contributors')
+        .then((response) => response.json())
+        .then((data: { [key: string]: string }[]) => {
+            for (let i = 0; i < data.length; i++) {
+                constList.push({
+                    url: data[i].avatar_url,
+                    link: data[i].html_url,
+                    title: data[i].login,
+                    isMe: data[i].login == 'Stapxs',
+                    isSuperThakns: superThanks.includes(data[i].login),
                 })
-        },
-        methods: {
-            dependencies(type = undefined as string | undefined, title = '许可版权声明') {
-                runtimeData.popBoxList = []
-                const popInfo = {
-                    title: this.$t(title),
-                    template: DepPan,
-                    templateValue: {
-                        type: type,
-                        title: title
-                    },
-                }
-                runtimeData.popBoxList.push(popInfo)
-            },
-
-            goGithub() {
-                openLink('https://github.com/Stapxs/Stapxs-QQ-Lite-2.0')
-                sendStatEvent('click_statistics', { name: 'visit_github' })
-            },
-
-            goBlog() {
-                openLink('https://blog.stapxs.cn/About.html')
-                sendStatEvent('click_statistics', { name: 'visit_blog' })
-            },
-        },
+            }
+        })
+})
+function dependencies(type = undefined as string | undefined, title = '许可版权声明') {
+    const $t = app.config.globalProperties.$t
+    emit('closePopBox')
+    popBox({
+        title: $t(title),
+        template: DepPan,
+        templateValue: {
+            type: type,
+            title: title
+        }
     })
+}
+
+function goGithub() {
+    openLink('https://github.com/Stapxs/Stapxs-QQ-Lite-2.0')
+    sendStatEvent('click_statistics', { name: 'visit_github' })
+}
+
+function goBlog() {
+    openLink('https://blog.stapxs.cn/About.html')
+    sendStatEvent('click_statistics', { name: 'visit_blog' })
+}
 </script>
 
 <style>
-    .hidd-sha {
-        box-shadow: none !important;
-    }
+.hidd-sha {
+    box-shadow: none !important;
+}
 </style>

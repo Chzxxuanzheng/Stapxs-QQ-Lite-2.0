@@ -82,6 +82,7 @@ import { BubbleBox, SessionBox } from '@renderer/function/model/box'
 import { i18n } from '@renderer/main'
 import { runtimeData } from '@renderer/function/msg'
 import SelectBox from './SelectBox.vue'
+import { ensurePopBox, popBox } from '@renderer/function/utils/popBox'
 
 //#region == 声明变量 ================================================================
 const $t = i18n.global.t
@@ -349,7 +350,7 @@ function clickNoticeClose() {
     close()
 }
 function clickPutInBox() {
-    const popInfo = {
+    popBox({
         title: $t('放入收纳盒'),
         template: markRaw(SelectBox),
         templateValue: { session: markRaw(getTarget()) },
@@ -362,34 +363,28 @@ function clickPutInBox() {
                     // TODO: 这个操作容易遗忘，看看能不能放进设置界面里
                     // 注：新建收纳盒也在用这个
                     SessionBox.saveData()
-                    runtimeData.popBoxList.shift()
                 },
             },
         ],
-    }
-    runtimeData.popBoxList.push(popInfo)
+    })
     close()
 }
 function clickConfigBox() {
-    const popInfo = {
+    popBox({
         title: $t('收纳盒设置'),
         template: markRaw(ConfigBox),
         templateValue: { baseBox: markRaw(getTarget()) },
-        button: [
-            {
-                text: $t('确定'),
-                master: true,
-                fun: () => {
-                    // 更新群组->收纳盒映射
-                    // TODO: 这个操作容易遗忘，看看能不能放进设置界面里
-                    // 注：新建收纳盒也在用这个
-                    SessionBox.saveData()
-                    runtimeData.popBoxList.shift()
-                },
+        button: [{
+            text: $t('确定'),
+            master: true,
+            fun: () => {
+                // 更新群组->收纳盒映射
+                // TODO: 这个操作容易遗忘，看看能不能放进设置界面里
+                // 注：新建收纳盒也在用这个
+                SessionBox.saveData()
             },
-        ],
-    }
-    runtimeData.popBoxList.push(popInfo)
+        },],
+    })
     close()
 }
 function clickLeaveBox() {
@@ -401,26 +396,10 @@ function clickLeaveBox() {
 }
 function clickDeleteBox() {
     const target = getTarget() as SessionBox
-    const popInfo = {
-        html: '<span>' + $t('确定要删除收纳盒吗？它会永远消失的！') + '</span>',
-        button: [
-            {
-                text: $t('确定'),
-                fun: async () => {
-                    target.remove()
-                    runtimeData.popBoxList.shift()
-                },
-            },
-            {
-                text: $t('取消'),
-                master: true,
-                fun: () => {
-                    runtimeData.popBoxList.shift()
-                },
-            },
-        ],
-    }
-    runtimeData.popBoxList.push(popInfo)
+    ensurePopBox($t('确定要删除收纳盒吗？它会永远消失的！'))
+        .then(ensure => {
+            if (ensure) target.remove()
+        })
     close()
 }
 //#endregion

@@ -322,6 +322,7 @@
     import { runASWEvent as save, checkDefault } from '@renderer/function/option'
     import { runtimeData } from '@renderer/function/msg'
     import { openLink } from '@renderer/function/utils/appUtil'
+import { noticePopBox } from '@renderer/function/utils/popBox'
 
     export default defineComponent({
         name: 'ViewOptFunction',
@@ -344,20 +345,7 @@
             breakLineTip(event: Event) {
                 const sender = event.target as HTMLInputElement
                 if (sender.checked) {
-                    const popInfo = {
-                        title: this.$t('提醒'),
-                        html: `<span>${this.$t('开启 shift enter 换行可能会在一些拥有特殊选词模式的输入法上出现问题，如 微软注音2003、新注音2003 和 绝大部分很早期的拼音输入法；如果在使用的时候遇到问题可以尝试关闭此功能。（或者换个更现代的输入法）')}</span>`,
-                        button: [
-                            {
-                                text: this.$t('知道了'),
-                                master: true,
-                                fun: () => {
-                                    runtimeData.popBoxList.shift()
-                                },
-                            },
-                        ],
-                    }
-                    runtimeData.popBoxList.push(popInfo)
+                    noticePopBox(this.$t('开启 shift enter 换行可能会在一些拥有特殊选词模式的输入法上出现问题，如 微软注音2003、新注音2003 和 绝大部分很早期的拼音输入法；如果在使用的时候遇到问题可以尝试关闭此功能。（或者换个更现代的输入法）'))
                 }
             },
             showStatus() {

@@ -97,6 +97,7 @@ import { vAutoFocus, vSearch } from '@renderer/function/utils/appUtil'
 import { i18n } from '@renderer/main'
 import { SessionBox, BubbleBox } from '@renderer/function/model/box'
 import driver from '@renderer/function/driver'
+import { popBox } from '@renderer/function/utils/popBox'
 
 const $t = i18n.global.t
 
@@ -116,16 +117,13 @@ const menu: undefined | InstanceType<typeof FriendMenu> = inject('friendMenu')
 function newBox() {
     // 参数接下来的组件会自动补全，这里填空就行了
     const newBox = new SessionBox($t('新收纳盒'), '', 0)
-    const popInfo = {
+    popBox({
         title: $t('新建收纳盒'),
         template: markRaw(ConfigBox),
         templateValue: { baseBox: markRaw(newBox), init: true },
         button: [
             {
                 text: $t('取消'),
-                fun: () => {
-                    runtimeData.popBoxList.shift()
-                },
             },
             {
                 text: $t('确定'),
@@ -134,12 +132,10 @@ function newBox() {
                     SessionBox.addBox(newBox)
                     // 更新群组->收纳盒映射
                     SessionBox.saveData()
-                    runtimeData.popBoxList.shift()
                 },
             },
         ],
-    }
-    runtimeData.popBoxList.push(popInfo)
+    })
 }
 
 /**

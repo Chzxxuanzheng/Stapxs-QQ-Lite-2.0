@@ -34,6 +34,7 @@ import {
 import { Notify } from './notify'
 import { Msg, SelfMsg } from './model/msg'
 import { Session } from './model/session'
+import { htmlPopBox } from './utils/popBox'
 
 // 其他 tag
 const logger = new Logger()
@@ -163,18 +164,11 @@ export async function newMsg(msg: Msg) {
         )
     }
     if (num === 495) {  // QED怎么能和芙兰无关？(◣_◢)吃我一发 QED [495年的波纹]
-        const popInfo = {
-            html: qed,
+        htmlPopBox(qed, {
             button: [
-                {
-                    text: '确定(O)',
-                    fun: () => {
-                        runtimeData.popBoxList.shift()
-                    },
-                },
+                { text: '确定(O)' },
             ],
-        }
-        runtimeData.popBoxList.push(popInfo)
+        })
         Umami.trackEvent('show_qed', { times: qed_try_times })
     }
     qed_try_times++

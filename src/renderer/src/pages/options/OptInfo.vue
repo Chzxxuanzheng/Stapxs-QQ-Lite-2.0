@@ -75,6 +75,7 @@ import {
     Ref,
 } from 'vue'
 import { PopInfo, PopType } from '@renderer/function/base'
+import { closePopBox, ensurePopBox, textPopBox } from '@renderer/function/utils/popBox'
 
 //#region == 声明变量 ================================================================
 const { $t } = app.config.globalProperties
@@ -129,44 +130,25 @@ async function setGroupName(event: KeyboardEvent) {
 /**
  * 退出群聊
  */
-function leaveGroup() {
-    const popInfo = {
-        html: '<span>' + $t('确定要退出群聊吗？') + '</span>',
-        button: [
-            {
-                text: $t('确定'),
-                fun: async () => {
-                    runtimeData.popBoxList.shift()
-                    if (!runtimeData.nowAdapter?.leaveGroup) {
-                        new PopInfo().add(PopType.INFO, $t('当前适配器不支持退出群聊'))
-                        return
-                    }
-                    await runtimeData.nowAdapter.leaveGroup(chat)
+async function leaveGroup() {
+    const ensure = await ensurePopBox($t('确定要退出群聊吗？'))
 
-                    await checkSetChatInfoResult()
-                },
-            },
-            {
-                text: $t('取消'),
-                master: true,
-                fun: () => {
-                    runtimeData.popBoxList.shift()
-                },
-            },
-        ],
+    if (!ensure) return
+
+    if (!runtimeData.nowAdapter?.leaveGroup) {
+        new PopInfo().add(PopType.INFO, $t('当前适配器不支持退出群聊'))
+        return
     }
-    runtimeData.popBoxList.push(popInfo)
+    await runtimeData.nowAdapter.leaveGroup(chat)
+
+    await checkSetChatInfoResult()
 }
 
 async function checkSetChatInfoResult() {
-    const popInfo = {
-        title: $t('操作'),
-        html: `<span>${$t('正在确认操作……')}</span>`
-    }
-    runtimeData.popBoxList.push(popInfo)
+    const popId = textPopBox($t('正在确认操作……'), { title: $t('操作'), allowAutoClose: false })
     await delay(1000)
     await reloadUsers(false)
-    runtimeData.popBoxList.shift()
+    closePopBox(popId)
 }
 //#endregion
 </script>

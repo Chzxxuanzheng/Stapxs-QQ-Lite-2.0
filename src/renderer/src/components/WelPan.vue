@@ -378,23 +378,27 @@
         <a>{{
             $t('该说的都说了 —— 那么就可以愉快的用啦（大声），如果遇到什么奇怪的问题，尽管来 GitHub 仓库问哦。')
         }}</a>
-        <button class="ss-button wel-next-end" @click="runtimeData.popBoxList.shift()">
+        <button class="ss-button wel-next-end" @click="emit('closePopBox')">
             {{ $t('关闭') }}
         </button>
     </div>
 </template>
 
+<script setup lang="ts">
+import languages from '@renderer/assets/l10n/_l10nconfig.json'
+
+import { defineComponent } from 'vue'
+import { runtimeData } from '@renderer/function/msg'
+import { runASWEvent as save } from '@renderer/function/option'
+import { openLink, sendStatEvent } from '@renderer/function/utils/appUtil'
+
+const emit = defineEmits<{
+    closePopBox: []
+}>()
+</script>
 <script lang="ts">
-    import languages from '@renderer/assets/l10n/_l10nconfig.json'
-
-    import { defineComponent } from 'vue'
-    import { runtimeData } from '@renderer/function/msg'
-    import { runASWEvent as save } from '@renderer/function/option'
-    import { openLink, sendStatEvent } from '@renderer/function/utils/appUtil'
-
     export default defineComponent({
         name: 'WelcomePan',
-        props: ['data'],
         data() {
             return {
                 languages: languages,

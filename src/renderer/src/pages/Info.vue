@@ -238,6 +238,7 @@ import { changeSession } from '@renderer/function/utils/msgUtil'
 import { GroupFile, GroupFileFolder } from '@renderer/function/model/file'
 import { Role } from '@renderer/function/adapter/enmu'
 import { vSearch } from '@renderer/function/utils/appUtil'
+import { closePopBox, ensurePopBox, textPopBox } from '@renderer/function/utils/popBox'
 
 const { chat } = defineProps<{
     chat: Session
@@ -275,35 +276,19 @@ function $t(key: string, option: {[key: string]: string}={}) {
 /**
  * 移出群聊
  */
-function removeUser(mem: Member) {
-    const popInfo = {
-        title: $t('提醒'),
-        html: `<span>${$t('真的要将 {user} 移出群聊吗', { user: mem.name })}</span>`,
-        button: [
-            {
-                text: app.config.globalProperties.$t('确定'),
-                fun: async() => {
-                    if (!runtimeData.nowAdapter?.kickMember) {
-                        new PopInfo().add(PopType.INFO, $t('当前适配器不支持移除群成员'))
-                        return
-                    }
+async function removeUser(mem: Member) {
+    const ensure = await ensurePopBox($t('真的要将 {user} 移出群聊吗', { user: mem.name }))
 
-                    await runtimeData.nowAdapter.kickMember(chat as GroupSession, mem)
+    if (!ensure) return
 
-                    runtimeData.popBoxList.shift()
-                    await checkSetMemInfoResult()
-                },
-            },
-            {
-                text: app.config.globalProperties.$t('取消'),
-                master: true,
-                fun: () => {
-                    runtimeData.popBoxList.shift()
-                },
-            },
-        ],
+    if (!runtimeData.nowAdapter?.kickMember) {
+        new PopInfo().add(PopType.INFO, $t('当前适配器不支持移除群成员'))
+        return
     }
-    runtimeData.popBoxList.push(popInfo)
+
+    await runtimeData.nowAdapter.kickMember(chat as GroupSession, mem)
+
+    await checkSetMemInfoResult()
 }
 
 function copyText(text: string | number) {
@@ -318,106 +303,56 @@ function copyText(text: string | number) {
     )
 }
 
-function banMember(mem: Member, banTime: number) {
+async function banMember(mem: Member, banTime: number) {
+    // TODO: 解除禁言
     if (banTime > 0) {
-        const popInfo = {
-            title: $t('操作'),
-            html: `<span>${$t('确认禁言？')}</span>`,
-            button: [
-                {
-                    text: $t('确认'),
-                    fun: async () => {
-                        runtimeData.popBoxList.shift()
-                        closeChatInfoPan()
+        const ensure = await ensurePopBox($t('确认禁言？'))
 
-                        if (!runtimeData.nowAdapter?.banMember) {
-                            new PopInfo().add(PopType.INFO, $t('当前适配器不支持禁言成员'))
-                            return
-                        }
+        if (!ensure) return
 
-                        await runtimeData.nowAdapter.banMember(
-                            chat as GroupSession, mem, banTime * 60
-                        )
-                    },
-                },
-                {
-                    text: $t('取消'),
-                    master: true,
-                    fun: () => {
-                        runtimeData.popBoxList.shift()
-                    },
-                },
-            ],
+        closeChatInfoPan()
+
+        if (!runtimeData.nowAdapter?.banMember) {
+            new PopInfo().add(PopType.INFO, $t('当前适配器不支持禁言成员'))
+            return
         }
-        runtimeData.popBoxList.push(popInfo)
+
+        await runtimeData.nowAdapter.banMember(chat as GroupSession, mem, banTime * 60)
     }
 }
 
-function updateMemberCard(mem: Member, newValue: string) {
-    const popInfo = {
-        title: $t('操作'),
-        html: `<span>${$t('确认修改昵称？')}</span>`,
-        button: [
-            {
-                text: $t('确认'),
-                fun: async () => {
-                    runtimeData.popBoxList.shift()
-                    closeChatInfoPan()
-                    if (!runtimeData.nowAdapter?.setMemberCard) {
-                        new PopInfo().add(PopType.INFO, $t('当前适配器不支持修改群昵称'))
-                        return
-                    }
-                    await runtimeData.nowAdapter.setMemberCard(chat as GroupSession, mem, newValue)
+async function updateMemberCard(mem: Member, newValue: string) {
+    const ensure = await ensurePopBox($t('确认修改昵称？'))
 
-                    await checkSetMemInfoResult()
-                },
-            },
-            {
-                text: $t('取消'),
-                master: true,
-                fun: () => {
-                    configCard.value = mem.card?.toString() ?? ''
-                    runtimeData.popBoxList.shift()
-                },
-            },
-        ],
+    if (!ensure) return
+
+    closeChatInfoPan()
+
+    if (!runtimeData.nowAdapter?.setMemberCard) {
+        new PopInfo().add(PopType.INFO, $t('当前适配器不支持修改群昵称'))
+        return
     }
-    runtimeData.popBoxList.push(popInfo)
+    await runtimeData.nowAdapter.setMemberCard(chat as GroupSession, mem, newValue)
+
+    await checkSetMemInfoResult()
 }
 
-function updateMemberTitle(mem: Member, value: string) {
-    if (mem.title?.toString() !== configTitle.value) {
-        const popInfo = {
-            title: $t('操作'),
-            html: `<span>${$t('确认修改头衔？')}</span>`,
-            button: [
-                {
-                    text: $t('确认'),
-                    fun: async () => {
-                        runtimeData.popBoxList.shift()
+async function updateMemberTitle(mem: Member, value: string) {
+    if (mem.title?.toString() === configTitle.value) return
 
-                        closeChatInfoPan()
-                        if (!runtimeData.nowAdapter?.setMemberTitle) {
-                            new PopInfo().add(PopType.INFO, $t('当前适配器不支持修改群头衔'))
-                            return
-                        }
-                        await runtimeData.nowAdapter.setMemberTitle(chat as GroupSession, mem, value)
+    const ensure = await ensurePopBox($t('确认修改头衔？'))
 
-                        await checkSetMemInfoResult()
-                    },
-                },
-                {
-                    text: $t('取消'),
-                    master: true,
-                    fun: () => {
-                        configTitle.value = mem.title?.toString() ?? ''
-                        runtimeData.popBoxList.shift()
-                    },
-                },
-            ],
-        }
-        runtimeData.popBoxList.push(popInfo)
+    if (!ensure) return
+
+    closeChatInfoPan()
+
+    if (!runtimeData.nowAdapter?.setMemberTitle) {
+        new PopInfo().add(PopType.INFO, $t('当前适配器不支持修改群头衔'))
+        return
     }
+    await runtimeData.nowAdapter.setMemberTitle(chat as GroupSession, mem, value)
+
+    await checkSetMemInfoResult()
 }
 
 /**
@@ -471,14 +406,10 @@ function canEditMember(role: string) {
 }
 
 async function checkSetMemInfoResult() {
-    const popInfo = {
-        title: $t('操作'),
-        html: `<span>${$t('正在确认操作……')}</span>`
-    }
-    runtimeData.popBoxList.push(popInfo)
+    const popId = textPopBox($t('正在确认操作……'), { title: $t('操作'), allowAutoClose: false })
     await delay(1000)
     await (chat as GroupSession).reloadUserList(false)
-    runtimeData.popBoxList.shift()
+    closePopBox(popId)
 }
 
 defineExpose({
