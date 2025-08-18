@@ -1695,58 +1695,37 @@ input {
 }
 
 .forward-pan {
-    pointer-events: all;
-    position: absolute;
-    height: 100%;
-    z-index: 20;
-    width: 100%;
-    left: 0;
-    top: 0;
-}
-.forward-pan > div.bg {
-    background: var(--color-card-2);
-    height: 100%;
-    opacity: 0.7;
-    width: 100%;
-}
-.forward-pan > div.card {
-    transform: translate(-50%, -50%);
     flex-direction: column;
-    margin: 50vh 0 0 50%;
-    position: absolute;
     display: flex;
-    height: 70%;
-    width: 50%;
-    z-index: 1;
+    width: 100%;
+    overflow: hidden;
+    height: 75vh;
+    width: 60vw;
+    min-width: 360px;
+    max-width: 60vh;
 }
-.forward-pan > div.card > header {
-    align-items: center;
-    padding: 10px;
-    display: flex;
+@media (max-width: 500px) {
+    .forward-pan {
+        width: 100%;
+        max-width: unset;
+        min-width: unset;
+    }
 }
-.forward-pan > div.card > header > span {
-    font-size: 1rem;
-    flex: 1;
-}
-.forward-pan > div.card > header > svg {
-    color: var(--color-font);
-    cursor: pointer;
-    height: 1.5rem;
-}
-.forward-pan > div.card > div:nth-child(2) {
+.forward-pan > div:nth-child(1) {
     display: flex;
 }
-.forward-pan > div.card > div > input {
+.forward-pan > div:nth-child(1) > input {
     background: var(--color-card-1);
     border-radius: 7px;
     padding: 0 10px;
     height: 40px;
     border: 0;
-    min-width: unset;
+    min-width: 6rem;
     width: auto;
     flex: 1;
 }
-.forward-pan > div.card > div > button {
+.forward-pan > div:nth-child(1) > button {
+    min-width: 4rem;
     width: 4rem;
     margin-left: 10px;
     background: var(--color-card-1);
@@ -1755,10 +1734,10 @@ input {
     border: 0;
     transition: 0.3s;
 }
-.forward-pan > div.card > div > button:hover {
+.forward-pan > div:nth-child(1) > button:hover {
     background: var(--color-card-2);
 }
-.forward-pan > div.card > div:nth-child(3) {
+.forward-pan > div:nth-child(2) {
     flex-direction: column;
     overflow-y: scroll;
     margin-top: 10px;

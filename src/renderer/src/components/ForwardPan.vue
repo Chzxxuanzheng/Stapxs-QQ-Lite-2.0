@@ -1,52 +1,44 @@
 <!--
  * @FileDescription: 转发栏组件
- * @Author: Stapxs
- * @Date: 2025/07/31
- *        2025/07/27
+ * @Author: Mr.Lee
+ * @Date: 2025/07/27
+ *        2025/07/31
+ *        2025/08/18
  * @Version: 1.0
+ *           2.0 重构为弹窗
 -->
 <template>
-    <Transition>
-        <Teleport to="body">
-            <div v-if="show" class="forward-pan">
-                <div class="ss-card card">
-                    <header>
-                        <span>{{ $t('转发消息') }}</span>
-                        <font-awesome-icon :icon="['fas', 'xmark']" @click="close" />
-                    </header>
-                    <div>
-                        <input
-                            v-search="searchInfo"
-                            :placeholder="$t('搜索 ……')">
-                        <button v-if="!multiselectMode"
-                            @click="multiselectMode=true">
-                            多选
-                        </button>
-                        <button v-if="multiselectMode"
-                            @click="runForward">
-                            发送
-                        </button>
-                    </div>
-                    <div>
-                        <TinySessionBody v-for="session in displaySession"
-                            :key="session.id"
-                            :session="session"
-                            :selected="selected.includes(session)"
-                            @click="clickChat(session)" />
-                    </div>
-                </div>
-                <div class="bg" @click="close" />
-            </div>
-        </Teleport>
-    </Transition>
+    <div class="forward-pan">
+        <div>
+            <input
+                v-search="searchInfo"
+                :placeholder="$t('搜索 ……')">
+            <button v-if="!multiselectMode"
+                @click="multiselectMode=true">
+                多选
+            </button>
+            <button v-if="multiselectMode"
+                @click="runForward">
+                发送
+            </button>
+        </div>
+        <div>
+            <TinySessionBody v-for="session in displaySession"
+                :key="session.id"
+                :session="session"
+                :selected="selected.includes(session)"
+                @click="clickChat(session)" />
+        </div>
+    </div>
 </template>
+
 <script setup lang="ts">
 import MsgBar from './MsgBar.vue'
 import TinySessionBody from './TinySessionBody.vue'
 
 import { runtimeData } from '@renderer/function/msg'
 import { markRaw } from 'vue'
-import { Msg, SelfMsg, SelfPreMergeMsg, SelfPreMsg } from '@renderer/function/model/msg'
+import { Msg, SelfMsg, SelfPreMsg } from '@renderer/function/model/msg'
 import { Session } from '@renderer/function/model/session'
 import {
     shallowRef,
@@ -63,10 +55,7 @@ import { popBox } from '@renderer/function/utils/popBox'
 //#region == 声明/导出变量 ===========================================================
 // 变量
 const { $t } = app.config.globalProperties
-const show: ShallowRef<boolean> = shallowRef(false)
 const selected: ShallowRef<Session[]> = shallowRef([])
-const msgs: ShallowRef<Msg[]> = shallowRef([])
-const type: ShallowRef<'single' | 'merge'> = shallowRef('single')
 const multiselectMode: ShallowRef<boolean> = shallowRef(false)
 const reflashDisplaySession = shallowRef(0)
 const searchInfo = shallowReactive({
@@ -80,12 +69,20 @@ const displaySession = computed(() => {
     const mainSession = searchInfo.isSearch ?searchInfo.query :searchInfo.originList
     return [...headSession, ...mainSession]
 })
-// 导出
-defineExpose({
-    show,
-    singleForward,
-    mergeForward,
-})
+
+const {
+    msgs,
+    type
+} = defineProps<{
+    msgs: Msg[],
+    type: 'single' | 'merge',
+}>()
+
+const emit = defineEmits<{
+    closePopBox: []
+}>()
+
+init()
 //#endregion
 
 //#region == 方法函数 ====================================================================
@@ -101,30 +98,7 @@ function init(){
     const allChat = Session.sessionList.filter(item => !activeChat.includes(item))
 
     searchInfo.originList = shallowReactive([...activeChat, ...allChat])
-    searchInfo.query = []
-    searchInfo.isSearch = false
     multiselectMode.value = runtimeData.sysConfig.default_multiselect_forward ?? false
-    selected.value = []
-}
-/**
-* 逐条发送消息
-* @param msgs 消息列表
-*/
-function singleForward(forwardMsgs: Msg[]){
-    init()
-    msgs.value = forwardMsgs
-    type.value = 'single'
-    show.value = true
-}
-/**
-* 合并转发消息
-* @param msgs 消息列表
-*/
-function mergeForward(forwardMsgs: Msg[]){
-    init()
-    msgs.value = forwardMsgs
-    type.value = 'merge'
-    show.value = true
 }
 /**
  * 运行发送消息确认框
@@ -134,14 +108,14 @@ function runForward(){
     let previewMsg: SelfPreMsg[]
     let title: string
     let whileSendMsg: SelfMsg[]
-    if (type.value === 'single') {
+    if (type === 'single') {
         title = $t('转发消息')
-        previewMsg = createSinglePreview(msgs.value)
-        whileSendMsg = createSingleSendMsgs(msgs.value)
+        previewMsg = createSinglePreview(msgs)
+        whileSendMsg = createSingleSendMsgs(msgs)
     } else {
         title = $t('合并转发消息')
-        previewMsg = createMergePreview(msgs.value)
-        whileSendMsg = createMergeSendMsg(msgs.value)
+        previewMsg = createMergePreview(msgs)
+        whileSendMsg = createMergeSendMsg(msgs)
     }
 
     popBox({
@@ -178,17 +152,16 @@ async function sendMsg(msgs: SelfMsg[]){
     }
 }
 function close(){
-    show.value = false
+    emit('closePopBox')
 }
 /**
  * 创建单条转发消息预览
  * @param msgs
  */
 function createSinglePreview(msgs: Msg[]): SelfPreMsg[]{
-    // 构造 titleList
     const out: SelfPreMsg[] = []
     msgs.forEach((msg: Msg)=>{
-        out.push(new SelfPreMsg(msg.message))
+        out.push(SelfPreMsg.create(msg.message))
     })
     return out
 }
@@ -196,9 +169,8 @@ function createSinglePreview(msgs: Msg[]): SelfPreMsg[]{
  * 创建合并转发消息预览
  * @param msg
  */
-function createMergePreview(msgs: Msg[]): SelfPreMergeMsg[]{
-    // 构造 titleList
-    const Msg = new SelfPreMergeMsg(msgs)
+function createMergePreview(msgs: Msg[]): SelfPreMsg[]{
+    const Msg = SelfPreMsg.createMerge(msgs)
     return [Msg]
 }
 /**

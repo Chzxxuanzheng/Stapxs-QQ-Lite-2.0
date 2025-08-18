@@ -3,11 +3,14 @@ import anime from 'animejs'
 import { runtimeData } from '@renderer/function/msg'
 import { sendStatEvent } from './appUtil'
 import { callBackend } from './systemUtil'
-import { SelfMsg } from '../model/msg'
+import { Msg, SelfMsg } from '../model/msg'
 import { Seg } from '../model/seg'
 import { GroupSession, Session, UserSession } from '../model/session'
 import { IUser } from '../model/user'
 import { BubbleBox, SessionBox } from '../model/box'
+import { popBox } from './popBox'
+import { markRaw } from 'vue'
+import app from '@renderer/main'
 
 // dev下貌似能优化掉0.5s初次进入chat等待时间
 const facePathMap = new Map<number, string>()
@@ -165,4 +168,40 @@ export function isImportant(user: IUser | number): boolean {
     const userSession = UserSession.getSessionById(user)
     if (!userSession) return false
     return userSession.sessionClass.id === 9999
+}
+
+/**
+ * 逐条转发消息
+ * @param msgList 消息列表
+ */
+export async function singleForward(msgList: Msg[]) {
+    const $t = app.config.globalProperties.$t
+    const ForwardPan = (await import('@renderer/components/ForwardPan.vue')).default
+    popBox({
+        title: $t('转发消息'),
+        svg: 'fa-arrows-turn-right',
+        template: markRaw(ForwardPan),
+        templateValue: {
+            msgs: msgList,
+            type: 'single',
+        }
+    })
+}
+
+/**
+ * 合并转发消息
+ * @param msgList 消息列表
+ */
+export async function mergeForward(msgList: Msg[]) {
+    const $t = app.config.globalProperties.$t
+    const ForwardPan = (await import('@renderer/components/ForwardPan.vue')).default
+    popBox({
+        title: $t('合并转发消息'),
+        svg: 'fa-share-from-square',
+        template: markRaw(ForwardPan),
+        templateValue: {
+            msgs: msgList,
+            type: 'merge',
+        }
+    })
 }

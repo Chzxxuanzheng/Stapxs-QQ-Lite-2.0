@@ -144,7 +144,7 @@
                             <span>{{ $t('合并转发') }}</span>
                         </div>
                         <div v-else>
-                            <font-awesome-icon :icon="['fas', 'fa-share-from-square']" @click="mergeForward" />
+                            <font-awesome-icon :icon="['fas', 'fa-share-from-square']" @click="sendMergeForward" />
                             <span>{{ $t('合并转发') }}</span>
                         </div>
                         <div v-if="refs().msgBar!.multiCanForward()">
@@ -154,7 +154,7 @@
                             <span>{{ $t('逐条转发') }}</span>
                         </div>
                         <div v-else>
-                            <font-awesome-icon :icon="['fas', 'fa-arrows-turn-right']" @click="singleForward" />
+                            <font-awesome-icon :icon="['fas', 'fa-arrows-turn-right']" @click="sendSingleForward" />
                             <span>{{ $t('逐条转发') }}</span>
                         </div>
                         <div>
@@ -411,7 +411,6 @@
             </div>
         </Transition>
         <!-- 转发面板 -->
-        <ForwardPan ref="forwardPan" />
         <div class="bg" :style=" runtimeData.sysConfig.chat_background ?
             `backdrop-filter: blur(${runtimeData.sysConfig.chat_background_blur}px);` : ''" />
     </div>
@@ -451,7 +450,6 @@ const userInfoPanFunc: UserInfoPan = {
     import Option, { get } from '@renderer/function/option'
     import Info from '@renderer/pages/Info.vue'
     import MergePan from '@renderer/components/MergePan.vue'
-    import ForwardPan from '@renderer/components/ForwardPan.vue'
     import MsgBar from '@renderer/components/MsgBar.vue'
     import imageCompression from 'browser-image-compression'
     import FacePan from '@renderer/components/FacePan.vue'
@@ -471,6 +469,8 @@ const userInfoPanFunc: UserInfoPan = {
         sendMsgRaw,
         getFace,
         closeSession,
+        mergeForward,
+        singleForward,
     } from '@renderer/function/utils/msgUtil'
     import { scrollToMsg } from '@renderer/function/utils/appUtil'
     import { Logger, LogType, PopInfo, PopType } from '@renderer/function/base'
@@ -487,7 +487,7 @@ const userInfoPanFunc: UserInfoPan = {
     import { Message } from '@renderer/function/model/message'
     import { Time } from '@renderer/function/model/data'
     import { Role } from '@renderer/function/adapter/enmu'
-import { closePopBox, ensurePopBox, textPopBox } from '@renderer/function/utils/popBox'
+    import { closePopBox, ensurePopBox, textPopBox } from '@renderer/function/utils/popBox'
 
     export interface UserInfoPan {
         open: (user: IUser|number, x: number, y: number) => void
@@ -497,7 +497,6 @@ import { closePopBox, ensurePopBox, textPopBox } from '@renderer/function/utils/
     type ComponentRefs = {
         msgBar: InstanceType<typeof MsgBar>|undefined
         mergePan: InstanceType<typeof MergePan>|undefined
-        forwardPan: InstanceType<typeof ForwardPan>|undefined
         infoRef: InstanceType<typeof Info>|undefined
         msgMenu: InstanceType<typeof Menu>|undefined
         userMenu: InstanceType<typeof Menu>|undefined
@@ -510,7 +509,6 @@ import { closePopBox, ensurePopBox, textPopBox } from '@renderer/function/utils/
             MsgBar,
             FacePan,
             MergePan,
-            ForwardPan,
             Menu
         },
         props: {
@@ -1584,11 +1582,9 @@ import { closePopBox, ensurePopBox, textPopBox } from '@renderer/function/utils/
              * 转发
              */
             showForWard() {
-                const forwardPan = this.refs().forwardPan
-                if (!forwardPan) return
                 if (!this.menuSelectedMsg) return
 
-                forwardPan.singleForward([this.menuSelectedMsg as Msg])
+                singleForward([this.menuSelectedMsg as Msg])
                 this.closeMsgMenu()
             },
             /**
@@ -1685,30 +1681,27 @@ import { closePopBox, ensurePopBox, textPopBox } from '@renderer/function/utils/
             /**
              * 合并转发
              */
-            mergeForward(){
+            sendMergeForward(){
                 const msgBar = this.refs().msgBar
                 if (!msgBar) return
                 const msgList = msgBar.getMultiselectList()
                 if (msgList.length === 0) return
-                const forwardPan = this.refs().forwardPan
-                if (!forwardPan) return
+                console.log('合并转发', msgList)
 
-                forwardPan.mergeForward(msgList)
+                mergeForward(msgList)
 
                 this.closeMultiselect()
             },
             /**
              * 逐条转发
              */
-            singleForward(){
+            sendSingleForward(){
                 const msgBar = this.refs().msgBar
                 if (!msgBar) return
                 const msgList = msgBar.getMultiselectList()
                 if (msgList.length === 0) return
-                const forwardPan = this.refs().forwardPan
-                if (!forwardPan) return
 
-                forwardPan.singleForward(msgList)
+                singleForward(msgList)
 
                 this.closeMultiselect()
             },

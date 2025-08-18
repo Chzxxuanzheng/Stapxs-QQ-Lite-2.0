@@ -385,18 +385,27 @@ export class SelfMsg extends Msg {
  * 自身发送的预览消息
  */
 export class SelfPreMsg extends Msg {
-    constructor(segs: Seg[]) {
+    protected constructor(segs: Seg[]) {
         super(segs, BaseUser.createMe())
     }
-}
 
-/**
- * 自身发送的合并预览消息
- */
-export class SelfPreMergeMsg extends SelfPreMsg {
-    constructor(messages: Msg[]) {
+    /**
+     * 创建自身发送的预览消息
+     * @param segs
+     * @returns
+     */
+    static create(segs: Seg[]): SelfPreMsg {
+        return new this(segs)
+    }
+
+    /**
+     * 创建自身发送的合并预览消息
+     * @param messages 消息列表
+     * @returns 合并预览消息
+     */
+    static createMerge(messages: Msg[]): SelfPreMsg {
         const segs = [new ForwardSeg(messages)]
-        super(segs.map(seg =>{seg.id='0';return seg}))
+        return new this(segs.map(seg => { seg.id = '0'; return seg }))
     }
 }
 

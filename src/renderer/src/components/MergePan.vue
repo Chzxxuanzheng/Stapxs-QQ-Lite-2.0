@@ -43,7 +43,6 @@
                             </KeepAlive>
                         </Transition>
                     </div>
-                    <ForwardPan ref="forwardPan" />
                     <!-- 多选指示器 -->
                     <Transition name="select-tag">
                         <div v-if="isMultiselectMode" class="select-tag">
@@ -54,7 +53,7 @@
                                 <span>{{ $t('合并转发') }}</span>
                             </div>
                             <div v-else>
-                                <font-awesome-icon :icon="['fas', 'fa-share-from-square']" @click="mergeForward" />
+                                <font-awesome-icon :icon="['fas', 'fa-share-from-square']" @click="sendMergeForward" />
                                 <span>{{ $t('合并转发') }}</span>
                             </div>
                             <div v-if="refs().msgBar!.multiCanForward()">
@@ -64,7 +63,7 @@
                                 <span>{{ $t('逐条转发') }}</span>
                             </div>
                             <div v-else>
-                                <font-awesome-icon :icon="['fas', 'fa-arrows-turn-right']" @click="singleForward" />
+                                <font-awesome-icon :icon="['fas', 'fa-arrows-turn-right']" @click="sendSingleForward" />
                                 <span>{{ $t('逐条转发') }}</span>
                             </div>
                             <div>
@@ -115,7 +114,7 @@
 
     import { defineComponent, nextTick, Reactive } from 'vue'
     import { runtimeData } from '@renderer/function/msg'
-    import { isShowTime } from '@renderer/function/utils/msgUtil'
+    import { isShowTime, mergeForward, singleForward } from '@renderer/function/utils/msgUtil'
     import { wheelMask } from '@renderer/function/utils/input'
     import { Msg } from '@renderer/function/model/msg'
     import ForwardPan from './ForwardPan.vue'
@@ -426,11 +425,9 @@
              * 转发
              */
             showForWard() {
-                const forwardPan = this.refs().forwardPan as InstanceType<typeof ForwardPan>
-                if (!forwardPan) return
                 if (!this.menuDisplay.selectMsg) return
 
-                forwardPan.singleForward([this.menuDisplay.selectMsg as Msg])
+                singleForward([this.menuDisplay.selectMsg as Msg])
                 this.closeMsgMenu()
             },
             /**
@@ -480,30 +477,26 @@
             /**
              * 合并转发
              */
-            mergeForward(){
+            sendMergeForward(){
                 const msgBar = this.refs().msgBar
                 if (!msgBar) return
                 const msgList = msgBar.getMultiselectList()
                 if (msgList.length === 0) return
-                const forwardPan = this.refs().forwardPan
-                if (!forwardPan) return
 
-                forwardPan.mergeForward(msgList)
+                mergeForward(msgList)
 
                 this.closeMultiselect()
             },
             /**
              * 逐条转发
              */
-            singleForward(){
+            sendSingleForward(){
                 const msgBar = this.refs().msgBar
                 if (!msgBar) return
                 const msgList = msgBar.getMultiselectList()
                 if (msgList.length === 0) return
-                const forwardPan = this.refs().forwardPan
-                if (!forwardPan) return
 
-                forwardPan.singleForward(msgList)
+                singleForward(msgList)
 
                 this.closeMultiselect()
             },
