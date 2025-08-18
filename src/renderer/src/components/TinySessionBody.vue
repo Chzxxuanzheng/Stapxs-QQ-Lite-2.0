@@ -24,17 +24,32 @@
             <p>
                 {{ session.showName }}
             </p>
-            <span v-if="session.type === 'group'">{{ $t('群组') }}</span>
-            <span v-else-if="session.type === 'user'">{{ $t('好友') }}</span>
-            <span v-else-if="session.type === 'temp'">{{ $t('临时会话') }}</span>
-            <span v-else-if="session.type === 'box'">{{ $t('收纳盒') }}</span>
+            <div>
+                <span v-if="session.type === 'group'">{{ $t('群组') }}</span>
+                <span v-else-if="session.type === 'user'">{{ $t('好友') }}</span>
+                <span v-else-if="session.type === 'temp'">{{ $t('临时会话') }}</span>
+                <span v-else-if="session.type === 'box'">{{ $t('收纳盒') }}</span>
+                <template v-if="session instanceof Session">
+                    <template
+                        v-for="belongBox in session.boxs"
+                        :key="belongBox.id">
+                        <BoxTag
+                            v-if="belongBox.id !== BubbleBox.instance.id"
+                            v-overflow-hide
+                            :style="{'--color': belongBox.color}">
+                            {{ belongBox.showName }}
+                        </BoxTag>
+                    </template>
+                </template>
+            </div>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { SessionBox } from '@renderer/function/model/box'
+import { BubbleBox, SessionBox } from '@renderer/function/model/box'
 import { Session } from '@renderer/function/model/session'
+import BoxTag from './BoxTag.vue';
 
 const { session, selected = false } = defineProps<{
     session: Session | SessionBox,

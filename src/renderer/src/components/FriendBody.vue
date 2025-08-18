@@ -45,14 +45,12 @@
                         <template
                             v-for="belongBox in data.boxs"
                             :key="belongBox.id">
-                            <span
+                            <BoxTag
                                 v-if="belongBox.id !== BubbleBox.instance.id"
                                 v-overflow-hide
-                                class="box"
                                 :style="{'--color': belongBox.color}">
-                                <font-awesome-icon :icon="['fas', 'circle']" />
                                 {{ belongBox.showName }}
-                            </span>
+                            </BoxTag>
                         </template>
                     </div>
                 </template>
@@ -73,6 +71,7 @@ import { inject, computed } from 'vue'
 
 import { vOverflowHide } from '@renderer/function/utils/vcmd';
 import { BubbleBox, SessionBox } from '@renderer/function/model/box';
+import BoxTag from './BoxTag.vue';
 
 const {
     data,

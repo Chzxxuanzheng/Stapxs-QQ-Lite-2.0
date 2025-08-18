@@ -237,6 +237,7 @@ export const vOverflowHide: Directive<HTMLElement, undefined> = {
         const update = () => {
             const pRect = parent.getBoundingClientRect()
             const eRect = el.getBoundingClientRect()
+            console.log(pRect, eRect, el)
             if (eRect.left < pRect.left ||
                 eRect.top < pRect.top ||
                 eRect.right > pRect.right ||

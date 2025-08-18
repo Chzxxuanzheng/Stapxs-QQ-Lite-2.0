@@ -666,37 +666,25 @@ textarea:focus {
     width: auto;
     overflow: visible;
 }
+.friend-body > div:nth-child(3) {
+    display: flex;
+    flex-direction: column;
+}
+.friend-body > div:nth-child(3) > div:nth-child(2) {
+    flex: 1
+}
 .friend-body .boxs-bar {
     display: flex;
-}
-.friend-body .boxs-bar > span.box {
-    background-color: var(--color);
-    font-size: 0.7rem;
-    height: 1rem;
-    border-radius: 1rem;
-    padding: 0.15rem 0.3rem;
-    display: flex;
+    width: 100%;
+    height: 100%;
     align-items: center;
-    margin-right: 5px;
 }
-.friend-body.active .boxs-bar > span.box {
-    color: var(--color-font);
-}
-.friend-body .boxs-bar > span.box > svg {
-    width: 0.7rem;
-    height: 0.7rem;
-    transform: none;
-    opacity: 1.0;
-    color: var(--color-card-1);
-}
-.friend-body:hover .boxs-bar > span.box > svg {
-    color: var(--color-card-2);
-}
-.friend-body.onmenu .boxs-bar > span.box > svg {
-    color: var(--color-card-2);
-}
-.friend-body.active .boxs-bar > span.box > svg {
-    color: var(--color-main);
+.friend-body .boxs-bar > svg {
+    display: inline;
+    transform: unset;
+    height: 1.2rem;
+    width: unset;
+    flex-shrink: 0;
 }
 
 .friend-body.active > div > div a {
@@ -739,6 +727,15 @@ textarea:focus {
 }
 .box-body > div:nth-child(1) > svg {
     background-color: var(--box-color);
+}
+.box-body > div:nth-child(1) > div:nth-child(3) {
+    display: flex;
+    flex-direction: column;
+}
+.box-body > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) {
+    display: flex;
+    align-items: center;
+    flex: 1
 }
 .box-content {
     overflow-y: hidden;
