@@ -11,6 +11,7 @@
     <div class="forward-pan">
         <div>
             <input
+                v-auto-focus
                 v-search="searchInfo"
                 :placeholder="$t('搜索 ……')">
             <button v-if="!multiselectMode"
@@ -51,6 +52,7 @@ import app from '@renderer/main'
 import { changeSession } from '@renderer/function/utils/msgUtil'
 import { vSearch } from '@renderer/function/utils/vcmd'
 import { popBox } from '@renderer/function/utils/popBox'
+import { vAutoFocus } from '@renderer/function/utils/vcmd'
 
 //#region == 声明/导出变量 ===========================================================
 // 变量

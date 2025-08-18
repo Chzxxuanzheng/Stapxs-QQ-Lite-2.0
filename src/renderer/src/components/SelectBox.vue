@@ -9,6 +9,7 @@
 <template>
     <div>
         <input
+            v-auto-focus
             v-search="searchInfo"
             class="ss-input"
             :placeholder="$t('搜索 ……')">
@@ -31,7 +32,7 @@ import {
     computed,
     onUnmounted,
 } from 'vue'
-import { vSearch } from '@renderer/function/utils/vcmd'
+import { vAutoFocus, vSearch } from '@renderer/function/utils/vcmd'
 import TinySessionBody from './TinySessionBody.vue'
 
 const { session } = defineProps<{

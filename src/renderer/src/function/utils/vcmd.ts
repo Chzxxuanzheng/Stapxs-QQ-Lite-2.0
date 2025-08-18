@@ -116,12 +116,14 @@ function createVMenu(): Directive<HTMLElement, (event: MenuEventData) => void> {
 export const vMenu: Directive<HTMLElement, (event: MenuEventData) => void, 'prevent' | 'stop'> = createVMenu()
 /**
  * 挂在时如果设备支持,自动聚焦输入框
+ * 支持是否启用
+ * @example v-auto-focus="是否启用(默认启用)"
  */
-export const vAutoFocus: Directive<HTMLInputElement | HTMLTextAreaElement, undefined> = {
-    mounted(el: HTMLInputElement | HTMLTextAreaElement) {
+export const vAutoFocus: Directive<HTMLInputElement | HTMLTextAreaElement, boolean | undefined> = {
+    mounted(el: HTMLInputElement | HTMLTextAreaElement, binding: DirectiveBinding<boolean | undefined>) {
+        if (binding.value === false) return
         // 判断是否支持聚焦
         if (!shouldAutoFocus()) return
-
         // 检查元素是否可见
         const isVisible = () => {
             const style = window.getComputedStyle(el)
@@ -131,11 +133,15 @@ export const vAutoFocus: Directive<HTMLInputElement | HTMLTextAreaElement, undef
         }
 
         if (!isVisible()) return
-
-        el.focus()
+        setTimeout(() => el.focus(), 0)
     }
 }
 
+/**
+ * 自动聚焦输入框
+ * 挂在时自动聚焦输入框
+ * @example v-focus
+ */
 export const vFocus: Directive<HTMLElement, boolean | undefined> = {
     mounted(el: HTMLElement, binding: DirectiveBinding<boolean | undefined>) {
         if (binding.value === false) return
@@ -160,10 +166,10 @@ export interface SearchBinding<T extends { match(query: string): boolean }> {
     query: T[]
     forceUpdate?: number // 强制刷新
 }
+
 /**
  * 生成一个 Search 指令
  */
-
 export function createVSearch<T extends { match(query: string): boolean }>(): Directive<HTMLInputElement, SearchBinding<T>> {
     return {
         mounted(el, binding: DirectiveBinding<SearchBinding<T>>) {
@@ -284,6 +290,7 @@ export const vHide: Directive<HTMLElement, boolean> = {
             el.style.opacity = ''
     }
 }
+
 /**
  * 监听 Esc 键按下事件
  * 当按下 Esc 键时，执行绑定的函数

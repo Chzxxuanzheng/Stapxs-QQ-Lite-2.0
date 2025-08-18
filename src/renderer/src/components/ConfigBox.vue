@@ -18,6 +18,7 @@
                 <div />
             </div>
             <input v-once
+                v-auto-focus="init"
                 :placeholder="$t('你也是起名困难症嘛？')"
                 :value="baseBox.showName"
                 type="text"
@@ -35,6 +36,7 @@
         <div class="box-search">
             <div>
                 <input
+                    v-auto-focus="!init"
                     v-search="searchInfo"
                     :placeholder="$t('搜索 ……')">
             </div>
@@ -65,7 +67,7 @@ import {
     onUnmounted,
 } from 'vue'
 import { Session } from '@renderer/function/model/session'
-import { vSearch } from '@renderer/function/utils/vcmd'
+import { vAutoFocus, vSearch } from '@renderer/function/utils/vcmd'
 
 const allIcons = [
     // 常用分组图标
