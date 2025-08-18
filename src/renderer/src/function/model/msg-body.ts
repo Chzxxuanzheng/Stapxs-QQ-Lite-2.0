@@ -30,6 +30,7 @@ export class MsgBodyFuns {
     static isMsgInline(typeName: string) {
         switch (typeName) {
             case 'at':
+            case 'atall':
             case 'text':
             case 'face':
                 return true

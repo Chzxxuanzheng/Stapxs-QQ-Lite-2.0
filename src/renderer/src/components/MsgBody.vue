@@ -87,7 +87,7 @@
                     <template v-else-if="!hasCard()">
                         <div v-for="(item, index) in data.message"
                             :key="data.uuid + '-m-' + index"
-                            :class="View.isMsgInline(item.type) ? 'msg-inline' : ''">
+                            :class="{'msg-inline': View.isMsgInline(item.type)}">
                             <div v-if="item.type === undefined" />
                             <span v-else-if="isDebugMsg" class="msg-text">{{ item }}</span>
                             <template v-else-if="item instanceof TxtSeg">
@@ -124,16 +124,27 @@
                                 }" :icon="['fas', 'face-grin-wide']" />
                             </template>
                             <div v-else-if="item instanceof AtSeg"
-                                :class="getAtClass(item.user_id)">
+                                :class="{
+                                    'msg-at': true,
+                                    'me': needSpecialMe(),
+                                    'atme': item.user_id == runtimeData.loginInfo.uin,
+                                }">
                                 <a :data-id="item.user_id"
                                     :data-group="data.session?.id"
                                     @mouseenter="userInfoHoverHandle($event, getAtMember(item.user_id))"
                                     @mousemove="userInfoHoverHandle($event, getAtMember(item.user_id))"
                                     @mouseleave="userInfoHoverEnd($event)">{{ getAtName(item) }}</a>
                             </div>
+                            <div v-else-if="item instanceof AtAllSeg"
+                                :class="{
+                                    'msg-at': true,
+                                    'atme': true,
+                                }">
+                                <a>@{{ $t('全体成员') }}</a>
+                            </div>
                             <div v-else-if="item instanceof FileSeg" :class="{
                                 'msg-file': true,
-                                'me': needSpecialMe(),
+                                'me': true,
                             }">
                                 <div>
                                     <div>
@@ -406,6 +417,7 @@ import {
 import { linkView } from '@renderer/function/utils/linkViewUtil'
 import { MenuEventData } from '@renderer/function/elements/information'
 import {
+    AtAllSeg,
     AtSeg,
     FaceSeg,
     FileSeg,
@@ -536,21 +548,6 @@ defineExpose({
             this.getLink()
         },
         methods: {
-            /**
-             * 根据消息状态获取 At 消息实际的 CSS class
-             * @param who
-             */
-            getAtClass(who: number | string) {
-                let back = 'msg-at'
-                if (this.needSpecialMe()) {
-                    back += ' me'
-                }
-                if (runtimeData.loginInfo.uin == who || who == 'all') {
-                    back += ' atme'
-                }
-                return back
-            },
-
             /**
              * 在 At 消息返回内容没有名字的时候尝试在群成员列表内寻找
              * @param item
