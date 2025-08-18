@@ -42,7 +42,7 @@ import {
     markRaw,
     shallowReactive,
 } from 'vue'
-import { useInterval } from '@renderer/function/utils/appUtil'
+import { useInterval } from '@renderer/function/utils/vuse'
 import { GetImplInfoOutput } from '@saltify/milky-types'
 
 const adapter = computed<MilkyAdapter>(() => markRaw(runtimeData.nowAdapter as MilkyAdapter))

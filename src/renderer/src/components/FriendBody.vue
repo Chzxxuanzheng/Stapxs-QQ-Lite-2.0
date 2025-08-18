@@ -71,7 +71,7 @@ import { GroupSession, Session, UserSession } from '@renderer/function/model/ses
 import { runtimeData } from '@renderer/function/msg'
 import { inject, computed } from 'vue'
 
-import { vOverflowHide } from '@renderer/function/utils/appUtil';
+import { vOverflowHide } from '@renderer/function/utils/vcmd';
 import { BubbleBox, SessionBox } from '@renderer/function/model/box';
 
 const {

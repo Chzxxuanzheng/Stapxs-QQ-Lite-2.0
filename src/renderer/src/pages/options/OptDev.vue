@@ -226,7 +226,7 @@ import { PopInfo, PopType } from '@renderer/function/base'
 import { runtimeData } from '@renderer/function/msg'
 import { BrowserInfo, detect } from 'detect-browser'
 import { uptime } from '@renderer/main'
-import { useBaseDebounced } from '@renderer/function/utils/appUtil'
+import { useBaseDebounced } from '@renderer/function/utils/vuse'
 import { callBackend, stdUrl } from '@renderer/function/utils/systemUtil'
 import {
     shallowReactive,

@@ -91,9 +91,9 @@ import {
     markRaw,
 } from 'vue'
 import { runtimeData } from '@renderer/function/msg'
-import { vMenu } from '@renderer/function/utils/appUtil'
+import { vMenu } from '@renderer/function/utils/vcmd'
 import { Session } from '@renderer/function/model/session'
-import { vAutoFocus, vSearch } from '@renderer/function/utils/appUtil'
+import { vAutoFocus, vSearch } from '@renderer/function/utils/vcmd'
 import { i18n } from '@renderer/main'
 import { SessionBox, BubbleBox } from '@renderer/function/model/box'
 import driver from '@renderer/function/driver'

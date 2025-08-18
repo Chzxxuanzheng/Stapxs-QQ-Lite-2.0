@@ -49,7 +49,7 @@ import {
 import { delay } from '@renderer/function/utils/systemUtil'
 import app from '@renderer/main'
 import { changeSession } from '@renderer/function/utils/msgUtil'
-import { vSearch } from '@renderer/function/utils/appUtil'
+import { vSearch } from '@renderer/function/utils/vcmd'
 import { popBox } from '@renderer/function/utils/popBox'
 
 //#region == 声明/导出变量 ===========================================================

@@ -48,7 +48,8 @@
 import { PopBoxData } from '@renderer/function/elements/information'
 import { runtimeData } from '@renderer/function/msg'
 import { closePopBox } from '@renderer/function/utils/popBox'
-import { vEsc, vFocus, useEventListener } from '@renderer/function/utils/appUtil'
+import { useEventListener } from '@renderer/function/utils/vuse';
+import { vEsc, vFocus } from '@renderer/function/utils/vcmd';
 
 const { props } = defineProps<{props: {id: string, data: PopBoxData}}>()
 

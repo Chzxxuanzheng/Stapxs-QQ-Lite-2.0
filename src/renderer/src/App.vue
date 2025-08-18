@@ -221,7 +221,7 @@ import driver from './function/driver'
 import { login, loginInfo } from './function/login'
 import PopBox from './components/PopBox.vue'
 import { ensurePopBox, noticePopBox } from './function/utils/popBox'
-import { vHide } from './function/utils/appUtil'
+import { vHide } from './function/utils/vcmd'
 
 const friendMenu: Ref<undefined|InstanceType<typeof FriendMenu>> = ref()
 provide('friendMenu', friendMenu)

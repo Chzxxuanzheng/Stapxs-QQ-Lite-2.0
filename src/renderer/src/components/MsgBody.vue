@@ -392,10 +392,12 @@ import { getFace, pokeAnime } from '@renderer/function/utils/msgUtil'
 import {
     openLink,
     sendStatEvent,
-    useStayEvent,
-    vUserRole,
-    vMenu,
 } from '@renderer/function/utils/appUtil'
+import { useStayEvent } from '@renderer/function/utils/vuse'
+import {
+    vUserRole,
+    vMenu
+} from '@renderer/function/utils/vcmd'
 import {
     callBackend,
     getSizeFromBytes,

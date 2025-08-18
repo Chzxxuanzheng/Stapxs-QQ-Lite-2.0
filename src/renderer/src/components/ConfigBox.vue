@@ -65,7 +65,7 @@ import {
     onUnmounted,
 } from 'vue'
 import { Session } from '@renderer/function/model/session'
-import { vSearch } from '@renderer/function/utils/appUtil'
+import { vSearch } from '@renderer/function/utils/vcmd'
 
 const allIcons = [
     // 常用分组图标

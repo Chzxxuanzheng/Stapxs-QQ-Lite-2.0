@@ -237,7 +237,7 @@ import { Ann } from '@renderer/function/model/ann'
 import { changeSession } from '@renderer/function/utils/msgUtil'
 import { GroupFile, GroupFileFolder } from '@renderer/function/model/file'
 import { Role } from '@renderer/function/adapter/enmu'
-import { vSearch } from '@renderer/function/utils/appUtil'
+import { vSearch } from '@renderer/function/utils/vcmd'
 import { closePopBox, ensurePopBox, textPopBox } from '@renderer/function/utils/popBox'
 
 const { chat } = defineProps<{

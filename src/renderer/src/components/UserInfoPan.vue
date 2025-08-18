@@ -120,7 +120,7 @@
 </template>
 
 <script setup lang="ts">
-import { vUserRole } from '@renderer/function/utils/appUtil'
+import { vUserRole } from '@renderer/function/utils/vcmd';
 import { IUser, Member, User } from '@renderer/function/model/user'
 import {
     ref,

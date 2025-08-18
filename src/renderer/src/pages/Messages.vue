@@ -124,7 +124,7 @@ import {
 import { Notify } from '@renderer/function/notify'
 import { Session } from '@renderer/function/model/session'
 import { Message } from '@renderer/function/model/message'
-import { vMenu } from '@renderer/function/utils/appUtil'
+import { vMenu } from '@renderer/function/utils/vcmd'
 import { SessionBox, BubbleBox } from '@renderer/function/model/box'
 import BoxBody from '@renderer/components/BoxBody.vue'
 import driver from '@renderer/function/driver'

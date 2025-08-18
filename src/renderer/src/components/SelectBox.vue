@@ -31,7 +31,7 @@ import {
     computed,
     onUnmounted,
 } from 'vue'
-import { vSearch } from '@renderer/function/utils/appUtil'
+import { vSearch } from '@renderer/function/utils/vcmd'
 import TinySessionBody from './TinySessionBody.vue'
 
 const { session } = defineProps<{

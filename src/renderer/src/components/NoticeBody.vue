@@ -111,7 +111,7 @@ import {
 } from '@renderer/function/model/notice'
 import { IUser } from '@renderer/function/model/user'
 import { runtimeData } from '@renderer/function/msg'
-import { usePasttime, useStayEvent } from '@renderer/function/utils/appUtil'
+import { usePasttime, useStayEvent } from '@renderer/function/utils/vuse'
 import app from '@renderer/main'
 import { UserInfoPan } from '@renderer/pages/Chat.vue'
 import {

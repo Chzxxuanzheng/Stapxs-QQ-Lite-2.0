@@ -105,7 +105,7 @@ import { randomChoice, randomNum } from '@renderer/function/utils/systemUtil'
 import { i18n } from '@renderer/main'
 import { runtimeData } from '@renderer/function/msg'
 import { Session } from '@renderer/function/model/session'
-import { vMenu } from '@renderer/function/utils/appUtil'
+import { vMenu } from '@renderer/function/utils/vcmd'
 const $t = i18n.global.t
 //#region == 彩蛋相关 ============================================================
 const cialloList = [
