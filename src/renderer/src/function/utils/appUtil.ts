@@ -26,6 +26,7 @@ import { Notify } from '../notify'
 import { GroupSession, UserSession } from '../model/session'
 import {
     toRaw,
+    markRaw,
 } from 'vue'
 
 const popInfo = new PopInfo()
@@ -211,7 +212,7 @@ export async function reloadUsers(useCache: boolean = true) {
     if (nowChatId) {
         const session = Session.getSessionById(nowChatId)
         if (!session?.isActive) await session?.activate()
-        runtimeData.nowChat = session
+        runtimeData.nowChat = session ? markRaw(session) : session
     }
 }
 

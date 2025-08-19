@@ -45,7 +45,7 @@ export abstract class Session {
     _name: Name
     protected abstract _face: ComputedRef<string>
     // 消息列表相关
-    messageList: Message[] = []
+    messageList: Message[] = shallowReactive([])
     imgList: {url: string, id: string}[] = []
     imgListUpdateTime: number = 0
     newMsg: number = 0
@@ -124,9 +124,9 @@ export abstract class Session {
         this.activePromise = undefined
         this.newMsg = 0
         this.showNotice = false
-        this.loadHistoryLock = undefined
-        this.lastLoadFaileFlag = false
-        this.canLoadMoreHistory = true
+        this.loadHistoryLock.value = undefined
+        this.lastLoadFaileFlag.value = false
+        this.canLoadMoreHistory.value = true
         Session.activeSessions.delete(this)
         this.runHook('unactiveHook')
     }
@@ -320,48 +320,41 @@ export abstract class Session {
         }
     }
 
-    private loadHistoryLock?: number
-    private lastLoadFaileFlag: boolean = false
-    canLoadMoreHistory: boolean = true
+    private loadHistoryLock: ShallowRef<number|undefined> = shallowRef(undefined)
+    private lastLoadFaileFlag: ShallowRef<boolean> = shallowRef(false)
+    private canLoadMoreHistory: ShallowRef<boolean> = shallowRef(true)
     /**
      * 加载历史
      * @returns 是否加载成功
      */
     async loadHistory(): Promise<boolean> {
-        if (this.loadHistoryLock) return false
-        if (!this.canLoadMoreHistory) return false
+        if (this.loadHistoryLock.value) return false
+        if (!this.canLoadMoreHistory.value) return false
         const selfId = Date.now()
-        this.loadHistoryLock = selfId
+        this.loadHistoryLock.value = selfId
 
         const { $t } = app.config.globalProperties
         // 过滤不支持的适配器
         if (!runtimeData.nowAdapter?.getHistoryMsg) {
-            this.lastLoadFaileFlag = true
+            this.lastLoadFaileFlag.value = true
             this.messageList.unshift(SystemNotice.info(
                 runtimeData.nowAdapter?.name + $t('不支持获取历史记录')
             ))
             return false
         }
         try {
-            if (this.lastLoadFaileFlag) this.messageList.shift()
-            // 添加提示词
-            this.messageList.unshift(SystemNotice.info($t('获取历史记录ing')))
-
             // 调API
             const data = await runtimeData.nowAdapter.getHistoryMsg(this, 20, this.headMsg)
 
             // 中断处理
-            if (this.loadHistoryLock !== selfId) return false
-
-            // 删除提示
-            this.messageList.shift()
+            if (this.loadHistoryLock.value !== selfId) return false
 
             // 处理消息
             if (!data) throw new Error('获取历史记录失败')
             let msgs: Message[]
             if (data.length === 0) {
-                this.canLoadMoreHistory = false
-                msgs = [SystemNotice.info($t('没有更多历史消息'))]
+                this.canLoadMoreHistory.value = false
+                msgs = []
             }else {
                 msgs = data.map(item => new Msg(item))
             }
@@ -374,21 +367,23 @@ export abstract class Session {
             this.headMsg = <Msg>msgs[0]
         } catch (e) {
             new Logger().error(e as Error, '加载历史消息失败')
-            this.lastLoadFaileFlag = true
-            this.messageList.unshift(SystemNotice.info($t('获取历史记录失败')))
+            this.lastLoadFaileFlag.value = true
             new PopInfo().add(
                 PopType.ERR,
                 app.config.globalProperties.$t('获取历史记录失败'),
             )
-            this.loadHistoryLock = undefined
+            this.loadHistoryLock.value = undefined
             return false
         }
-        this.loadHistoryLock = undefined
+        this.loadHistoryLock.value = undefined
         return true
     }
 
-    get isLoadingHistory(): boolean {
-        return this.loadHistoryLock !== undefined
+    get loadHistoryState(): 'loading' | 'fail' | 'end' | 'normal' {
+        if (this.loadHistoryLock.value) return 'loading'
+        if (this.lastLoadFaileFlag.value) return 'fail'
+        if (!this.canLoadMoreHistory.value) return 'end'
+        return 'normal'
     }
 
     /**

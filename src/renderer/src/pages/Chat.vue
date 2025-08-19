@@ -49,15 +49,36 @@
                     :icon="['fas', 'spinner']" class="loading" />
             </div>
         </div>
-        <!-- 加载中指示器 -->
-        <div :class=" 'loading' + (chat.isLoadingHistory && chat.canLoadMoreHistory ? ' show' : '')">
-            <font-awesome-icon :icon="['fas', 'spinner']" />
-            <span>{{ $t('加载中') }}</span>
-        </div>
         <!-- 消息显示区 -->
         <div id="msgPan" class="chat"
             style="scroll-behavior: smooth"
             @scroll="chatScroll">
+            <!-- 前缀 -->
+            <!-- 搜索 -->
+            <template v-if="details[3].open">
+                <div class="note note-nomsg">
+                    <hr>
+                    <a>{{ $t('没有更多消息啦～') }}</a>
+                </div>
+            </template>
+            <!-- 通常 -->
+            <template v-else>
+                <div v-if="chat.loadHistoryState === 'loading'"
+                    class="note note-nomsg">
+                    <hr>
+                    <a>{{ $t('获取历史记录ing') }}</a>
+                </div>
+                <div v-else-if="chat.loadHistoryState === 'fail'"
+                    class="note note-nomsg">
+                    <hr>
+                    <a>{{ $t('获取历史记录失败') }}</a>
+                </div>
+                <div v-else-if="chat.loadHistoryState === 'end'"
+                    class="note note-nomsg">
+                    <hr>
+                    <a>{{ $t('没有更多消息啦～') }}</a>
+                </div>
+            </template>
             <MsgBar
                 :ref="'msgBar'"
                 :key="chat.id"
@@ -488,6 +509,7 @@ const userInfoPanFunc: UserInfoPan = {
     import { Time } from '@renderer/function/model/data'
     import { Role } from '@renderer/function/adapter/enmu'
     import { closePopBox, ensurePopBox, textPopBox } from '@renderer/function/utils/popBox'
+import { de } from 'zod/v4/locales/index.cjs'
 
     export interface UserInfoPan {
         open: (user: IUser|number, x: number, y: number) => void
@@ -1978,7 +2000,7 @@ const userInfoPanFunc: UserInfoPan = {
              * 加载更多历史消息
              */
             async loadHistory() {
-                if (this.chat.isLoadingHistory) return
+                if (this.chat.loadHistoryState !== 'normal') return
 
                 const pan = document.getElementById('msgPan')
                 if (!pan) return

@@ -17,7 +17,7 @@ import { Message } from './message'
 import { GroupSession, Session } from './session'
 import { delay } from '../utils/systemUtil'
 import { EssenceData, ForwardNodeData, MsgData, SegData } from '../adapter/interface'
-import { reactive } from 'vue'
+import { reactive, toRaw } from 'vue'
 
 type IconData = { icon: string, rotate: boolean, desc: string, color: string }
 
@@ -104,7 +104,7 @@ export class Msg extends Message {
 
             this.sender = new BaseUser(data.sender.id, data.sender.nickname)
 
-            this.session.activate().then(()=>{
+            toRaw(this.session).activate().then(()=>{
                 // 获取发送者
                 this.sender = getSender(data.sender, this.session)
             })

@@ -154,7 +154,7 @@
             v-if="driver.isConnected() && runtimeData.nowChat"
             v-show="tags.showChat"
             ref="chat"
-            :chat="runtimeData.nowChat"
+            :chat="markRaw(runtimeData.nowChat)"
             @user-click="changeSession" />
         <!-- 通知列表 -->
         <TransitionGroup class="app-msg" name="appmsg" tag="div">
@@ -205,6 +205,7 @@ import {
     ref,
     Ref,
     provide,
+    markRaw,
 } from 'vue'
 import { Logger, popList, PopInfo, LogType, PopType } from '@renderer/function/base'
 import { runtimeData } from '@renderer/function/msg'
