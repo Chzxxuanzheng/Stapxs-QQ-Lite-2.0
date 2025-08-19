@@ -1,3 +1,16 @@
+<!--
+ * @FileDescription: 快速打开会话搜索栏
+ * @Author: Mr.Lee
+ * @Date:
+ *      2025/08/19
+ * @Version:
+ *      1.0 - 初始版本
+ * @Description:
+ *      该组件用于在全局范围内快速搜索和选择会话。
+ *      通过按下 Ctrl + E 快捷键打开搜索栏，用户可以输入关键词来过滤会话列表。
+ *      支持上下键选择会话，回车键确认选择。
+ *      被VSC的快捷键 Ctrl + E 激励创作的
+-->
 <template>
     <Teleport to="body">
         <Transition name="global-session-search-bar">
@@ -128,6 +141,8 @@ function init() {
  * @param session 被选择的会话
  */
 function choiceSession(session: Session) {
+    runtimeData.tags.openSideBar = false
+
     changeSession(session)
     close()
 }
@@ -138,8 +153,7 @@ function choiceSession(session: Session) {
  */
 function choiceSessionById(id: number) {
     if (id < 0 || id >= showSessions.value.length) return
-    changeSession(showSessions.value[id])
-    close()
+    choiceSession(showSessions.value[id])
 }
 
 /**
