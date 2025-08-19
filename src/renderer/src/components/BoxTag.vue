@@ -22,7 +22,7 @@ import {
     shallowRef
 } from 'vue'
 
-const width = shallowRef<number>(50)
+const width = shallowRef<number>(500)
 const svg = useTemplateRef('svg')
 
 onMounted(() => {

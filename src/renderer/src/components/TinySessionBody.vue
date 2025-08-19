@@ -11,7 +11,9 @@
 <template>
     <div :key=" 'tiny-' + String(session.id)"
         class="tiny-session-body"
-        :class="{selected: selected}">
+        :class="{
+            'selected': selected,
+        }" >
         <div />
         <font-awesome-icon
             v-if="session instanceof SessionBox"
@@ -24,7 +26,10 @@
             <p>
                 {{ session.showName }}
             </p>
-            <div>
+            <div v-if="from === 'global-search' && session instanceof Session && session.isActive">
+                <span>{{ session.preMessage?.preMsg }}</span>
+            </div>
+            <div v-else>
                 <span v-if="session.type === 'group'">{{ $t('群组') }}</span>
                 <span v-else-if="session.type === 'user'">{{ $t('好友') }}</span>
                 <span v-else-if="session.type === 'temp'">{{ $t('临时会话') }}</span>
@@ -51,8 +56,13 @@ import { BubbleBox, SessionBox } from '@renderer/function/model/box'
 import { Session } from '@renderer/function/model/session'
 import BoxTag from './BoxTag.vue';
 
-const { session, selected = false } = defineProps<{
+const {
+    session,
+    selected = false,
+    from,
+} = defineProps<{
     session: Session | SessionBox,
-    selected?: boolean
+    selected?: boolean,
+    from?: 'global-search'
 }>()
 </script>

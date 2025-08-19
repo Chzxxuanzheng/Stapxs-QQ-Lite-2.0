@@ -175,6 +175,8 @@
                 <PopBox :props="pop" />
             </template>
         </TransitionGroup>
+        <!-- 全局搜索栏 -->
+        <GlobalSessionSearchBar />
         <viewer v-show="runtimeData.tags.viewer.show" ref="viewer" class="viewer"
             :options="viewerOpt"
             :images="runtimeData.mergeMessageImgList ?? runtimeData.img_list"
@@ -211,17 +213,18 @@ import { changeSession } from './function/utils/msgUtil'
 import { getDeviceType, callBackend } from './function/utils/systemUtil'
 import { uptime } from '@renderer/main'
 import { Session } from './function/model/session'
+import driver from './function/driver'
+import { login, loginInfo } from './function/login'
+import PopBox from './components/PopBox.vue'
+import { ensurePopBox, noticePopBox } from './function/utils/popBox'
+import { vHide } from './function/utils/vcmd'
 
 import Options from '@renderer/pages/Options.vue'
 import Friends from '@renderer/pages/Friends.vue'
 import Messages from '@renderer/pages/Messages.vue'
 import Boxs from '@renderer/pages/Boxs.vue'
 import FriendMenu from '@renderer/components/FriendMenu.vue'
-import driver from './function/driver'
-import { login, loginInfo } from './function/login'
-import PopBox from './components/PopBox.vue'
-import { ensurePopBox, noticePopBox } from './function/utils/popBox'
-import { vHide } from './function/utils/vcmd'
+import GlobalSessionSearchBar from './components/GlobalSessionSearchBar.vue'
 
 const friendMenu: Ref<undefined|InstanceType<typeof FriendMenu>> = ref()
 provide('friendMenu', friendMenu)

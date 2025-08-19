@@ -12,11 +12,24 @@ import { h, markRaw } from 'vue'
 import { v4 as uuidv4 } from 'uuid'
 import app from '@renderer/main'
 
+/**
+ * 关闭一个弹窗
+ * @param id 弹窗id
+ * @returns
+ */
 export function closePopBox(id: string) {
     const index = runtimeData.popBoxList.findIndex(item => item.id === id)
     if (index === -1) return
     runtimeData.popBoxList[index].data.onClose?.()
     runtimeData.popBoxList.splice(index, 1)
+}
+
+/**
+ * 判断当前是否有弹窗存在
+ * @returns
+ */
+export function hasPopBox(): boolean {
+    return runtimeData.popBoxList.length > 0
 }
 
 /**
