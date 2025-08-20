@@ -234,7 +234,10 @@
                     </div>
                 </div>
                 <!-- 更多功能 -->
-                <div :class="tags.showMoreDetail ? 'more-detail show' : 'more-detail'">
+                <div :class="{
+                    'more-detail': true,
+                    'show': tags.showMoreDetail
+                    }">
                     <div
                         :title="$t('图片')"
                         @click="runSelectImg">
@@ -246,7 +249,7 @@
                         :title="$t('文件')"
                         @click="runSelectFile">
                         <font-awesome-icon :icon="['fas', 'folder']" />
-                        <input id="choice-file" type="file"
+                        <input ref="choiceFile" type="file"
                             style="display: none" @change="selectFile">
                     </div>
                     <div
@@ -272,11 +275,14 @@
             </div>
             <!-- 消息发送框 -->
             <div>
-                <div @click="moreFunClick(runtimeData.sysConfig.quick_send)" @contextmenu="moreFunClick()">
-                    <font-awesome-icon v-if="runtimeData.sysConfig.quick_send == 'default'" :icon="['fas', 'plus']" />
-                    <font-awesome-icon v-if="runtimeData.sysConfig.quick_send == 'img'" :icon="['fas', 'image']" />
-                    <font-awesome-icon v-if="runtimeData.sysConfig.quick_send == 'file'" :icon="['fas', 'folder']" />
-                    <font-awesome-icon v-if="runtimeData.sysConfig.quick_send == 'face'" :icon="['fas', 'face-laugh']" />
+                <div
+                    v-menu.stop.prevent="_=>moreFunClick()"
+                    @click="moreFunClick(runtimeData.sysConfig.quick_send)">
+                    <font-awesome-icon v-if="tags.showMoreDetail" :icon="['fas', 'minus']" />
+                    <font-awesome-icon v-else-if="runtimeData.sysConfig.quick_send == 'default'" :icon="['fas', 'plus']" />
+                    <font-awesome-icon v-else-if="runtimeData.sysConfig.quick_send == 'img'" :icon="['fas', 'image']" />
+                    <font-awesome-icon v-else-if="runtimeData.sysConfig.quick_send == 'file'" :icon="['fas', 'folder']" />
+                    <font-awesome-icon v-else-if="runtimeData.sysConfig.quick_send == 'face'" :icon="['fas', 'face-laugh']" />
                 </div>
                 <div>
                     <form @submit.prevent="mainSubmit">
@@ -442,11 +448,16 @@
 
 <script setup lang="ts">
 import UserInfoPanComponent from '@renderer/components/UserInfoPan.vue'
+import { vMenu } from '@renderer/function/utils/vcmd'
 import {
     shallowReactive,
     ShallowReactive,
-    Reactive
+    Reactive,
+    useTemplateRef
 } from 'vue'
+
+const choiceFile = useTemplateRef<HTMLInputElement>('choiceFile')
+
 const userInfoPanData: ShallowReactive<{
     user: undefined | IUser | number,
     x: number,
@@ -1250,10 +1261,7 @@ const userInfoPanFunc: UserInfoPan = {
             },
 
             runSelectImg() {
-                const input = document.getElementById('choice-pic')
-                if (input) {
-                    input.click()
-                }
+                choiceFile.value?.click()
             },
             /**
              * 手动选择图片
@@ -1273,8 +1281,7 @@ const userInfoPanFunc: UserInfoPan = {
                 }
             },
             /**
-             * 选择文件
-             * @todo TODO: 重写发送文件逻辑
+             * 发送文件
              */
             async selectFile(event: Event) {
                 this.tags.showMoreDetail = false
@@ -1553,18 +1560,20 @@ const userInfoPanFunc: UserInfoPan = {
                     item.open = false
                 })
                 // 如果有关闭操作，就不打开更多功能菜单
-                if(!hasOpen) {
-                    if (type == 'default') {
-                        this.tags.showMoreDetail = !this.tags.showMoreDetail
-                    } else {
-                        this.tags.showMoreDetail = false
-                        // 打开指定的更多功能菜单
-                        switch(type) {
-                            case 'img': this.runSelectImg(); break
-                            case 'file': this.runSelectFile(); break
-                            case 'face': this.details[1].open = !this.details[1].open; break
-                        }
-                    }
+                if (hasOpen) return
+
+                if (this.tags.showMoreDetail) {
+                    // 如果更多功能菜单已经打开，则关闭
+                    this.tags.showMoreDetail = false
+                    return
+                }
+
+                // 打开指定的更多功能菜单
+                switch(type) {
+                    case 'default': this.tags.showMoreDetail = true; break
+                    case 'img': this.runSelectImg(); break
+                    case 'file': this.runSelectFile(); break
+                    case 'face': this.details[1].open = !this.details[1].open; break
                 }
             },
 
