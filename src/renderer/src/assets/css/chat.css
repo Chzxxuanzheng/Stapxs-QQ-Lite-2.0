@@ -227,9 +227,14 @@ input {
     min-width: 40px;
     cursor: pointer;
     margin: 5px;
+    transition: background 0.2s;
 }
 .chat-pan > div.more > div:nth-child(2) > div > div:hover {
     background: var(--color-card-2);
+}
+.chat-pan>div.more>div:nth-child(2)>div>div.disable {
+    background: var(--color-card);
+    opacity: 0.7;
 }
 .chat-pan > div.more > div:nth-child(2) > div svg {
     color: var(--color-font-1);

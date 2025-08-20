@@ -305,7 +305,10 @@
                             @click="selectSQIn()"
                             @input="searchMessage" />
                     </form>
-                    <div @click="sendMsg">
+                    <div @click="sendMsg"
+                        :class="{
+                            'disable': msg.trim() === ''
+                        }">
                         <font-awesome-icon v-if="details[3].open" :icon="['fas', 'search']" />
                         <font-awesome-icon v-else :icon="['fas', 'angle-right']" />
                     </div>
@@ -431,7 +434,7 @@
                 <div class="bg" @click="imgCache = []" />
             </div>
         </Transition>
-        <!-- 转发面板 -->
+        <!-- 背景 -->
         <div class="bg" :style=" runtimeData.sysConfig.chat_background ?
             `backdrop-filter: blur(${runtimeData.sysConfig.chat_background_blur}px);` : ''" />
     </div>
@@ -509,7 +512,6 @@ const userInfoPanFunc: UserInfoPan = {
     import { Time } from '@renderer/function/model/data'
     import { Role } from '@renderer/function/adapter/enmu'
     import { closePopBox, ensurePopBox, textPopBox } from '@renderer/function/utils/popBox'
-import { de } from 'zod/v4/locales/index.cjs'
 
     export interface UserInfoPan {
         open: (user: IUser|number, x: number, y: number) => void
@@ -1408,6 +1410,8 @@ import { de } from 'zod/v4/locales/index.cjs'
                 this.details.forEach((item) => {
                     item.open = false
                 })
+                // 无消息不发送
+                if (this.msg.trim() === '') return
                 // 为了减少对于复杂图文排版页面显示上的工作量，对于非纯文本的消息依旧处理为纯文本，如：
                 // "这是一段话 [SQ:0]，[SQ:1] 你要不要来试试 Stapxs QQ Lite？"
                 // 其中 [SQ:n] 结构代表着这是特殊消息以及这个消息具体内容在消息缓存中的 index，像是这样：
