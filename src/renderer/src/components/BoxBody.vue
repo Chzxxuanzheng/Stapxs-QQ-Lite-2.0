@@ -125,7 +125,6 @@ const flanAge = Math.floor(
 ) + 495
 
 // 我也来搞个抽签
-// @Stapxs 可以试试把这个扔umami上
 let cialloMsg = randomChoice(...cialloList)
 const random = randomNum(0, 5000)
 if (random === flanAge)

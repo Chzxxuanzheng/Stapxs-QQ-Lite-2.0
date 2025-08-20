@@ -15,7 +15,8 @@ import {
     ShallowRef,
     shallowReactive,
     ComputedRef,
-    computed
+    computed,
+    toRaw,
 } from 'vue'
 import { queueWait, stdUrl } from '../utils/systemUtil'
 import { Name } from './data'
@@ -67,7 +68,7 @@ export abstract class Session {
      * 是否激活
      * 激活会在message里显示，且会调用获取历史记录等API
      */
-    isActive = false
+    _isActive: ShallowRef<boolean> = shallowRef(false)
     // 缓存
     /**
      * 会话列表
@@ -593,6 +594,14 @@ export abstract class Session {
         return this._name.py.replace(/[\u202A-\u202E\u2066-\u2069]/g, '')
     }
 
+    get isActive(): boolean {
+        return toRaw(this)._isActive.value
+    }
+
+    protected set isActive(active: boolean) {
+        toRaw(this)._isActive.value = active
+    }
+
     get name(): Name {
         return this._name
     }
@@ -1070,7 +1079,7 @@ export class TempSession extends Session {
 export class SessionClass {
     id: number
     name: string
-    content: Session[] = reactive([])
+    content: Session[] = shallowReactive([])
     open: boolean = false
     private static AllFriendClass: SessionClass[] = reactive([])
     constructor(id: number, name: string) {
