@@ -391,7 +391,7 @@ export class BaseUser {
     }
 
     get title(): Name | undefined {
-        return this.title
+        return this._title
     }
 
     set nickname(value: Name | string) {
