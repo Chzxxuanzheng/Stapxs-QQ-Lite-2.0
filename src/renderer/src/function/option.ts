@@ -42,8 +42,8 @@ export const optDefault = {
     save_password: '',
     notice_group: {},
     auto_connect: false,
-    boxs: {},           // 存储收纳盒消息
-    sessionBoxs: {},    // 存储会话被那些收纳盒收录...这俩名字起的也不行，容易混淆...
+    boxes: {},           // 存储收纳盒消息
+    sessionBoxes: {},    // 存储会话被那些收纳盒收录...这俩名字起的也不行，容易混淆...
     // View
     language: 'zh-CN',
     opt_dark: false,
@@ -127,7 +127,7 @@ function switchBubbleBox() {
             // 过滤非群聊
             if (!(session instanceof GroupSession)) continue
             // 过滤已经有收纳盒的
-            if (session.boxs.length > 0) continue
+            if (session.boxes.length > 0) continue
             BubbleBox.instance.putSession(session)
         }
     }else {

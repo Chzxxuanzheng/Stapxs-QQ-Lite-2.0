@@ -167,13 +167,13 @@ const searchInfo = shallowReactive({
 })
 // 初始化已选择的会话
 for (const [index, session] of [...searchInfo.originList].entries()) {
-    if (!session.boxs.find(item => item.id === baseBox.value.id)) continue
+    if (!session.boxes.find(item => item.id === baseBox.value.id)) continue
     selectedSession.value.push(session)
     searchInfo.originList.splice(index, 1)
 }
-const reflashDisplaySession = ref(0)
+const refreshDisplaySession = ref(0)
 const displaySession = computed(() => {
-    reflashDisplaySession.value
+    refreshDisplaySession.value
     const headSession = selectedSession.value
     const mainSession = searchInfo.isSearch ?searchInfo.query :searchInfo.originList
     return [...headSession, ...mainSession]
@@ -196,7 +196,7 @@ function select(session: Session) {
     searchInfo.originList.splice(index, 1)
 
     // 刷新显示列表
-    reflashDisplaySession.value ++
+    refreshDisplaySession.value ++
 }
 /**
  * 取消选择会话
@@ -214,7 +214,7 @@ function unselect(session: Session) {
     searchInfo.originList.unshift(session)
 
     // 刷新显示列表
-    reflashDisplaySession.value ++
+    refreshDisplaySession.value ++
 }
 //#endregion
 </script>

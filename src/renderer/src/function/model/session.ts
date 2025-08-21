@@ -60,7 +60,7 @@ export abstract class Session {
     highlightInfo: string[] = shallowReactive([])
     showNotice: boolean = false
     // 分组盒子
-    boxs: SessionBox[] = []
+    boxes: SessionBox[] = []
 
     // 内部信息
     // 已有会话列表
@@ -316,7 +316,7 @@ export abstract class Session {
             this.newMsg ++
 
         // 刷新收纳盒
-        for (const box of this.boxs) {
+        for (const box of this.boxes) {
             box.sessionNewMessage(this, msg)
         }
     }
@@ -425,7 +425,7 @@ export abstract class Session {
         this.highlightInfo.length = 0
 
         // 向收纳盒上报消息
-        for (const box of this.boxs) {
+        for (const box of this.boxes) {
             box.sessionSetReaded()
         }
 
@@ -571,8 +571,8 @@ export abstract class Session {
      * @returns
      */
     addBox(box: SessionBox): void {
-        if (this.boxs.includes(box)) return
-        this.boxs.push(box)
+        if (this.boxes.includes(box)) return
+        this.boxes.push(box)
     }
 
     /**
@@ -581,9 +581,9 @@ export abstract class Session {
      * @returns
      */
     leaveBox(box: SessionBox): void {
-        const index = this.boxs.findIndex(b => b.id === box.id)
+        const index = this.boxes.findIndex(b => b.id === box.id)
         if (index < 0) return
-        this.boxs.splice(index, 1)
+        this.boxes.splice(index, 1)
     }
 
     get showName(): string {

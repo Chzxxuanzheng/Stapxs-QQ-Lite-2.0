@@ -59,14 +59,14 @@ import { vAutoFocus } from '@renderer/function/utils/vcmd'
 const { $t } = app.config.globalProperties
 const selected: ShallowRef<Session[]> = shallowRef([])
 const multiselectMode: ShallowRef<boolean> = shallowRef(false)
-const reflashDisplaySession = shallowRef(0)
+const refreshDisplaySession = shallowRef(0)
 const searchInfo = shallowReactive({
     originList: shallowReactive<Session[]>([]),
     query: shallowReactive([]),
     isSearch: false,
 })
 const displaySession = computed(() => {
-    reflashDisplaySession.value
+    refreshDisplaySession.value
     const headSession = selected.value
     const mainSession = searchInfo.isSearch ?searchInfo.query :searchInfo.originList
     return [...headSession, ...mainSession]
@@ -211,7 +211,7 @@ function clickChat(chat: Session) {
             if (index > -1)
                 searchInfo.originList.splice(index, 1)
         }
-        reflashDisplaySession.value ++
+        refreshDisplaySession.value ++
     }
 }
 //#endregion

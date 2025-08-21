@@ -36,7 +36,7 @@
                 <span v-else-if="session.type === 'box'">{{ $t('收纳盒') }}</span>
                 <template v-if="session instanceof Session">
                     <template
-                        v-for="belongBox in session.boxs"
+                        v-for="belongBox in session.boxes"
                         :key="belongBox.id">
                         <BoxTag
                             v-if="belongBox.id !== BubbleBox.instance.id"

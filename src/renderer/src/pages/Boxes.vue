@@ -49,7 +49,7 @@
                         from="friend"
                         @user-click="session=>userClick(session, BubbleBox.instance)" />
                     <BoxBody
-                        v-for="box in SessionBox.sessionBoxs"
+                        v-for="box in SessionBox.sessionBoxes"
                         :key="box.id"
                         v-menu.prevent="event => menu?.open('friend', box, event)"
                         :data="box"
@@ -106,7 +106,7 @@ const emit = defineEmits<{
 }>()
 
 const searchInfo = shallowReactive({
-    originList: SessionBox.sessionBoxs,
+    originList: SessionBox.sessionBoxes,
     query: shallowReactive([] as SessionBox[]),
     isSearch: false,
 })

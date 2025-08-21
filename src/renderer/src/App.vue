@@ -141,7 +141,7 @@
                     <Friends @user-click="changeSession" />
                 </div>
                 <div v-else-if="tags.page == 'Box'">
-                    <Boxs @user-click="changeSession" />
+                    <Boxes @user-click="changeSession" />
                 </div>
                 <div class="opt-main-tab" style="opacity: 0">
                     <Options :show="tags.page == 'Options'" :class="tags.page == 'Options' ? 'active' : ''"
@@ -223,7 +223,7 @@ import { vHide } from './function/utils/vcmd'
 import Options from '@renderer/pages/Options.vue'
 import Friends from '@renderer/pages/Friends.vue'
 import Messages from '@renderer/pages/Messages.vue'
-import Boxs from '@renderer/pages/Boxs.vue'
+import Boxes from '@renderer/pages/Boxes.vue'
 import FriendMenu from '@renderer/components/FriendMenu.vue'
 import GlobalSessionSearchBar from './components/GlobalSessionSearchBar.vue'
 

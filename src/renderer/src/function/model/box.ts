@@ -76,8 +76,8 @@ export class SessionBox {
     })
 
     // 静态缓存
-    static sessionBoxs: ShallowReactive<SessionBox[]> = shallowReactive([])
-    static alwaysTopBoxs: ShallowReactive<Set<SessionBox>> = shallowReactive(new Set())
+    static sessionBoxes: ShallowReactive<SessionBox[]> = shallowReactive([])
+    static alwaysTopBoxes: ShallowReactive<Set<SessionBox>> = shallowReactive(new Set())
     constructor(name: string, icon: string, color: number) {
         this._name = shallowRef(new Name(name))
         this._icon = shallowRef(icon)
@@ -95,18 +95,18 @@ export class SessionBox {
      * @param box 新盒子
      */
     static addBox(box: SessionBox): void {
-        SessionBox.sessionBoxs.push(shallowReactive(box))
+        SessionBox.sessionBoxes.push(shallowReactive(box))
         SessionBox.saveData()
     }
     /**
      * 清空收纳盒
      */
     static clear(): void {
-        SessionBox.sessionBoxs.length = 0
-        SessionBox.alwaysTopBoxs.clear()
+        SessionBox.sessionBoxes.length = 0
+        SessionBox.alwaysTopBoxes.clear()
     }
     static getBoxById(id: string): SessionBox | undefined {
-        return this.sessionBoxs.find(box => box.id === id)
+        return this.sessionBoxes.find(box => box.id === id)
     }
     //#endregion
 
@@ -122,7 +122,7 @@ export class SessionBox {
         box.setAlwaysTop(data.alwaysTop, false)
 
         // 记录到缓存里
-        this.sessionBoxs.push(shallowReactive(box))
+        this.sessionBoxes.push(shallowReactive(box))
         return box
     }
     /**
@@ -131,31 +131,31 @@ export class SessionBox {
      */
     static load(): void {
         const selfId = runtimeData.loginInfo.uin.toString()
-        const cfgs = runtimeData.sysConfig.boxs as {
+        const cfgs = runtimeData.sysConfig.boxes as {
             [key: string]: {[key: string]: SessionBoxData}
         }
         if (!cfgs) return
-        const userBoxs = cfgs[selfId]
-        if (!userBoxs) return
+        const userBoxes = cfgs[selfId]
+        if (!userBoxes) return
 
         // 读取所有的收纳盒
-        for (const id in userBoxs) {
-            this.parse(userBoxs[id])
+        for (const id in userBoxes) {
+            this.parse(userBoxes[id])
         }
 
         // 读取群组对应的收纳盒
-        const sessionBoxs = runtimeData.sysConfig.sessionBoxs as {
+        const sessionBoxes = runtimeData.sysConfig.sessionBoxes as {
             [key: string]: {[key: string]: SessionBoxData}
         }
-        if (!sessionBoxs) return
-        const userSessionBoxs = sessionBoxs[selfId] as unknown as {[key: string]: string[]}
-        if (!userSessionBoxs) return
+        if (!sessionBoxes) return
+        const userSessionBoxes = sessionBoxes[selfId] as unknown as {[key: string]: string[]}
+        if (!userSessionBoxes) return
 
         // 读取所有的群组收纳盒
-        for (const id in userSessionBoxs) {
+        for (const id in userSessionBoxes) {
             const session = Session.getSessionById(Number(id))
             if (!session) continue
-            for (const boxId of userSessionBoxs[id]) {
+            for (const boxId of userSessionBoxes[id]) {
                 const box = this.getBoxById(boxId)
                 if (!box) continue
                 box.putSession(session)
@@ -174,35 +174,35 @@ export class SessionBox {
         {
         // 序列化全部数据
         const datas = {}
-        for (const box of this.sessionBoxs) {
+        for (const box of this.sessionBoxes) {
             const data = box.toData()
             datas[data.id] = data
         }
 
         // 更新配置
-        const cfgs = runtimeData.sysConfig.boxs ?? {} as {
+        const cfgs = runtimeData.sysConfig.boxes ?? {} as {
             [key: string]: {[key: string]: SessionBoxData}
         }
         cfgs[selfId] = datas
 
         // 保存到配置
-        option.save('boxs', cfgs)
+        option.save('boxes', cfgs)
         }
         // == 保存群组对应收纳盒数据 ====================================================
         {
         const datas = {}
         for (const session of Session.sessionList) {
-            if (session.boxs.length === 0) continue
-            datas[session.id] = session.boxs.map(box => box.id)
+            if (session.boxes.length === 0) continue
+            datas[session.id] = session.boxes.map(box => box.id)
         }
 
         // 更新配置
-        const cfgs = runtimeData.sysConfig.sessionBoxs ?? {} as {
+        const cfgs = runtimeData.sysConfig.sessionBoxes ?? {} as {
             [key: string]: {[key: string]: SessionBoxData}
         }
         cfgs[selfId] = datas
 
-        option.save('sessionBoxs', cfgs)
+        option.save('sessionBoxes', cfgs)
         }
     }
     /**
@@ -225,10 +225,10 @@ export class SessionBox {
         this.alwaysTop = value
 
         // 更新缓存列表
-        if (value && !SessionBox.alwaysTopBoxs.has(this))
-            SessionBox.alwaysTopBoxs.add(this)
-        else if (!value && SessionBox.alwaysTopBoxs.has(this))
-            SessionBox.alwaysTopBoxs.delete(this)
+        if (value && !SessionBox.alwaysTopBoxes.has(this))
+            SessionBox.alwaysTopBoxes.add(this)
+        else if (!value && SessionBox.alwaysTopBoxes.has(this))
+            SessionBox.alwaysTopBoxes.delete(this)
 
         if (!saveCfg) return
         SessionBox.saveData()
@@ -291,7 +291,7 @@ export class SessionBox {
 
         if (runtimeData.sysConfig.bubble_sort_user &&
             session.type === 'group' &&
-            session.boxs.length === 0)
+            session.boxes.length === 0)
             BubbleBox.instance.putSession(session)
     }
     /**
@@ -337,10 +337,10 @@ export class SessionBox {
      * @returns
      */
     remove(): void {
-        const id = SessionBox.sessionBoxs.findIndex(box => box.id === this.id)
+        const id = SessionBox.sessionBoxes.findIndex(box => box.id === this.id)
         if (id === -1) return
         // 从缓存中删除
-        SessionBox.sessionBoxs.splice(id, 1)
+        SessionBox.sessionBoxes.splice(id, 1)
         // 清空会话
         for (const session of this._content) this.removeSession(session)
         // 保存数据
@@ -462,14 +462,14 @@ export class BubbleBox extends SessionBox {
 
     protected constructor() {
         super('群收纳盒', 'user-group', 0)
-        SessionBox.sessionBoxs.pop() // 给自己删了
+        SessionBox.sessionBoxes.pop() // 给自己删了
 
         setTimeout(()=>{
             // 添加到群收纳盒
             Session.prepareActiveHook.push((session: Session) => {
                 if (!runtimeData.sysConfig.bubble_sort_user) return
                 if (session.alwaysTop) return
-                if (session.boxs.length > 0) return
+                if (session.boxes.length > 0) return
                 if (!(session instanceof GroupSession)) return
                 this.putSession(session)
             })

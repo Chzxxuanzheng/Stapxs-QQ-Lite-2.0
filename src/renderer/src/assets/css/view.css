@@ -650,7 +650,7 @@ textarea:focus {
     display: flex;
 }
 .box-body > div:nth-child(1) > div > div a,
-.friend-body .boxs-bar,
+.friend-body .boxes-bar,
 .friend-body > div > div a {
     color: var(--color-font-1);
     text-overflow: ellipsis;
@@ -673,13 +673,13 @@ textarea:focus {
 .friend-body > div:nth-child(3) > div:nth-child(2) {
     flex: 1
 }
-.friend-body .boxs-bar {
+.friend-body .boxes-bar {
     display: flex;
     width: 100%;
     height: 100%;
     align-items: center;
 }
-.friend-body .boxs-bar > svg {
+.friend-body .boxes-bar > svg {
     display: inline;
     transform: unset;
     height: 1.2rem;

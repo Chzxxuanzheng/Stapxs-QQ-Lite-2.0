@@ -146,7 +146,7 @@ async function setNick(event: KeyboardEvent) {
 
         if (re) {
             new PopInfo().add(PopType.INFO, $t('检查更新结果ing'))
-            await reflashSelfInfo()
+            await refreshSelfInfo()
         }else {
             new PopInfo().add(PopType.ERR, $t('个性签名设置失败'))
         }
@@ -167,14 +167,14 @@ async function setLNick(event: KeyboardEvent) {
         const re = await runtimeData.nowAdapter?.setSign(selfSign.value)
         if (re) {
             new PopInfo().add(PopType.INFO, $t('检查更新结果ing'))
-            await reflashSelfInfo()
+            await refreshSelfInfo()
         }else {
             new PopInfo().add(PopType.ERR, $t('个性签名设置失败'))
         }
     }
 }
 
-async function reflashSelfInfo() {
+async function refreshSelfInfo() {
     if (!runtimeData.nowAdapter) {
         new PopInfo().add(PopType.ERR, $t('连接中断...'))
         return

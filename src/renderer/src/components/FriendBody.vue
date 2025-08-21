@@ -41,9 +41,9 @@
                     <a>{{ data.preMessage?.preMsg }}</a>
                 </template>
                 <template v-else>
-                    <div class="boxs-bar">
+                    <div class="boxes-bar">
                         <template
-                            v-for="belongBox in data.boxs"
+                            v-for="belongBox in data.boxes"
                             :key="belongBox.id">
                             <BoxTag
                                 v-if="belongBox.id !== BubbleBox.instance.id"

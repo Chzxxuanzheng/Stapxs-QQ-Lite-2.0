@@ -134,7 +134,7 @@ export function changeSession(session: Session, fromBox?: SessionBox) {
 
     // 补加列表没有的会话时,盒子切换
     if (!fromBox && !session.alwaysTop) {
-        const box = session.boxs.at(0)
+        const box = session.boxes.at(0)
 
         // 自己有收纳盒,应当会自己出现在自己的收纳盒中
         if (box) {

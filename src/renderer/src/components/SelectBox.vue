@@ -52,15 +52,15 @@ onUnmounted(()=>{
 })
 
 // 初始化选择和未选择的盒子
-for (const box of SessionBox.sessionBoxs) {
-    if (session.boxs.includes(box))
+for (const box of SessionBox.sessionBoxes) {
+    if (session.boxes.includes(box))
         selected.value.push(box)
     else
         searchInfo.originList.push(box)
 }
-const reflashDisplayBox = shallowRef(0)
+const refreshDisplayBox = shallowRef(0)
 const displayBox = computed(() => {
-    reflashDisplayBox.value
+    refreshDisplayBox.value
     const head = selected.value
     const main = searchInfo.isSearch ? searchInfo.query : searchInfo.originList
     return [...head, ...main]
@@ -80,6 +80,6 @@ function switchSelected(box: SessionBox) {
             searchInfo.originList.splice(index, 1)
         box.putSession(session)
     }
-    reflashDisplayBox.value ++
+    refreshDisplayBox.value ++
 }
 </script>

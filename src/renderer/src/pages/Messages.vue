@@ -74,7 +74,7 @@
                     <BoxBody
                         v-else-if="item instanceof SessionBox"
                         :key="'inMessage-box-' + item.id"
-                        ref="sessionBoxs"
+                        ref="sessionBoxes"
                         v-menu.prevent="event => menu?.open('message', item, event)"
                         :data="item"
                         from="message"
@@ -135,36 +135,36 @@ const emit = defineEmits<{
 const showSessionList = shallowRef<(Session | SessionBox)[]>([])
 // 旧群收纳盒的东西
 const menu: undefined | InstanceType<typeof FriendMenu> = inject('friendMenu')
-const sessionBoxs = useTemplateRef('sessionBoxs')
+const sessionBoxes = useTemplateRef('sessionBoxes')
 
 onMounted(()=>{
     library.add(faCheckToSlot, faThumbTack, faTrashCan, faGripLines)
-    reflashSessionList()
+    refreshSessionList()
     // 刷新会话列表时用
     watch(
         () => Session.sessionList.length,
-        reflashSessionList,
+        refreshSessionList,
     )
     watch(
-        () => SessionBox.alwaysTopBoxs.size,
-        reflashSessionList,
+        () => SessionBox.alwaysTopBoxes.size,
+        refreshSessionList,
     )
     watch(
         () => Session.alwaysTopSessions.size,
-        reflashSessionList,
+        refreshSessionList,
     )
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     Session.newMessageHook.push((_: Session, _1: Message)=>{
         // 等到会话列表更新后再刷新
         // TODO: 更好的钩子系统,支持before, on, after等
-        setTimeout(reflashSessionList, 100)
+        setTimeout(refreshSessionList, 100)
     })
 })
 
 /**
  * 刷新会话列表
  */
-function reflashSessionList() {
+function refreshSessionList() {
     // 时间排序算法
     const sort = (
         a: Session | SessionBox,
@@ -187,7 +187,7 @@ function reflashSessionList() {
     const mainList: (Session | SessionBox)[] = []
     const alwaysTop = [
         ...Session.alwaysTopSessions,
-        ...SessionBox.alwaysTopBoxs
+        ...SessionBox.alwaysTopBoxes
     ]
     // 过滤走群收纳盒
     const putBox: Set<SessionBox> = new Set([BubbleBox.instance])
@@ -197,9 +197,9 @@ function reflashSessionList() {
         if (session.alwaysTop) continue
 
         // 查询收纳盒
-        if (session.boxs.length > 0) {
+        if (session.boxes.length > 0) {
             // 如果有收纳盒，把收纳盒塞进列表里
-            for (const box of session.boxs) {
+            for (const box of session.boxes) {
                 // 如果收纳盒是置顶的，就放到置顶列表里
 
                 // 过滤已经有的收纳盒
@@ -249,8 +249,8 @@ function userClick(data: Session, fromBox?: SessionBox) {
  * 折叠全部收纳盒
  */
 function foldAllBox(){
-    if (!sessionBoxs.value) return
-    for (const item of sessionBoxs.value) {
+    if (!sessionBoxes.value) return
+    for (const item of sessionBoxes.value) {
         if (!item) continue
         item.closeBox()
     }
