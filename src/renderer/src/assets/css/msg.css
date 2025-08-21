@@ -113,13 +113,14 @@ div.rotate > div > svg {
 
 .message-content {
     display: flex;
+    width: 100%;
 }
 .message-content > div.main {
     background: var(--color-card-1);
     border-radius: 7px;
-    width: fit-content;
     margin-top: 5px;
     padding: 10px;
+    max-width: calc(100% - 20px);
 }
 
 .message-content > div.not-exist {
