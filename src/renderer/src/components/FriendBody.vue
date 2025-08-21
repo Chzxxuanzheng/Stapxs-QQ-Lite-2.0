@@ -64,14 +64,14 @@
 </template>
 
 <script setup lang="ts">
-import FriendMenu from './FriendMenu.vue';
+import FriendMenu from './FriendMenu.vue'
 import { GroupSession, Session, UserSession } from '@renderer/function/model/session'
 import { runtimeData } from '@renderer/function/msg'
 import { inject, computed } from 'vue'
 
-import { vOverflowHide } from '@renderer/function/utils/vcmd';
-import { BubbleBox, SessionBox } from '@renderer/function/model/box';
-import BoxTag from './BoxTag.vue';
+import { vOverflowHide } from '@renderer/function/utils/vcmd'
+import { BubbleBox, SessionBox } from '@renderer/function/model/box'
+import BoxTag from './BoxTag.vue'
 
 const {
     data,

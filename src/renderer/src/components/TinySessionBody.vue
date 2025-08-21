@@ -13,7 +13,7 @@
         class="tiny-session-body"
         :class="{
             'selected': selected,
-        }" >
+        }">
         <div />
         <font-awesome-icon
             v-if="session instanceof SessionBox"
@@ -54,7 +54,7 @@
 <script setup lang="ts">
 import { BubbleBox, SessionBox } from '@renderer/function/model/box'
 import { Session } from '@renderer/function/model/session'
-import BoxTag from './BoxTag.vue';
+import BoxTag from './BoxTag.vue'
 
 const {
     session,

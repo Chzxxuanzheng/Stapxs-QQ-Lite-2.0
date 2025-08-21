@@ -26,8 +26,8 @@ class ScanNetwork {
             if (!name.startsWith('bridge')) {
                 network?.forEach(({ family, address, netmask }) => {
                     if (family === 'IPv4' && !address.startsWith('127') && !address.startsWith('169.254')) {
-                        const subnetParts = address.split('.').map(Number);
-                        const netmaskParts = netmask.split('.').map(Number);
+                        const subnetParts = address.split('.').map(Number)
+                        const netmaskParts = netmask.split('.').map(Number)
 
                         this.logger.info(`IP: ${address}, Netmask: ${netmask}`)
 

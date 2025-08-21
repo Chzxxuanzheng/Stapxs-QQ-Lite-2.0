@@ -25,8 +25,8 @@
     </Teleport>
 </template>
 <script lang="ts">
-import { runtimeData } from '@renderer/function/msg';
-import { defineComponent, nextTick } from 'vue';
+import { runtimeData } from '@renderer/function/msg'
+import { defineComponent, nextTick } from 'vue'
 
 export default defineComponent({
     name: 'Menu',
@@ -50,7 +50,7 @@ export default defineComponent({
             this.show = true
             nextTick(()=>this.calcMenu(x, y))
             const promise = new Promise<void>(resolve => {
-                this.showFinish = resolve;
+                this.showFinish = resolve
             })
             return promise
         },
@@ -109,7 +109,7 @@ export default defineComponent({
             }
         }
     }
-});
+})
 </script>
 <style scoped>
 .menu {

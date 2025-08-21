@@ -120,7 +120,7 @@
 </template>
 
 <script setup lang="ts">
-import { vUserRole } from '@renderer/function/utils/vcmd';
+import { vUserRole } from '@renderer/function/utils/vcmd'
 import { IUser, Member, User } from '@renderer/function/model/user'
 import {
     ref,
@@ -128,8 +128,8 @@ import {
     watchEffect,
     reactive,
     Reactive,
-} from 'vue';
-import { Role } from '@renderer/function/adapter/enmu';
+} from 'vue'
+import { Role } from '@renderer/function/adapter/enmu'
 
 const { data } = defineProps<{
     data: {

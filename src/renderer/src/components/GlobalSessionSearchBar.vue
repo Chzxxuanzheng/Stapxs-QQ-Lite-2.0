@@ -25,19 +25,19 @@
                         :placeholder="$t('搜索 ……')"
                         @focusout="close">
                     <template v-if="showSessions.length > 0">
-                        <hr />
+                        <hr>
                         <div ref="sessionList">
                             <div v-for="(session, key) in showSessions"
+                                :key="key"
                                 :class="{
                                     'session-item': true,
                                     'selected': selectId === key,
                                 }"
-                                @click="choiceSession(session)"
-                                :key="key">
+                                @click="choiceSession(session)">
                                 <TinySessionBody
                                     ref="sessionItems"
                                     :session="session"
-                                    from="global-search"/>
+                                    from="global-search" />
                                 <span v-if="session.id === runtimeData.nowChat?.id">
                                     {{ $t('当前会话') }}
                                 </span>

@@ -2,9 +2,9 @@
     <div v-if="status.delay"
         :class="'bot-status ' + status.delayType">
         <div />
-        <span>{{$t('延迟') + ': ' + status.delay }}</span>
+        <span>{{ $t('延迟') + ': ' + status.delay }}</span>
     </div>
-    <div class="bot-info" v-if="status.info">
+    <div v-if="status.info" class="bot-info">
         <div>
             <span>
                 <span>{{ $t('协议端名称') + ': ' }}</span>

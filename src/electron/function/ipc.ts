@@ -69,14 +69,14 @@ export function regIpcListener() {
     // 获取最终 URL
     ipcMain.handle('sys:getFinalRedirectUrl', async (_, str: string) => {
         try {
-            const url = new URL(str);
+            const url = new URL(str)
             if (!['http:', 'https:'].includes(url.protocol)) {
                 return str
             }
             if (str.length > 2000) {
                 return str
             }
-            const MAX_REDIRECTS = 10;
+            const MAX_REDIRECTS = 10
             const response = await axios.get(url.toString(), {
                 maxRedirects: MAX_REDIRECTS,
                 validateStatus: (status) => status < 400

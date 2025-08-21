@@ -1,7 +1,7 @@
 <template>
     <div
-        v-esc="closeSelf"
         ref="test"
+        v-esc="closeSelf"
         class="pop-box">
         <div
             :class="{
@@ -12,7 +12,7 @@
             }"
             :style="{
                 marginBottom: runtimeData.sysConfig.fs_adaptation > 0 ?
-                `${40 + Number(runtimeData.sysConfig.fs_adaptation)}px` : ''
+                    `${40 + Number(runtimeData.sysConfig.fs_adaptation)}px` : ''
             }">
             <header v-if="title">
                 <div v-if="svg">
@@ -29,8 +29,8 @@
                 @close-pop-box="closeSelf" />
             <div v-if="buttons.length > 0" class="button">
                 <button v-for="(button, index) in buttons"
-                    v-focus="button.master"
                     :key="'pop-box-btn' + index"
+                    v-focus="button.master"
                     :class="{
                         'ss-button': true,
                         'master': button.master,
@@ -48,8 +48,8 @@
 import { PopBoxData } from '@renderer/function/elements/information'
 import { runtimeData } from '@renderer/function/msg'
 import { closePopBox } from '@renderer/function/utils/popBox'
-import { useEventListener } from '@renderer/function/utils/vuse';
-import { vEsc, vFocus } from '@renderer/function/utils/vcmd';
+import { useEventListener } from '@renderer/function/utils/vuse'
+import { vEsc, vFocus } from '@renderer/function/utils/vcmd'
 
 const { props } = defineProps<{props: {id: string, data: PopBoxData}}>()
 

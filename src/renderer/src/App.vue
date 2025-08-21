@@ -298,7 +298,7 @@ export default defineComponent({
                 }
             } else if(window.Capacitor != undefined && window.Capacitor.isNativePlatform()) {
                 runtimeData.tags.clientType = 'capacitor'
-                runtimeData.plantform.capacitor = window.Capacitor;
+                runtimeData.plantform.capacitor = window.Capacitor
                 runtimeData.plantform.pulgins = window.Capacitor.Plugins
             }
 
@@ -413,7 +413,7 @@ export default defineComponent({
                         runtimeData.watch.backTimes += 1
                         history.pushState('ssqqweb', '', location.href)
                     }
-                });
+                })
                 if (history.state != 'ssqqweb') {
                     history.pushState('ssqqweb', '', location.href)
                 }

@@ -250,7 +250,7 @@
                 <div :class="{
                     'more-detail': true,
                     'show': tags.showMoreDetail
-                    }">
+                }">
                     <div
                         :title="$t('图片')"
                         @click="runSelectImg">
@@ -325,10 +325,10 @@
                             @click="selectSQIn()"
                             @input="searchMessage" />
                     </form>
-                    <div @click="sendMsg"
-                        :class="{
-                            'disable': msgWhileSend.trim() === ''
-                        }">
+                    <div :class="{
+                             'disable': msgWhileSend.trim() === ''
+                         }"
+                        @click="sendMsg">
                         <font-awesome-icon v-if="details[3].open" :icon="['fas', 'search']" />
                         <font-awesome-icon v-else :icon="['fas', 'angle-right']" />
                     </div>
@@ -1076,7 +1076,6 @@ async function changeRespond(id: string, msg: Msg) {
     // lgr 贴表情不会根据是否已经有了做判断,而且我拿不到 emoji_id,不知道也没有已经贴上去了
     // 所以采用这个逻辑,添加成功按贴表情成功处理,否则尝试移除表情
 
-    console.log(msg, id, !hasSend)
     const re = await runtimeData.nowAdapter.setResponse(
         msg, id, !hasSend,
     )
@@ -1657,7 +1656,6 @@ function sendMergeForward(){
     if (!msgBar.value) return
     const msgList = msgBar.value.getMultiselectList()
     if (msgList.length === 0) return
-    console.log('合并转发', msgList)
 
     mergeForward(msgList)
 

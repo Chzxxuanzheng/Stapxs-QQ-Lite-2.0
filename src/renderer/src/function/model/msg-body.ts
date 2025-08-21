@@ -340,8 +340,8 @@ export class MsgBodyFuns {
 	}
 
     static decodeBase64Unicode(base64) {
-        const binary = atob(base64);
-        const bytes = Uint8Array.from(binary, ch => ch.charCodeAt(0));
-        return new TextDecoder().decode(bytes);
+        const binary = atob(base64)
+        const bytes = Uint8Array.from(binary, ch => ch.charCodeAt(0))
+        return new TextDecoder().decode(bytes)
     }
 }

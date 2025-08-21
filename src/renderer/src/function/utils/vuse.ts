@@ -23,7 +23,6 @@ import { pastTimeFormat } from './systemUtil'
  *   acceptEndEvent: (event: T) => void // 接受结束事件
  * }
  */
-
 export function useStayEvent<T extends Event, C>(
     getPos: (event: T) => { x: number, y: number } | void,
     hooks: {
@@ -133,13 +132,13 @@ export function useStayEvent<T extends Event, C>(
         handleEnd,
     }
 }
+
 /**
  * 有延迟的但个元素的watch
  * @param getValue 获取值的函数
  * @param delay 延迟时间，默认 500ms
  * @returns 返回一个Ref对象，当尝过delay时长未更新后更新
  */
-
 export function useBaseDebounced<T>(getValue: () => T, delay: number = 500): ShallowRef<T> {
     const result: ShallowRef<T> = shallowRef(getValue())
     let timeout: ReturnType<typeof setTimeout>
@@ -151,13 +150,13 @@ export function useBaseDebounced<T>(getValue: () => T, delay: number = 500): Sha
     })
     return result
 }
+
 /**
  * 自动卸载的定时器
  * @param callback 回调
  * @param interval 计时
  * @returns
  */
-
 export function useInterval(
     callback: () => void,
     interval: number
@@ -179,13 +178,13 @@ export function usePasttime(time: number): ComputedRef<string> {
         return pastTimeFormat(time)
     })
 }
+
 /**
  * 使用事件监听器
  * @param target 目标dom
  * @param event 事件
  * @param callback 回调
  */
-
 export function useEventListener<T extends keyof DocumentEventMap>(
     target: Document,
     event: T,

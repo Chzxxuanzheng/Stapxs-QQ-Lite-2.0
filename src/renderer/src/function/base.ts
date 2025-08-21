@@ -188,7 +188,7 @@ export class Logger {
         type: LogType,
         from?: string
     ): { message: string; styles: string[] } {
-        const hasFrom = !hidden && from;
+        const hasFrom = !hidden && from
         if (hasFrom) {
             return {
                 message: `%c${typeStr}%c${from}%c\n${args}`,

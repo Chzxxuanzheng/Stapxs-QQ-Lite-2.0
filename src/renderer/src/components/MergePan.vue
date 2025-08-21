@@ -117,7 +117,6 @@
     import { isShowTime, mergeForward, singleForward } from '@renderer/function/utils/msgUtil'
     import { wheelMask } from '@renderer/function/utils/input'
     import { Msg } from '@renderer/function/model/msg'
-    import ForwardPan from './ForwardPan.vue'
     import { MenuEventData } from '@renderer/function/elements/information'
     import { Logger, PopInfo, PopType } from '@renderer/function/base'
     import app from '@renderer/main'
@@ -128,14 +127,13 @@
     type ComponentRefs = {
         msgBar: InstanceType<typeof MsgBar>
         msgMenu: InstanceType<typeof Menu>
-        forwardPan: InstanceType<typeof ForwardPan>
         mergeBar: HTMLDivElement
         mergePan: HTMLDivElement
     }
 
     export default defineComponent({
         name: 'MergePan',
-        components: { MsgBar, Menu, ForwardPan },
+        components: { MsgBar, Menu },
         data() {
             const stack = runtimeData.mergeMsgStack
             return {
@@ -222,7 +220,7 @@
              * 恢复滚动位置
              */
             restoreScrollPosition() {
-                const position = this.positionCache.pop();
+                const position = this.positionCache.pop()
                 const msgBarElement = this.refs().mergeBar
                 if (!msgBarElement || position === undefined) return
                 nextTick(() => {

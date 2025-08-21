@@ -44,14 +44,14 @@ export function runCommand(command: string) {
 
 async function getFinalRedirectUrl(initialUrl: string) {
     try {
-        const url = new URL(initialUrl);
+        const url = new URL(initialUrl)
         if (!['http:', 'https:'].includes(url.protocol)) {
-            return null;
+            return null
         }
         if (initialUrl.length > 2000) {
-            return null;
+            return null
         }
-        const MAX_REDIRECTS = 10;
+        const MAX_REDIRECTS = 10
         const response = await axios.get(url.toString(), {
             maxRedirects: MAX_REDIRECTS,
             validateStatus: (status) => status < 400

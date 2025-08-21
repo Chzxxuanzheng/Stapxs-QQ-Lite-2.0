@@ -53,7 +53,7 @@
                         <span
                             v-if="msgItem instanceof RecallNotice"
                             style="color: yellow">::
-                                <span style="color: yellow; opacity: 0.7">{{ msgItem.operator.name }}</span>
+                            <span style="color: yellow; opacity: 0.7">{{ msgItem.operator.name }}</span>
                             recalled a message.</span>
                     </div>
                     <div v-else-if="msgItem.commandLine">

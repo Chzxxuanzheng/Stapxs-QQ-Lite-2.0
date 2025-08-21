@@ -111,7 +111,6 @@ import {
 import { runtimeData } from '@renderer/function/msg'
 import { reloadUsers } from '@renderer/function/utils/appUtil'
 import { vMenu } from '@renderer/function/utils/vcmd'
-import { loginInfo as loginInfo } from '@renderer/function/login'
 import { callBackend } from '@renderer/function/utils/systemUtil'
 import { SessionClass, Session } from '@renderer/function/model/session'
 import { vAutoFocus } from '@renderer/function/utils/vcmd'

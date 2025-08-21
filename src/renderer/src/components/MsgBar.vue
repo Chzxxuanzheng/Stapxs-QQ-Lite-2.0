@@ -22,8 +22,8 @@
             <NoticeBody
                 v-if="
                     !runtimeData.sysConfig.dont_parse_delete &&
-                    msgIndex instanceof Msg &&
-                    msgIndex.isDelete"
+                        msgIndex instanceof Msg &&
+                        msgIndex.isDelete"
                 :key="'delete-' + msgIndex.uuid"
                 :data="SystemNotice.delete()" />
             <!-- 消息体 -->
@@ -190,7 +190,7 @@ function isMultiselectMode(): boolean {
  * @param msg 消息对象
  */
 function forceAddToMultiselectList(msg: Msg) {
-    if (!multiselectMode) throw new Error('多选模式未开启，无法添加消息到多选列表。')
+    if (!multiselectMode.value) throw new Error('多选模式未开启，无法添加消息到多选列表。')
     if (!multipleSelectList.has(msg)) multipleSelectList.add(msg)
 }
 /**
@@ -198,7 +198,7 @@ function forceAddToMultiselectList(msg: Msg) {
  * @returns {number} 多选列表长度
  */
 function getMultiselectListLength(): number {
-    if (!multiselectMode) throw new Error('多选模式未开启，无法获取多选列表长度。')
+    if (!multiselectMode.value) throw new Error('多选模式未开启，无法获取多选列表长度。')
     return multipleSelectList.size
 }
 /**
@@ -229,7 +229,7 @@ function multiCanForward(): string {
     return ''
 }
 function toggleMsgInMultiselectList(msg: Msg) {
-    if (!multiselectMode) {
+    if (!multiselectMode.value) {
         throw new Error('多选模式未开启，无法添加消息到多选列表。')
     }
     if (!multipleSelectList.has(msg)) {

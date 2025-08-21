@@ -590,7 +590,7 @@ watch(() => proxyUrl.value, () => {
                 htmlPopBox(`
                         <header>以下配置将被删除</header>
                         <div style="color: var(--color-red);font-weight: 700;">
-                    ` + needless.join('<br>') + `</div>`, {
+                    ` + needless.join('<br>') + '</div>', {
                     title: this.$t('删除无用配置'),
                     button: [
                         {

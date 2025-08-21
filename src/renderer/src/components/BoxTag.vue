@@ -5,11 +5,15 @@
         <defs>
             <mask id="circle-mask">
                 <rect width="100%" height="100%" fill="white" />
-                <circle cx="10" cy="10" r="6" fill="black" />
+                <circle cx="10" cy="10" r="6"
+                    fill="black" />
             </mask>
         </defs>
-        <rect x="0" y="0" width="100%" height="20" rx="10" ry="10" fill="var(--color)" mask="url(#circle-mask)" />
-        <text x="20" y="14" font-size="12" fill="white" font-family="inherit">
+        <rect x="0" y="0" width="100%"
+            height="20" rx="10" ry="10"
+            fill="var(--color)" mask="url(#circle-mask)" />
+        <text x="20" y="14" font-size="12"
+            fill="white" font-family="inherit">
             <slot />
         </text>
     </svg>

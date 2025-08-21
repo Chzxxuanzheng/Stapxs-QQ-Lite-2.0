@@ -56,9 +56,9 @@
                 <!-- 群收纳盒 -->
                 <BoxBody
                     v-if="runtimeData.sysConfig.bubble_sort_user"
+                    key="inMessage-bubble-box"
                     v-menu.prevent="event => menu?.open('message', BubbleBox.instance, event)"
                     :data="markRaw(BubbleBox.instance)"
-                    key="inMessage-bubble-box"
                     from="message"
                     @user-click="
                         (session)=>userClick(session, BubbleBox.instance)" />
@@ -113,7 +113,6 @@ import {
 import { runtimeData } from '@renderer/function/msg'
 import { getRaw as getOpt, run as runOpt } from '@renderer/function/option'
 import { library } from '@fortawesome/fontawesome-svg-core'
-import { loginInfo as loginInfo } from '@renderer/function/login'
 
 import {
     faThumbTack,

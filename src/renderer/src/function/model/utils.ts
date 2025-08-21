@@ -18,7 +18,7 @@ export function autoReactive<T extends { new(...args: any[]): any }>(con: T): T 
             if (reactiveProxy.init) reactiveProxy.init()
             return reactiveProxy
         }
-    } as T;
+    } as T
 }
 
 export function formatTime(time: number,

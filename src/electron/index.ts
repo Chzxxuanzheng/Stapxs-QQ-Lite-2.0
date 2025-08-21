@@ -185,20 +185,20 @@ app.on('ready', async () => {
     }
     // 注册 customFileProtocol 到 app 协议
     protocol.handle('app', async (request) => {
-        const url = request.url.replace('app://', ''); // 移除协议部分
+        const url = request.url.replace('app://', '') // 移除协议部分
         // 实际路径在 __dirname 的上一层的 renderer 目录下
         // PS：为了防止报错堆栈输出过多的路径信息，在这里添加了 renderer 目录
-        const filePath = path.join(__dirname, '..', 'renderer', url);
+        const filePath = path.join(__dirname, '..', 'renderer', url)
 
         // 确认文件存在并返回内容
         try {
-            const fileContent = await fs.promises.readFile(filePath);
+            const fileContent = await fs.promises.readFile(filePath)
             return new Response(fileContent, {
                 headers: { 'Content-Type': getMimeType(filePath) },
-            });
+            })
         } catch (err) {
             logger.error(`Failed to load file: ${filePath}`, err)
-            return new Response('File not found', { status: 404 });
+            return new Response('File not found', { status: 404 })
         }
     })
     // 创建托盘
@@ -265,9 +265,9 @@ const mimeTypes = {
     '.jpg': 'image/jpeg',
     '.gif': 'image/gif',
     '.svg': 'image/svg+xml',
-};
+}
 
 function getMimeType(filePath) {
-    const ext = path.extname(filePath).toLowerCase();
-    return mimeTypes[ext] || 'application/octet-stream';
+    const ext = path.extname(filePath).toLowerCase()
+    return mimeTypes[ext] || 'application/octet-stream'
 }

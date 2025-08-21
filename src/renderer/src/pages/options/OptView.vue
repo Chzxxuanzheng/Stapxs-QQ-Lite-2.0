@@ -362,6 +362,7 @@
 
             scaleSave(event: Event) {
                 save(event)
+                // eslint-disable-next-line prefer-const
                 let makeSureBoxId: string
                 // 5 秒后自动取消防止误操作导致无法恢复
                 const timerId = setTimeout(() => {
