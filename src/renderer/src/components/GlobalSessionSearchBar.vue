@@ -122,14 +122,31 @@ function close() {
  * 初始化搜索框
  */
 function init() {
-    const activeChat = Array.from(Session.activeSessions).sort((a, b) => {
-        if (!a.preMessage?.time) return 1
-        if (!b.preMessage?.time) return -1
-        return b.preMessage.time.time - a.preMessage.time.time
-    })
-    const allChat = Session.sessionList.filter(item => !activeChat.includes(item))
-
-    searchInfo.originList = shallowReactive([...activeChat, ...allChat])
+    const sessionAtTopBox = (session: Session) => {
+        return session.boxes.find(box => box.alwaysTop) !== undefined
+    }
+    searchInfo.originList = shallowReactive([...Session.sessionList].sort((
+        a: Session,
+        b: Session,
+    ) => {
+        // 置顶最优先
+        if (a.alwaysTop && !b.alwaysTop) return -1
+        if (!a.alwaysTop && b.alwaysTop) return 1
+        // 收纳盒置顶次之
+        if (sessionAtTopBox(a) && !sessionAtTopBox(b)) return -1
+        if (!sessionAtTopBox(a) && sessionAtTopBox(b)) return 1
+        // 按照时间戳降序
+        if (a.preMessage?.time && !b.preMessage?.time) return -1
+        if (!a.preMessage?.time && b.preMessage?.time) return 1
+        if (a.preMessage?.time && b.preMessage?.time) {
+            return b.preMessage.time.time - a.preMessage.time.time
+        }
+        // 群组优先
+        if (a.type === 'group' && b.type !== 'group') return -1
+        if (b.type === 'group' && a.type !== 'group') return 1
+        // 按照名称首字母排序
+        return a.showNamePy.localeCompare(b.showNamePy)
+    }))
 
     searchInfo.query = shallowReactive([])
     searchInfo.isSearch = false
