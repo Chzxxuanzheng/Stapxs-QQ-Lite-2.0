@@ -171,6 +171,10 @@ watchEffect(() => {
             bodyWidth - menuWidth - 10 + 'px'
     }
 })
+export interface UserInfoPan {
+    open: (user: IUser|number, x: number, y: number) => void
+    close: () => void
+}
 </script>
 
 <style scoped>
