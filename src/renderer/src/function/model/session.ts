@@ -707,6 +707,7 @@ export class GroupSession extends Session {
     }
 
     override match(str: string): boolean {
+        str = str.trim().toLowerCase()
         if (this.name.matchStr(str)) return true
         if (String(this.id).includes(str)) return true
         return false
@@ -900,6 +901,7 @@ export class UserSession extends Session {
     override prepareUnactive(): void {/**/}
 
     override match(str: string): boolean {
+        str = str.trim().toLowerCase()
         if (this.name.matchStr(str)) return true
         if (this._remark?.matchStr(str)) return true
         if (String(this.id).includes(str)) return true
@@ -1013,6 +1015,7 @@ export class TempSession extends Session {
     }
 
     override match(str: string): boolean {
+        str = str.trim().toLowerCase()
         if (this.name.matchStr(str)) return true
         if (String(this.id).includes(str)) return true
         if (typeof this.group === 'number' && String(this.group).includes(str)) return true

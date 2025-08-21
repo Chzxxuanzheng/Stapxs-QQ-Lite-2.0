@@ -197,6 +197,7 @@ export class Member implements IUser {
     }
 
     match(search: string): boolean {
+        search = search.trim().toLowerCase()
         if (this.leave) return false
         if (this.nickname?.matchStr(search)) return true
         if (this.card?.matchStr(search)) return true
@@ -312,6 +313,7 @@ export class User implements IUser {
     }
 
     match(search: string): boolean {
+        search = search.trim().toLowerCase()
         if (this._nickname?.matchStr(search)) return true
         if (this._remark?.matchStr(search)) return true
         if (this._longNick?.matchStr(search)) return true
@@ -459,6 +461,7 @@ export class BaseUser {
     }
 
     match(search: string): boolean {
+        search = search.trim().toLowerCase()
         if (this._nickname?.matchStr(search)) return true
         if (this._card?.matchStr(search)) return true
         if (this.title?.matchStr(search)) return true
@@ -520,6 +523,7 @@ export class ForwardSender implements IUser{
         return this._nickname.py
     }
     match(search: string): boolean {
+        search = search.trim().toLowerCase()
         return this._nickname.matchStr(search)
     }
 }
