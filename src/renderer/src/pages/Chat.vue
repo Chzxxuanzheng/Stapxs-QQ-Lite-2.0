@@ -738,7 +738,7 @@ function chatScroll(event: Event) {
  * @param event 事件
  */
 function mainKey(event: KeyboardEvent) {
-    if (!event.shiftKey && event.key === 'enter') {
+    if (!event.shiftKey && event.key === 'Enter') {
         // enter 发送消息
         if (msgWhileSend.value != '') {
             sendMsg()
@@ -750,12 +750,12 @@ function mainKeyUp(event: KeyboardEvent) {
     // 发送完成后输入框会遗留一个换行，把它删掉 ……
     if (
         !event.shiftKey &&
-        event.key === 'enter' &&
+        event.key === 'Enter' &&
         msgWhileSend.value == '\n'
     ) {
         msgWhileSend.value = ''
     }
-    if (event.key !== 'enter') {
+    if (event.key !== 'Enter') {
         // 获取最后一个输入的符号用于判定 at
         const lastInput = msgWhileSend.value.at(-1)
         if (
