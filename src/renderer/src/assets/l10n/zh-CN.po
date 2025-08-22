@@ -1643,3 +1643,264 @@ msgstr ""
 
 msgid "sudo rm -rf /etc"
 msgstr ""
+
+msgid "(已离开)"
+msgstr ""
+
+msgid "Bilibili 预览信息服务"
+msgstr ""
+
+msgid "Tauri 代理服务似乎没有正常启动"
+msgstr ""
+
+msgid "[图片]"
+msgstr ""
+
+msgid "[视频]"
+msgstr ""
+
+msgid "ntqq协议"
+msgstr ""
+
+msgid "ntqq类型"
+msgstr ""
+
+msgid "{arg} 这是某个吸血鬼少女的年龄"
+msgstr ""
+
+msgid "不支持"
+msgstr ""
+
+msgid "不支持的协议: "
+msgstr ""
+
+msgid "不支持获取历史记录"
+msgstr ""
+
+msgid "个性签名设置失败"
+msgstr ""
+
+msgid "代理地址不包含 \\{url\\}，请检查配置"
+msgstr ""
+
+msgid "删除无用配置"
+msgstr ""
+
+msgid "别催了，已经在下了(>_<)"
+msgstr ""
+
+msgid "加入了群聊"
+msgstr ""
+
+msgid "加载失败"
+msgstr ""
+
+msgid "加载漫游表情失败"
+msgstr ""
+
+msgid "加载用户列表失败，请稍后再试。"
+msgstr ""
+
+msgid "协议仅支持ob/mk,详情请看如何连接.ws默认按ob处理"
+msgstr ""
+
+msgid "协议端名称"
+msgstr ""
+
+msgid "协议端版本"
+msgstr ""
+
+msgid "图标"
+msgstr ""
+
+msgid "基础链接预览服务"
+msgstr ""
+
+msgid "定位消息失败"
+msgstr ""
+
+msgid "将"
+msgstr ""
+
+msgid "延迟"
+msgstr ""
+
+msgid "当前会话"
+msgstr ""
+
+msgid "当前适配器不支持修改群头衔"
+msgstr ""
+
+msgid "当前适配器不支持修改群昵称"
+msgstr ""
+
+msgid "当前适配器不支持戳一戳"
+msgstr ""
+
+msgid "当前适配器不支持撤回消息"
+msgstr ""
+
+msgid "当前适配器不支持漫游表情"
+msgstr ""
+
+msgid "当前适配器不支持禁言成员"
+msgstr ""
+
+msgid "当前适配器不支持移除成员"
+msgstr ""
+
+msgid "当前适配器不支持移除群成员"
+msgstr ""
+
+msgid "当前适配器不支持表情回应"
+msgstr ""
+
+msgid "当前适配器不支持设置个性签名"
+msgstr ""
+
+msgid "当前适配器不支持设置昵称"
+msgstr ""
+
+msgid "当前适配器不支持设置群名称"
+msgstr ""
+
+msgid "当前适配器不支持退出群聊"
+msgstr ""
+
+msgid "戳了你"
+msgstr ""
+
+msgid "所有人"
+msgstr ""
+
+msgid "文件信息还没加载完呢，你是拿铁丝上网的吗？"
+msgstr ""
+
+msgid "文件大于 1GB。发送速度可能会非常缓慢；确认要发送吗？"
+msgstr ""
+
+msgid "无法回复该消息"
+msgstr ""
+
+msgid "无法戳一戳该用户"
+msgstr ""
+
+msgid "未知文件"
+msgstr ""
+
+msgid "未知通知类型"
+msgstr ""
+
+msgid "检查更新失败"
+msgstr ""
+
+msgid "检查更新结果ing"
+msgstr ""
+
+msgid "欸嘿，这个按钮只是用来占位置的"
+msgstr ""
+
+msgid "正在加载漫游表情"
+msgstr ""
+
+msgid "没有更多消息啦～"
+msgstr ""
+
+msgid "没有需要删除的配置项"
+msgstr ""
+
+msgid "点击确认以应用缩放比例，预览将在 5 秒后取消……"
+msgstr ""
+
+msgid "确认修改头衔？"
+msgstr ""
+
+msgid "确认禁言？"
+msgstr ""
+
+msgid "确认缩放比例"
+msgstr ""
+
+msgid "禁言中"
+msgstr ""
+
+msgid "离开"
+msgstr ""
+
+msgid "离开 Stapxs QQ Lite？"
+msgstr ""
+
+msgid "离开了群聊"
+msgstr ""
+
+msgid "离开盒子"
+msgstr ""
+
+msgid "缩放比例调整已取消，已恢复默认缩放比例。"
+msgstr ""
+
+msgid "网易云音乐预览信息服务"
+msgstr ""
+
+msgid "获取下载连接失败"
+msgstr ""
+
+msgid "获取个人信息失败"
+msgstr ""
+
+msgid "获取文件夹内容失败"
+msgstr ""
+
+msgid "获取用户信息失败"
+msgstr ""
+
+msgid "获取登录信息失败"
+msgstr ""
+
+msgid "获取群公告失败"
+msgstr ""
+
+msgid "获取群精华消息失败"
+msgstr ""
+
+msgid "解除了你的禁言"
+msgstr ""
+
+msgid "设置失败"
+msgstr ""
+
+msgid "设置成功"
+msgstr ""
+
+msgid "请先等发送完成..."
+msgstr ""
+
+msgid "还没有连接到 协议段 耶"
+msgstr ""
+
+msgid "这个人很懒什么都没有写～"
+msgstr ""
+
+msgid "连接_"
+msgstr ""
+
+msgid "连接中断..."
+msgstr ""
+
+msgid "连接到 协议端"
+msgstr ""
+
+msgid "适配器信息"
+msgstr ""
+
+msgid "通过了"
+msgstr ""
+
+msgid "邀请"
+msgstr ""
+
+msgid "重载"
+msgstr ""
+
+msgid "（试听）"
+msgstr ""
