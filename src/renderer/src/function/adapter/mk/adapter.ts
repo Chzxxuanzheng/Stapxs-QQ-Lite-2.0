@@ -799,17 +799,17 @@ export class MilkyAdapter implements AdapterInterface {
         switch (data.message_scene) {
             case 'friend':
                 return {
-                    id: data.sender_id,
+                    id: data.peer_id,
                     type: 'user',
                 }
             case 'group':
                 return {
-                    id: data.group.group_id,
+                    id: data.peer_id,
                     type: 'group',
                 }
             case 'temp':
                 return {
-                    id: data.sender_id,
+                    id: data.peer_id,
                     group_id: data.group?.group_id,
                     type: 'temp',
                 }
