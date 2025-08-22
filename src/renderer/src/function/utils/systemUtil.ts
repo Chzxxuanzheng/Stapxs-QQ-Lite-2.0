@@ -438,7 +438,7 @@ export function stdUrl(url: string){
         proxyUrl = runtimeData.sysConfig.proxyUrl.trim()
 
     // url 校验
-    if (proxyUrl && proxyUrl.includes('{url}')) {
+    if (proxyUrl && !proxyUrl.includes('{url}')) {
         new PopInfo().add(PopType.ERR, $t('代理地址不包含 \\{url\\}，请检查配置'),)
         proxyUrl = undefined
     }
