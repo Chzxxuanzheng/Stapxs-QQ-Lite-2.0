@@ -68,7 +68,7 @@
                         tag="div">
                         <FriendBody v-for="item in data.sortContentByTime"
                             :key="item.id"
-                            v-menu.prevent.stop="event => menu?.open('message', item, event, data)"
+                            v-menu.prevent.stop="event => menu?.open('message', toRaw(item), event, data)"
                             :data="item"
                             :from="from"
                             :box="data"
@@ -94,6 +94,7 @@
 import { SessionBox } from '@renderer/function/model/box'
 import {
     ref,
+    toRaw,
     inject,
     watch,
     computed,

@@ -327,10 +327,10 @@ function clickRemove() {
 function clickReload() {
     const target = getTarget() as Session
     target.unactive()
-    close()
     setTimeout(() => {
         target.activate()
     }, 1000)
+    close()
 }
 function clickReaded() {
     getTarget().setRead()
