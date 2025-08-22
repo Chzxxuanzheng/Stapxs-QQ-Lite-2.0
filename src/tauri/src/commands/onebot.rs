@@ -34,7 +34,7 @@ pub async fn onebot_connect(
     let app_handle_close = app_handle.clone();
 
     let ws_client = WebSocketClient::create(
-        &url,
+        &url.clone(),
         move || {
             info!("连接成功: {}", &url);
             let mut payload = HashMap::new();
