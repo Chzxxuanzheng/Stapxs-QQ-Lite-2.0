@@ -72,6 +72,9 @@ function createVMenu(): Directive<HTMLElement, (event: MenuEventData) => void> {
             const controller = new AbortController()
             const options = { signal: controller.signal }
 
+            // 修复由于 touch 阻断 click 事件冒泡的问题
+            let toushStartTime = 0
+
             // 添加监听
             el.addEventListener('contextmenu', (event) => {
                 if (prevent) event.preventDefault()
@@ -87,6 +90,7 @@ function createVMenu(): Directive<HTMLElement, (event: MenuEventData) => void> {
                 if (prevent) event.preventDefault()
                 if (stop) event.stopPropagation()
                 menuTouchHandle(event, binding)
+                toushStartTime = Date.now()
             }, options)
             el.addEventListener('touchmove', (event) => {
                 if (prevent) event.preventDefault()
@@ -97,7 +101,12 @@ function createVMenu(): Directive<HTMLElement, (event: MenuEventData) => void> {
                 if (prevent) event.preventDefault()
                 if (stop) event.stopPropagation()
                 menuTouchEnd(event)
+			
+				// 快速点击则触发点击事件
+                if (Date.now() - toushStartTime < 200)
+					event.target?.['click']?.()
             }, options)
+
             ;(el as any)._vMenuController = controller
         },
         unmounted(el: HTMLElement) {
