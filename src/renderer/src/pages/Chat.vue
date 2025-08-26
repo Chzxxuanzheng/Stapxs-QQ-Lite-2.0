@@ -575,13 +575,6 @@ const tagsDefault = {
         userId: -1,
         list: chat?.messageList ?? [],
     },
-    chatMove: {
-        move: 0,
-        onScroll: 'none' as 'none' | 'touch' | 'wheel',
-        lastTime: null as null | number,
-        speedList: [] as number[],
-        touchLast: null as null | TouchEvent,
-    },
     isMultiselectMode: false,
 }
 const details = [
@@ -1723,11 +1716,18 @@ function closeMultiselect() {
 //#endregion
 
 //#region == 窗口移动相关 ==================================================
+let chatMove = {
+    move: 0,
+    onScroll: 'none' as 'none' | 'touch' | 'wheel',
+    lastTime: null as null | number,
+    speedList: [] as number[],
+    touchLast: null as null | TouchEvent,
+}
 // 滚轮滑动
 function chatWheelEvent(event: WheelEvent) {
     const process = (event: WheelEvent) => {
         // 正在触屏,不处理
-        if (tags.chatMove.onScroll === 'touch') return false
+        if (chatMove.onScroll === 'touch') return false
         const x = event.deltaX
         const y = event.deltaY
         const absX = Math.abs(x)
@@ -1749,17 +1749,17 @@ function chatWheelEvent(event: WheelEvent) {
 
 // 触屏开始
 function chatMoveStartEvent(event: TouchEvent) {
-    if (tags.chatMove.onScroll === 'wheel') return
+    if (chatMove.onScroll === 'wheel') return
     // 触屏开始时，记录触摸点
-    tags.chatMove.touchLast = event
+    chatMove.touchLast = event
 }
 
 // 触屏滑动
 function chatMoveEvent(event: TouchEvent) {
-    if (tags.chatMove.onScroll === 'wheel') return
-    if (!tags.chatMove.touchLast) return
+    if (chatMove.onScroll === 'wheel') return
+    if (!chatMove.touchLast) return
     const touch = event.changedTouches[0]
-    const lastTouch = tags.chatMove.touchLast.changedTouches[0]
+    const lastTouch = chatMove.touchLast.changedTouches[0]
     const deltaX = touch.clientX - lastTouch.clientX
     const deltaY = touch.clientY - lastTouch.clientY
     const absX = Math.abs(deltaX)
@@ -1767,15 +1767,15 @@ function chatMoveEvent(event: TouchEvent) {
     // 斜度过大
     if (absY !== 0 && absX / absY < 2) return
     // 触屏移动
-    tags.chatMove.touchLast = event
+    chatMove.touchLast = event
     dispenseMove('touch', deltaX)
 }
 
 // 触屏滑动结束
 function chatMoveEndEvent(event: TouchEvent) {
-    if (tags.chatMove.onScroll === 'wheel') return
+    if (chatMove.onScroll === 'wheel') return
     const touch = event.changedTouches[0]
-    const lastTouch = tags.chatMove.touchLast?.changedTouches[0]
+    const lastTouch = chatMove.touchLast?.changedTouches[0]
     if (lastTouch) {
         const deltaX = touch.clientX - lastTouch.clientX
         const deltaY = touch.clientY - lastTouch.clientY
@@ -1787,14 +1787,14 @@ function chatMoveEndEvent(event: TouchEvent) {
         }
     }
     dispenseMove('touch', 0, true)
-    tags.chatMove.touchLast = null
+    chatMove.touchLast = null
 }
 /**
  * 分发触屏/滚轮情况
  */
 function dispenseMove(type: 'touch' | 'wheel', value: number, end: boolean = false) {
-    if (!end && tags.chatMove.onScroll === 'none') startMove(type, value)
-    if (tags.chatMove.onScroll === 'none') return
+    if (!end && chatMove.onScroll === 'none') startMove(type, value)
+    if (chatMove.onScroll === 'none') return
     if (end) endMove()
     else keepMove(value)
 }
@@ -1813,24 +1813,24 @@ function startMove(type: 'touch' | 'wheel', value: number) {
     if(chat) {
         chat.style.overflowY = 'hidden'
     }
-    tags.chatMove.onScroll = type
-    tags.chatMove.move = value
-    tags.chatMove.lastTime = Date.now()
+    chatMove.onScroll = type
+    chatMove.move = value
+    chatMove.lastTime = Date.now()
 }
 /**
  * 保持窗口移动
  */
 function keepMove(value: number){
-    tags.chatMove.move += value
+    chatMove.move += value
     const nowDate = Date.now()
-    if (!tags.chatMove.lastTime) return
-    const deltaTime = nowDate - tags.chatMove.lastTime
-    tags.chatMove.lastTime = nowDate
-    tags.chatMove.speedList.push(
+    if (!chatMove.lastTime) return
+    const deltaTime = nowDate - chatMove.lastTime
+    chatMove.lastTime = nowDate
+    chatMove.speedList.push(
         value / deltaTime
     )
-    if (tags.chatMove.move < 0) tags.chatMove.move = 0
-    const move = tags.chatMove.move
+    if (chatMove.move < 0) chatMove.move = 0
+    const move = chatMove.move
     const target = getTargetWin()
     if (!target) return
     target.style.transform = 'translateX(' + move + 'px)'
@@ -1840,13 +1840,13 @@ function keepMove(value: number){
  */
 function endMove() {
     // 保留自己要的数据
-    const move = tags.chatMove.move
-    const speedList = tags.chatMove.speedList
+    const move = chatMove.move
+    const speedList = chatMove.speedList
     // 重置数据
-    tags.chatMove.onScroll = 'none'
-    tags.chatMove.lastTime = 0
-    tags.chatMove.speedList = []
-    tags.chatMove.move = 0
+    chatMove.onScroll = 'none'
+    chatMove.lastTime = 0
+    chatMove.speedList = []
+    chatMove.move = 0
     // 复原css
     const pan = chatPan.value
     const chat = pan?.getElementsByClassName('chat')[0] as HTMLDivElement
