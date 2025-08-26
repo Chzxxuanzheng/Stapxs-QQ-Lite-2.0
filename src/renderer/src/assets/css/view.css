@@ -1434,7 +1434,7 @@ textarea:focus {
     bottom: calc(3% + 80px);
 }
 
-.viewer-tool-config-bar > div {
+.viewer-tool-config-bar > div.color {
     width: 24px;
     height: 24px;
     border: solid 3px var(--color-card);
@@ -1444,7 +1444,31 @@ textarea:focus {
     transition: 0.2s;
 }
 
-.viewer-tool-config-bar > svg {
+.viewer-tool-config-bar > div.line-width {
+    width: 20px;
+    height: 20px;
+    padding: 5px;
+    margin: 5px;
+    background-color: var(--color-main);
+    border-radius: 7px;
+    transition: 0.2s;
+    display: flex;
+}
+
+.viewer-tool-config-bar > div.line-width > div {
+    width: var(--line-width);
+    height: var(--line-width);
+    background-color: var(--color-card);
+    margin: auto;
+    border-radius: var(--line-width);
+}
+
+.viewer-tool-config-bar > div.color:hover,
+.viewer-tool-config-bar > div.line-width:hover {
+    transform: rotate(45deg);
+}
+
+.viewer-tool-config-bar > svg.rect-is-fill {
     width: 20px;
     height: 20px;
     padding: 5px;
@@ -1455,12 +1479,15 @@ textarea:focus {
     transition: 0.2s;
 }
 
-.viewer-tool-config-bar > svg:hover {
-    background-color: var(--color-font);
+.viewer-tool-config-bar > hr {
+    width: 0px;
+    margin: auto 2px;
+    height: 15px;
+    border: solid 1px var(--color-font);
 }
 
-.viewer-tool-config-bar > div:hover {
-    transform: rotate(45deg);
+.viewer-tool-config-bar > svg:hover {
+    background-color: var(--color-font);
 }
 
 .viewer-tool-config-bar > div.active {
@@ -1534,7 +1561,6 @@ textarea:focus {
     position: absolute;
     top: 0;
     left: 0;
-    cursor: not-allowed;
     height: 100vh;
     width: 100vw;
 }
@@ -1551,7 +1577,6 @@ textarea:focus {
     margin-top: calc(50vh - var(--height) * var(--scale) / 2 + var(--y));
     margin-left: calc(50vw - var(--width) * var(--scale) / 2 + var(--x));
     transition: all 0.2s;
-    cursor: var(--cursor);
     width: calc(var(--width) * var(--scale));
     height: calc(var(--height) * var(--scale));
     transform-origin: center;
@@ -1561,7 +1586,6 @@ textarea:focus {
 .viewer-img.grab > img,
 .viewer-img.grab > canvas {
     transition: none;
-    cursor: grabbing;
 }
 
 .viewer.loading {
@@ -1641,6 +1665,24 @@ textarea:focus {
     transform: translateX(100%);
 }
 
+.cursor-grab {
+    cursor: grab;
+}
+.cursor-grabbing {
+    cursor: grabbing;
+}
+.cursor-exit {
+    cursor: url(@renderer/assets/img/icons/exit.png), auto;
+}
+.cursor-not-allowed {
+    cursor: not-allowed
+}
+.cursor-pen {
+    cursor: url(@renderer/assets/img/icons/pen.png) 0 24, auto;
+}
+.cursor-crosshair {
+    cursor: crosshair;
+}
 @media (max-width: 900px) {
     /* emm...好难写啊...开摆，直接不写了 */
     .box-search {

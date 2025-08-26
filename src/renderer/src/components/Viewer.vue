@@ -8,18 +8,33 @@
                 <!-- 工具扩展设置 -->
                 <TransitionGroup class="viewer-bar viewer-tool-config-bar"
                     name="viewer-tool-config" tag="div">
+                    <!-- 颜色 -->
                     <template v-if="currentTool !== 'hand'">
                         <div v-for="(color, key) in colorMap"
+                            class="color"
                             :style="{'--color': color}"
                             :key="key"
                             :class="{'active': currentColor === key}"
                             @click.stop="selectColor(key)" />
                     </template>
+                    <!-- 线条粗细 -->
+                    <template v-if="currentTool !== 'hand'">
+                        <hr />
+                        <div v-for="size in lineWidthList"
+                            class="line-width"
+                            :key="size"
+                            :class="{'active': currentLineWidth === size}"
+                            @click.stop="selectLineWidth(size)">
+                            <div :style="{'--line-width': size + 'px'}"/>
+                        </div>
+                    </template>
+                    <!-- 是否填充 -->
                     <template v-if="currentTool === 'rect'">
-                        <font-awesome-icon v-if="toolConfig.rect.fill" :icon="['fas', 'square']"
-                            @click.stop="toolConfig.rect.fill = false" />
-                        <font-awesome-icon v-else :icon="['far', 'square']"
-                            @click.stop="toolConfig.rect.fill = true" />
+                        <hr />
+                        <font-awesome-icon
+                            class="rect-is-fill"
+                            :icon="[toolConfig.rect.fill ? 'fas' : 'far', 'square']"
+                            @click.stop="toolConfig.rect.fill = !toolConfig.rect.fill" />
                     </template>
                 </TransitionGroup>
                 <!-- 按钮栏 -->
@@ -86,7 +101,7 @@
                 <Transition mode="out-in"
                     :name="`viewer-change-img-${changeViewerCssName}`">
                     <div :key="currentImg?.src">
-                        <div v-if="loading" class="viewer loading">
+                        <div v-if="loading" class="viewer loading cursor-exit">
                             <font-awesome-icon :icon="['fas', 'spinner']" />
                             {{ $t('加载ing') }}
                         </div>
@@ -94,7 +109,9 @@
                             :class="{
                                 'viewer-img': true,
                                 'grab': mouseMoveInfo,
-                                'zooming': zoomTimeout
+                                'zooming': zoomTimeout,
+                                'cursor-not-allowed': edit,
+                                'cursor-exit': !edit,
                             }">
                             <!-- 水平滚动条 -->
                             <div v-hide="!showScrollbarX" class="scrollbar x"
@@ -107,6 +124,7 @@
                                 <div class="scrollbar-thumb" :style="scrollbarThumbYStyle"></div>
                             </div>
                             <img v-show="!edit"
+                                :class="getImgCursorClassByTool()"
                                 :src="currentImg?.src"
                                 :style="{
                                     '--x': modify.x + 'px',
@@ -115,7 +133,6 @@
                                     '--scale': modify.scale,
                                     '--width': currentImgInfo?.width + 'px',
                                     '--height': currentImgInfo?.height + 'px',
-                                    '--cursor': 'grab',
                                 }"
                                 :key="currentImg?.src"
                                 @wheel.stop.prevent="onWheel"
@@ -125,6 +142,7 @@
                                 @mouseup="onMouseUp"
                                 @mouseleave="mouseMoveInfo=undefined;" />
                             <canvas v-show="edit" ref="canvas"
+                                :class="getImgCursorClassByTool()"
                                 :style="{
                                     '--x': modify.x + 'px',
                                     '--y': modify.y + 'px',
@@ -132,7 +150,6 @@
                                     '--scale': modify.scale,
                                     '--width': currentImgInfo?.width + 'px',
                                     '--height': currentImgInfo?.height + 'px',
-                                    '--cursor': getCursorByTool(),
                                 }"
                                 @wheel.stop.prevent="onWheel"
                                 @click.stop="onClick"
@@ -176,6 +193,7 @@ const colorMap = {
     'black': '#000000',
     'white': '#ffffff',
 }
+const lineWidthList = [3, 5, 10, 15, 20]
 
 type Color = keyof typeof colorMap
 
@@ -192,6 +210,7 @@ const canvas = useTemplateRef('canvas')
 const prev = computed(() => currentImg.value?.prev)
 const next = computed(() => currentImg.value?.next)
 const currentColor = computed(() => toolConfig[currentTool.value].color)
+const currentLineWidth = computed(() => toolConfig[currentTool.value].width)
 const loading = shallowRef(true)
 const edit = shallowRef(false)
 let currentImgInfo = shallowRef<{
@@ -215,10 +234,12 @@ const currentTool = shallowRef<EditToolType>('hand')
 const toolConfig = {
     pen: shallowReactive({
         color: 'red',
+        width: 5,
     }),
     rect: shallowReactive({
         color: 'red',
         fill: false,
+        width: 5,
     }),
 }
 
@@ -370,6 +391,15 @@ let editHistory: ImageData[] = []
 function selectColor(color: Color) {
     if (currentTool.value === 'hand') return
     toolConfig[currentTool.value].color = color
+}
+
+/**
+ * 选择线条宽度
+ * @param width 宽度
+ */
+function selectLineWidth(width: number) {
+    if (currentTool.value === 'hand') return
+    toolConfig[currentTool.value].width = width
 }
 /**
  * 切换编辑工具
@@ -639,7 +669,7 @@ function handMouseUp(_: MouseEvent) {
 }
 
 let penLastPoint: {x: number, y: number} | undefined
-const width = 10
+
 function penMouseDown(event: MouseEvent) {
     const ctx = canvas.value?.getContext('2d')
     if (!ctx) return
@@ -648,11 +678,11 @@ function penMouseDown(event: MouseEvent) {
     const point = getPos(event.clientX, event.clientY)
 
     // 结尾有圆，开头再补一个圆，好看
-    ctx.fillStyle = colorMap[toolConfig.pen.color]
-    ctx.strokeStyle = colorMap[toolConfig.pen.color]
-    ctx.lineWidth = width
+    ctx.fillStyle = currentColor.value
+    ctx.strokeStyle = currentColor.value
+    ctx.lineWidth = currentLineWidth.value
     ctx.beginPath()
-    ctx.arc(point.x, point.y, width / 2, 0, Math.PI * 2)
+    ctx.arc(point.x, point.y, currentLineWidth.value / 2, 0, Math.PI * 2)
     ctx.fill()
     penLastPoint = point
 }
@@ -667,7 +697,7 @@ function penMouseMove(event: MouseEvent) {
     ctx.stroke()
     // 末端整个圆，防止连接处出现裂缝
     ctx.beginPath()
-    ctx.arc(point.x, point.y, width / 2, 0, Math.PI * 2)
+    ctx.arc(point.x, point.y, currentLineWidth.value / 2, 0, Math.PI * 2)
     ctx.fill()
     penLastPoint = point
 }
@@ -680,9 +710,9 @@ function rectMouseDown(event: MouseEvent) {
     const ctx = canvas.value?.getContext('2d')
     if (!ctx) return
     saveEditHistory()
-    ctx.lineWidth = width
-    ctx.fillStyle = colorMap[toolConfig.rect.color]
-    ctx.strokeStyle = colorMap[toolConfig.rect.color]
+    ctx.lineWidth = currentLineWidth.value
+    ctx.fillStyle = currentColor.value
+    ctx.strokeStyle = currentColor.value
     const point = getPos(event.clientX, event.clientY)
     rectStartPoint = point
 }
@@ -769,6 +799,16 @@ useKeyboard('ctrl+z', ()=>{
     editUndo()
     return true
 })
+useKeyboard('ctrl+c', ()=>{
+    if (edit.value) editCopy()
+    else copy()
+    return true
+})
+useKeyboard('ctrl+s', ()=>{
+    if (edit.value) downloadCanvas()
+    else download()
+    return true
+})
 //#endregion
 
 function handleEvent(event: Event) {
@@ -776,12 +816,13 @@ function handleEvent(event: Event) {
     event.preventDefault()
 }
 
-function getCursorByTool(): string {
+function getImgCursorClassByTool(): string {
+    if (mouseMoveInfo.value) return 'cursor-grabbing'
     switch (currentTool.value) {
-        case 'hand': return 'grab'
-        case 'pen': return 'default'
-        case 'rect': return 'crosshair'
-        default: return 'default'
+        case 'hand': return 'cursor-grab'
+        case 'pen': return 'cursor-pen'
+        case 'rect': return 'cursor-crosshair'
+        default: return ''
     }
 }
 
