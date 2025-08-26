@@ -844,7 +844,7 @@ function touchResizeStart(point1: Touch, point2: Touch) {
     // 计算两指中心点
     const centerX = (point1.clientX + point2.clientX) / 2
     const centerY = (point1.clientY + point2.clientY) / 2
-    
+
     touchResizeInfo = {
         initialDistance: distance,
         initialScale: modify.scale,
@@ -856,33 +856,33 @@ function touchResizeStart(point1: Touch, point2: Touch) {
 }
 function touchResizeKeep(point1: Touch, point2: Touch) {
     if (!touchResizeInfo) return
-    
+
     // 计算当前两指间距离
     const currentDistance = getTouchDistance(point1, point2)
     // 计算缩放比例
     const scaleChange = currentDistance / touchResizeInfo.initialDistance
     let newScale = touchResizeInfo.initialScale * scaleChange
-    
+
     // 限制缩放范围（0.1倍到10倍）
     newScale = Math.max(0.1, Math.min(newScale, 10))
-    
+
     // 计算当前两指中心点
     const centerX = (point1.clientX + point2.clientX) / 2
     const centerY = (point1.clientY + point2.clientY) / 2
-    
+
     // 计算中心点相对于图片中心的偏移
     const viewCenterX = vw.value * 50
     const viewCenterY = vh.value * 50
-    
+
     // 计算缩放中心相对于视口中心的偏移
     const scaleOffsetX = centerX - viewCenterX
     const scaleOffsetY = centerY - viewCenterY
-    
+
     // 根据缩放比例调整位置，确保缩放中心保持不变
     const scaleRatio = newScale / touchResizeInfo.initialScale
     const newX = touchResizeInfo.initialX - scaleOffsetX * (scaleRatio - 1)
     const newY = touchResizeInfo.initialY - scaleOffsetY * (scaleRatio - 1)
-    
+
     // 应用缩放和位移
     modify.scale = newScale
     modify.x = newX
@@ -900,66 +900,79 @@ function getTouchDistance(point1: Touch, point2: Touch): number {
 
 //#region == 按键监听 ===============================================
 useKeyboard('ArrowLeft', 'a', ()=>{
+    if (!currentImg.value) return
     if (!prev) return
     prevImg()
     return true
 })
 useKeyboard('ArrowRight', 'd', ()=>{
+    if (!currentImg.value) return
     if (!next) return
     nextImg()
     return true
 })
 useKeyboard('ArrowUp', 'w', ()=>{
+    if (!currentImg.value) return
     if (loading.value) return
     modify.scale /= 0.9
     return true
 })
 useKeyboard('ArrowDown', 's', ()=>{
+    if (!currentImg.value) return
     if (loading.value) return
     modify.scale *= 0.9
     return true
 })
 useKeyboard('q', ()=>{
+    if (!currentImg.value) return
     if (loading.value) return
     rotate(-90)
     return true
 })
 useKeyboard('e', ()=>{
+    if (!currentImg.value) return
     if (loading.value) return
     rotate(90)
     return true
 })
 useKeyboard('r', ()=>{
+    if (!currentImg.value) return
     if (loading.value) return
     resetModify()
     return true
 })
 useKeyboard('1', ()=>{
+    if (!currentImg.value) return
     if (!edit.value) return
     switchTool('hand')
     return true
 })
 useKeyboard('2', ()=>{
+    if (!currentImg.value) return
     if (!edit.value) return
     switchTool('pen')
     return true
 })
 useKeyboard('3', ()=>{
+    if (!currentImg.value) return
     if (!edit.value) return
     switchTool('rect')
     return true
 })
 useKeyboard('ctrl+z', ()=>{
+    if (!currentImg.value) return
     if (!edit.value) return
     editUndo()
     return true
 })
 useKeyboard('ctrl+c', ()=>{
+    if (!currentImg.value) return
     if (edit.value) editCopy()
     else copy()
     return true
 })
 useKeyboard('ctrl+s', ()=>{
+    if (!currentImg.value) return
     if (edit.value) downloadCanvas()
     else download()
     return true
