@@ -112,7 +112,10 @@
                                 'zooming': zoomTimeout,
                                 'cursor-not-allowed': edit,
                                 'cursor-exit': !edit,
-                            }">
+                            }"
+                            @touchstart="onGlobalTouchStart"
+                            @touchmove="onGlobalTouchMove"
+                            @touchend="onGlobalTouchEnd">
                             <!-- 水平滚动条 -->
                             <div v-hide="!showScrollbarX" class="scrollbar x"
                                 @wheel.stop.prevent="onScrollbarWheel('x', $event)">
@@ -140,6 +143,9 @@
                                 @mousedown="onMouseDown"
                                 @mousemove="onMouseMove"
                                 @mouseup="onMouseUp"
+                                @touchstart="onImgTouchStart"
+                                @touchmove="onImgTouchMove"
+                                @touchend="onImgTouchEnd"
                                 @mouseleave="mouseMoveInfo=undefined;" />
                             <canvas v-show="edit" ref="canvas"
                                 :class="getImgCursorClassByTool()"
@@ -157,6 +163,9 @@
                                 @mousemove.stop.prevent="onMouseMove"
                                 @mouseup.stop.prevent="onMouseUp"
                                 @mouseout.stop="onMouseout"
+                                @touchstart="onImgTouchStart"
+                                @touchmove="onImgTouchMove"
+                                @touchend="onImgTouchEnd"
                                 @mouseleave="mouseMoveInfo=undefined;" />
                         </div>
                     </div>
@@ -229,6 +238,16 @@ const moveTimeout = shallowRef<ReturnType<typeof setTimeout> | undefined>()
 const changeViewerCssName = shallowRef('next')
 
 const forceShowButton = shallowRef(false)
+
+// 双指缩放相关状态
+let touchResizeInfo: {
+    initialDistance: number,
+    initialScale: number,
+    initialX: number,
+    initialY: number,
+    centerX: number,
+    centerY: number
+} | undefined
 
 const currentTool = shallowRef<EditToolType>('hand')
 const toolConfig = {
@@ -588,13 +607,13 @@ function onMouseDown(event: MouseEvent) {
 
     switch (currentTool.value) {
         case 'hand':
-            handMouseDown(event)
+            handMouseDown(event.clientX, event.clientY)
             break
         case 'pen':
-            penMouseDown(event)
+            penMouseDown(event.clientX, event.clientY)
             break
         case 'rect':
-            rectMouseDown(event)
+            rectMouseDown(event.clientX, event.clientY)
             break
     }
 }
@@ -604,13 +623,13 @@ function onMouseMove(event: MouseEvent) {
 
     switch (currentTool.value) {
         case 'hand':
-            handMouseMove(event)
+            handMouseMove(event.clientX, event.clientY)
             break
         case 'pen':
-            penMouseMove(event)
+            penMouseMove(event.clientX, event.clientY)
             break
         case 'rect':
-            rectMouseMove(event)
+            rectMouseMove(event.clientX, event.clientY)
             break
     }
 
@@ -620,17 +639,17 @@ function onMouseUp(event: MouseEvent) {
 
     switch (currentTool.value) {
         case 'hand':
-            handMouseUp(event)
+            handMouseUp(event.clientX, event.clientY)
             break
         case 'pen':
-            penMouseUp(event)
+            penMouseUp(event.clientX, event.clientY)
             break
         case 'rect':
-            rectMouseUp(event)
+            rectMouseUp(event.clientX, event.clientY)
             break
     }
 }
-function onClick(event: MouseEvent) {
+function onClick(event: Event) {
     handleEvent(event)
     if (Date.now() -  mouseDownTime > 200) return
 
@@ -641,41 +660,119 @@ function onMouseout(event: MouseEvent) {
 
     switch (currentTool.value) {
         case 'hand':
-            handMouseUp(event)
+            handMouseUp(event.clientX, event.clientY)
             break
         case 'pen':
-            penMouseUp(event)
+            penMouseUp(event.clientX, event.clientY)
             break
         case 'rect':
-            rectMouseUp(event)
+            rectMouseUp(event.clientX, event.clientY)
             break
     }
 }
 
-function handMouseDown(event: MouseEvent) {
-    mouseMoveInfo.value = { x: event.clientX, y: event.clientY, modifyX: modify.x, modifyY: modify.y }
+let onImgTouchFlag = false
+function onImgTouchStart(event: TouchEvent) {
+    if (event.touches.length !== 1) return
+
+    mouseDownTime = Date.now()
+
+    handleEvent(event)
+    onImgTouchFlag = true
+    const touch = event.touches[0]
+    switch (currentTool.value) {
+        case 'hand':
+            handMouseDown(touch.clientX, touch.clientY)
+            break
+        case 'pen':
+            penMouseDown(touch.clientX, touch.clientY)
+            break
+        case 'rect':
+            rectMouseDown(touch.clientX, touch.clientY)
+            break
+    }
 }
-function handMouseMove(event: MouseEvent) {
+function onImgTouchMove(event: TouchEvent) {
+    if (event.touches.length !== 1) return
+    handleEvent(event)
+    const touch = event.touches[0]
+    switch (currentTool.value) {
+        case 'hand':
+            handMouseMove(touch.clientX, touch.clientY)
+            break
+        case 'pen':
+            penMouseMove(touch.clientX, touch.clientY)
+            break
+        case 'rect':
+            rectMouseMove(touch.clientX, touch.clientY)
+            break
+    }
+}
+function onImgTouchEnd(event: TouchEvent) {
+    if (!onImgTouchFlag) return
+    handleEvent(event)
+    onImgTouchFlag = false
+
+    // 点击判定
+    onClick(event)
+
+    // 结束单指操作
+    switch (currentTool.value) {
+        case 'hand':
+            handMouseUp(0, 0)
+            break
+        case 'pen':
+            penMouseUp(0, 0)
+            break
+        case 'rect':
+            rectMouseUp(0, 0)
+            break
+    }
+}
+
+let onGlobalTouch = false
+function onGlobalTouchStart(event: TouchEvent) {
+    if (event.touches.length !== 2) return
+    handleEvent(event)
+    onGlobalTouch = true
+    touchResizeStart(event.touches[0], event.touches[1])
+}
+function onGlobalTouchMove(event: TouchEvent) {
+    if (event.touches.length !== 2) return
+    handleEvent(event)
+    touchResizeKeep(event.touches[0], event.touches[1])
+}
+function onGlobalTouchEnd(event: TouchEvent) {
+    if (!onGlobalTouch) return
+    handleEvent(event)
+    onGlobalTouch = false
+    touchResizeInfo = undefined
+}
+
+function handMouseDown(x: number, y: number) {
+    mouseMoveInfo.value = { x, y, modifyX: modify.x, modifyY: modify.y }
+}
+function handMouseMove(x: number, y: number) {
     if (!mouseMoveInfo.value) return
 
-    const dx = event.clientX - mouseMoveInfo.value.x
-    const dy = event.clientY - mouseMoveInfo.value.y
+    const dx = x - mouseMoveInfo.value.x
+    const dy = y - mouseMoveInfo.value.y
     modify.x = mouseMoveInfo.value.modifyX + dx
     modify.y = mouseMoveInfo.value.modifyY + dy
 }
-function handMouseUp(_: MouseEvent) {
+function handMouseUp(_x: number, _y: number) {
     if (!mouseMoveInfo.value) return
     mouseMoveInfo.value = undefined
 }
 
 let penLastPoint: {x: number, y: number} | undefined
 
-function penMouseDown(event: MouseEvent) {
+function penMouseDown(x: number, y: number) {
     const ctx = canvas.value?.getContext('2d')
     if (!ctx) return
 
     saveEditHistory()
-    const point = getPos(event.clientX, event.clientY)
+    const point = getPos(x, y)
 
     // 结尾有圆，开头再补一个圆，好看
     ctx.fillStyle = currentColor.value
@@ -686,11 +783,11 @@ function penMouseDown(event: MouseEvent) {
     ctx.fill()
     penLastPoint = point
 }
-function penMouseMove(event: MouseEvent) {
+function penMouseMove(x: number, y: number) {
     if (!penLastPoint) return
     const ctx = canvas.value?.getContext('2d')
     if (!ctx) return
-    const point = getPos(event.clientX, event.clientY)
+    const point = getPos(x, y)
     ctx.beginPath()
     ctx.moveTo(penLastPoint.x, penLastPoint.y)
     ctx.lineTo(point.x, point.y)
@@ -701,26 +798,26 @@ function penMouseMove(event: MouseEvent) {
     ctx.fill()
     penLastPoint = point
 }
-function penMouseUp(_: MouseEvent) {
+function penMouseUp(_x: number, _y: number) {
     penLastPoint = undefined
 }
 
 let rectStartPoint: {x: number, y: number} | undefined
-function rectMouseDown(event: MouseEvent) {
+function rectMouseDown(x: number, y: number) {
     const ctx = canvas.value?.getContext('2d')
     if (!ctx) return
     saveEditHistory()
     ctx.lineWidth = currentLineWidth.value
     ctx.fillStyle = currentColor.value
     ctx.strokeStyle = currentColor.value
-    const point = getPos(event.clientX, event.clientY)
+    const point = getPos(x, y)
     rectStartPoint = point
 }
-function rectMouseMove(event: MouseEvent) {
+function rectMouseMove(x: number, y: number) {
     if (!rectStartPoint) return
     const ctx = canvas.value?.getContext('2d')
     if (!ctx) return
-    const point = getPos(event.clientX, event.clientY)
+    const point = getPos(x, y)
     const lastImg = editHistory.at(-1)
     if (!lastImg) return
     ctx.putImageData(lastImg, 0, 0)
@@ -728,11 +825,11 @@ function rectMouseMove(event: MouseEvent) {
     ctx.rect(rectStartPoint.x, rectStartPoint.y, point.x - rectStartPoint.x, point.y - rectStartPoint.y)
     ctx.stroke()
 }
-function rectMouseUp(event: MouseEvent) {
+function rectMouseUp(x: number, y: number) {
     if (!rectStartPoint) return
     const ctx = canvas.value?.getContext('2d')
     if (!ctx) return
-    const point = getPos(event.clientX, event.clientY)
+    const point = getPos(x, y)
     ctx.beginPath()
     ctx.rect(rectStartPoint.x, rectStartPoint.y, point.x - rectStartPoint.x, point.y - rectStartPoint.y)
     if (toolConfig.rect.fill)
@@ -740,6 +837,64 @@ function rectMouseUp(event: MouseEvent) {
     else
         ctx.stroke()
     rectStartPoint = undefined
+}
+function touchResizeStart(point1: Touch, point2: Touch) {
+    // 计算两指间的初始距离
+    const distance = getTouchDistance(point1, point2)
+    // 计算两指中心点
+    const centerX = (point1.clientX + point2.clientX) / 2
+    const centerY = (point1.clientY + point2.clientY) / 2
+    
+    touchResizeInfo = {
+        initialDistance: distance,
+        initialScale: modify.scale,
+        initialX: modify.x,
+        initialY: modify.y,
+        centerX,
+        centerY
+    }
+}
+function touchResizeKeep(point1: Touch, point2: Touch) {
+    if (!touchResizeInfo) return
+    
+    // 计算当前两指间距离
+    const currentDistance = getTouchDistance(point1, point2)
+    // 计算缩放比例
+    const scaleChange = currentDistance / touchResizeInfo.initialDistance
+    let newScale = touchResizeInfo.initialScale * scaleChange
+    
+    // 限制缩放范围（0.1倍到10倍）
+    newScale = Math.max(0.1, Math.min(newScale, 10))
+    
+    // 计算当前两指中心点
+    const centerX = (point1.clientX + point2.clientX) / 2
+    const centerY = (point1.clientY + point2.clientY) / 2
+    
+    // 计算中心点相对于图片中心的偏移
+    const viewCenterX = vw.value * 50
+    const viewCenterY = vh.value * 50
+    
+    // 计算缩放中心相对于视口中心的偏移
+    const scaleOffsetX = centerX - viewCenterX
+    const scaleOffsetY = centerY - viewCenterY
+    
+    // 根据缩放比例调整位置，确保缩放中心保持不变
+    const scaleRatio = newScale / touchResizeInfo.initialScale
+    const newX = touchResizeInfo.initialX - scaleOffsetX * (scaleRatio - 1)
+    const newY = touchResizeInfo.initialY - scaleOffsetY * (scaleRatio - 1)
+    
+    // 应用缩放和位移
+    modify.scale = newScale
+    modify.x = newX
+    modify.y = newY
+}
+/**
+ * 计算两个触摸点之间的距离
+ */
+function getTouchDistance(point1: Touch, point2: Touch): number {
+    const dx = point1.clientX - point2.clientX
+    const dy = point1.clientY - point2.clientY
+    return Math.sqrt(dx * dx + dy * dy)
 }
 //#endregion
 
