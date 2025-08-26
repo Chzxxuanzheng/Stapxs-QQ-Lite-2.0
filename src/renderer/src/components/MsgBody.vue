@@ -111,7 +111,7 @@
                                 :src="item.src"
                                 @load="imageLoaded"
                                 @error="imgLoadFail"
-                                @click="imgClick(item.imgId)">
+                                @click="imgClick(item.imgData)">
                             <template v-else-if="item instanceof FaceSeg">
                                 <img v-if="item.src"
                                     :alt="item.text"
@@ -280,6 +280,7 @@
                                     alt="预览图片"
                                     title="查看图片"
                                     :src="pageViewInfo.img"
+                                    @click="imgClick(pageViewInfo.img)"
                                     @load="linkViewPicFin"
                                     @error="linkViewPicErr">
                                 <div class="body">
@@ -370,7 +371,6 @@
                 'emoji-like': true,
                 'me': needSpecialMe(),
             }">
-            <!-- lgrv1的有bug,收不了表情事件...收没做测试 -->
             <div class="emoji-like-body">
                 <TransitionGroup name="emoji-like">
                     <div v-for="info, id in data.emojis"
@@ -392,7 +392,6 @@
 
 <script setup lang="ts">
 import Option from '@renderer/function/option'
-import app from '@renderer/main'
 import markdownit from 'markdown-it'
 
 import { MsgBodyFuns as ViewFuns } from '@renderer/function/model/msg-body'
@@ -435,9 +434,10 @@ import { Msg, SelfMsg} from '@renderer/function/model/msg'
 import { Member, IUser } from '@renderer/function/model/user'
 import { wheelMask } from '@renderer/function/utils/input'
 import { GroupSession } from '@renderer/function/model/session'
-import { UserInfoPan } from '@renderer/pages/Chat.vue'
 import { Role } from '@renderer/function/adapter/enmu'
 import CardMessage from './msg-component/CardMessage.vue'
+import { Img } from '@renderer/function/model/img'
+import { UserInfoPan } from './UserInfoPan.vue'
 
 //#region == 声明变量 ================================================================
 const {
@@ -449,7 +449,7 @@ const {
         dimNonExistentMsg: true,
     },
     userInfoPan
- } = defineProps<{
+} = defineProps<{
     data: Msg | SelfMsg
     selected?: boolean
     config: MsgBodyConfig
@@ -516,6 +516,7 @@ defineExpose({
 
     export default defineComponent({
         name: 'MsgBody',
+        inject: ['viewer'],
         data() {
             return {
                 md: markdownit({ breaks: true }),
@@ -608,29 +609,12 @@ defineExpose({
 
             /**
              * 图片点击
-             * @param id 消息 ID
+             * @param img
              */
-            imgClick(id: string) {
-                const images = runtimeData.mergeMessageImgList ?? runtimeData.img_list
-                if (images !== undefined) {
-                    // 寻找实际的序号
-                    let num = -1
-                    for (let i = 0; i < images.length; i++) {
-                        const item = images[i]
-                        if (item.id == id) {
-                            num = i
-                            break
-                        }
-                    }
-                    // 显示
-                    const viewer = app.config.globalProperties.$viewer
-                    if (num >= 0 && viewer) {
-                        viewer.view(num)
-                        viewer.show()
-                        runtimeData.tags.viewer.index = num
-                    } else {
-                        new PopInfo().add(PopType.INFO, this.$t('定位图片失败'))
-                    }
+            imgClick(img: Img | string) {
+                if (this.viewer) {
+                    if (typeof img === 'string') img = new Img(img)
+                    ;(this.viewer as any).open(img)
                 }
             },
 

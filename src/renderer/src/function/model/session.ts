@@ -32,6 +32,7 @@ import { GroupFile, GroupFileFolder } from './file'
 import { SessionBox } from './box'
 import { Role } from '../adapter/enmu'
 import { SessionData } from '../adapter/interface'
+import { Img } from './img'
 
 /**
  * 会话基类
@@ -47,8 +48,8 @@ export abstract class Session {
     protected abstract _face: ComputedRef<string>
     // 消息列表相关
     messageList: Message[] = shallowReactive([])
-    imgList: {url: string, id: string}[] = []
-    imgListUpdateTime: number = 0
+    imgHead: Img | undefined
+    imgTail: Img | undefined
     newMsg: number = 0
     headMsg?: Msg
     preMessage?: Message
@@ -117,7 +118,8 @@ export abstract class Session {
      */
     unactive() {
         this.messageList.length = 0
-        this.imgList.length = 0
+        this.imgHead = undefined
+        this.imgTail = undefined
         this.headMsg = undefined
         this.preMessage = undefined
         this.highlightInfo.length = 0
@@ -503,47 +505,60 @@ export abstract class Session {
     //#region == 图片更新 ==============================================================
     private imgFromNewMsg(msg: Message): void {
         if (!(msg instanceof Msg)) return
-        const imgList = msg.imgList
+        const imgList = toRaw(msg.imgList)
         if (imgList.length === 0) return
-        this.imgList.push(...imgList)
-        this.imgListUpdateTime ++
+        if (!this.imgHead || !this.imgTail) {
+            this.imgHead = imgList.at(0)
+            this.imgTail = imgList.at(-1)
+        }else {
+            this.imgTail.concatNext(imgList.at(0)!)
+        }
     }
     private imgFromHistory(msgs: Message[]): void {
-        const imgList: {url: string, id: string}[] = []
-        for (const msg of msgs) {
+        for (const msg of [...msgs].reverse()) {
             if (!(msg instanceof Msg)) continue
             if (msg.imgList.length === 0) continue
-            imgList.push(...msg.imgList)
+            const imgList = toRaw(msg.imgList)
+            if (!this.imgHead || !this.imgTail) {
+                this.imgHead = imgList.at(0)
+                this.imgTail = imgList.at(-1)
+            }else {
+                this.imgHead.concatPrev(imgList.at(-1)!)
+                this.imgHead = imgList.at(0)
+            }
         }
-        this.imgList = imgList.concat(this.imgList)
-        this.imgListUpdateTime ++
     }
     /**
      * 自身消息更新图片列表用
      */
     updateImgList(
-        oldData: {url: string, id: string}[],
-        newData: {url: string, id: string}[],
+        oldData: Img[],
+        newData: Img[],
     ): void {
-        if (oldData.length === 0) throw new Error('旧数据不能为空')
-        const startId = this.imgList.findIndex(item => item.id === oldData[0].id)
-        if (startId < 0) throw new Error('旧数据不在图片列表中')
-        // 替换
-        this.imgList.splice(startId, oldData.length, ...newData)
-        this.imgListUpdateTime ++
+        if (oldData.length === 0 && newData.length !== 0) throw new Error('旧数据不能为空')
+
+        const head = oldData.at(0)!.prev
+        const tail = newData.at(-1)!.next
+        this.removeImgList(oldData)
+        if (head) {
+            head.extendNext(newData.at(0)!)
+            if (!this.imgTail || this.imgTail === head) this.imgTail = newData.at(-1)!
+        }else if (tail) {
+            tail.extendPrev(oldData.at(-1)!)
+            if (!this.imgHead || this.imgHead === tail) this.imgHead = newData.at(0)!
+        }
     }
     /**
      * 删除图片
      * @param imgs 消息段
      * @returns
      */
-    removeImgList(imgs: {url: string, id: string}[]): void {
-        if (imgs.length === 0) return
-        const index = imgs[0].id
-        const startId = this.imgList.findIndex(item => item.id === index)
-        if (startId < 0) return
-        this.imgList.splice(startId, imgs.length)
-        this.imgListUpdateTime ++
+    removeImgList(imgs: Img[]): void {
+        for (const img of imgs) {
+            if (img === this.imgHead) this.imgHead = img.next
+            if (img === this.imgTail) this.imgTail = img.prev
+            img.delete()
+        }
     }
     //#endregion
 
@@ -793,9 +808,17 @@ export class GroupSession extends Session {
             )
             return []
         }
-        const ann = data.map(item => new Ann(item, this))
-        this.annCache = ann
-        return ann
+        const anns = data.map(item => new Ann(item, this))
+        this.annCache = anns
+        // 拼接图片
+        let tail: Img | undefined
+        for (const ann of anns) {
+            if (!ann.imgData) continue
+            tail?.insertNext(ann.imgData)
+            tail = ann.imgData
+        }
+        // 拼接图片列表
+        return anns
     }
     /**
      * 对 getAnn 的封装

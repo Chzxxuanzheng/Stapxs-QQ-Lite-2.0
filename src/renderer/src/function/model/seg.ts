@@ -5,9 +5,10 @@ import { getFace } from '../utils/msgUtil'
 import { PopInfo, PopType } from '../base'
 import { downloadFile } from '../utils/appUtil'
 import { ForwardMsg, Msg } from './msg'
-import { v4 as uuid } from 'uuid'
 import type { AtAllSegData, AtSegData, FaceSegData, FileSegData, ForwardSegData, ImgSegData, MdSegData, MfaceSegData, PokeSegData, ReplySegData, SegData, TextSegData, UnknownSegData, VideoSegData } from '../adapter/interface'
 import { Resource } from './ressource'
+import { Img } from './img'
+import { toRaw } from 'vue'
 
 export const segType = {}
 type SegCon<T extends Seg> = { new(...args: any[]): T; type: string };
@@ -90,7 +91,7 @@ export class ImgSeg extends Seg {
     _url: Resource
     summary?: string
     isFace: boolean = false
-    imgId: string = uuid()
+    imgData: Img
     constructor(url: string, isFace?: boolean)
     constructor(data: ImgSegData)
     constructor(arg1: string | ImgSegData, arg2: boolean = false) {
@@ -110,6 +111,7 @@ export class ImgSeg extends Seg {
             this.summary = data.summary
             this.isFace = data.isFace
         }
+        this.imgData = new Img(this.src)
     }
 
     get plaintext(): string {
@@ -125,13 +127,6 @@ export class ImgSeg extends Seg {
         if (this.url.startsWith('base64:')) return 'data:image/png;base64,' + this.url.substring(9)
         return this.url
     }
-
-    getImgData(): {url: string, id: string} {
-        return {
-            url: this.src,
-            id: this.imgId
-        }
-    }
 }
 
 @registerSegType
@@ -142,6 +137,7 @@ export class MfaceSeg extends Seg {
     packageId: number
     id: string
     key: string
+    imgData: Img
 
     constructor(data: MfaceSegData) {
         super()
@@ -150,6 +146,7 @@ export class MfaceSeg extends Seg {
         this.packageId = data.packageId
         this.id = data.id
         this.key = data.key
+        this.imgData = new Img(this.src)
     }
 
     get plaintext(): string {
@@ -342,6 +339,16 @@ export class ForwardSeg extends Seg {
             const data = arg1 as ForwardSegData
             this.id = data.id
 			this.content = data.content.map(item => new ForwardMsg(item))
+            // 图片拼装
+            let tail: undefined | Img
+            for (const msg of this.content) {
+                if (msg.imgList.length === 0) continue
+                const imgList = toRaw(msg.imgList)
+                if (tail) {
+                    tail.concatNext(imgList.at(-1)!)
+                }
+                tail = imgList.at(0)
+            }
         }
     }
 

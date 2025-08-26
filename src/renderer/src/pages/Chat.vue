@@ -516,7 +516,6 @@ import {
 //#region == 常量声明 ====================================================================
 const { chat } = defineProps<{chat: Session}>()
 
-const viewer = app.config.globalProperties.$viewer
 const $t = app.config.globalProperties.$t
 
 //#region  == 模板引用 ======================================
@@ -605,16 +604,11 @@ const msgWhileSend = shallowRef<string>('')
 const tags = shallowReactive({...tagsDefault})
 const atFindList = shallowRef<Member[]|null>(null)
 const msgWhileReply = shallowRef<undefined | Msg>()
-let getImgList: {
-    url: string;
-    id: string;
-}[] = []
 //#endregion
 
 //#region == 初始化 ======================================================================
 onMounted(()=>{
     init()
-    freshenImgList()
 
     // Capacitor：系统返回操作（Android）
     if(runtimeData.tags.clientType == 'capacitor' &&
@@ -650,18 +644,6 @@ onMounted(()=>{
 
 //#region == 侦测器 ======================================================================
 watch(()=>chat?.id,init)
-// 图片列表
-watch(
-    () => viewer.hiding,
-    (newVal) => {
-        if (newVal)
-            runtimeData.img_list = getImgList
-    },
-)
-watch(
-    () => chat.imgListUpdateTime,
-    freshenImgList,
-)
 // Web：系统返回操作
 watch(() => runtimeData.watch.backTimes, () => {
     exitWin()
@@ -682,7 +664,6 @@ function init() {
     details[2].open = false
     details[3].open = false
     initMenuDisplay()
-    freshenImgList()
     // 聚焦输入框
     // PS: 有虚拟键盘的设备会弹键盘,要做判断
     if (shouldAutoFocus()) toMainInput()
@@ -1959,17 +1940,6 @@ async function loadHistory() {
         pan.scrollTop += pan.scrollHeight - oldScrollHeight
         pan.style.scrollBehavior = 'smooth'
     })
-}
-
-/**
- * 刷新图片列表
- */
-function freshenImgList() {
-    const viewer = app.config.globalProperties.$viewer
-    getImgList = chat.imgList
-    // 更新viewer图片
-    if (!viewer.hiding)
-        runtimeData.img_list = getImgList
 }
 //#endregion
 

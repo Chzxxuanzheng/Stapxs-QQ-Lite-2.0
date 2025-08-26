@@ -25,6 +25,7 @@
                 v-html="parseText(data.content)" />
             <img v-if="data.getImg()"
                 :src="data.getImg()"
+                @click.stop="imgClick(data.imgData!)"
                 :class="{
                     img: true,
                     all: showAll,
@@ -52,9 +53,11 @@
     import { openLink } from '@renderer/function/utils/appUtil'
     import { getTrueLang } from '@renderer/function/utils/systemUtil'
     import { Ann } from '@renderer/function/model/ann'
+    import { Img } from '@renderer/function/model/img'
 
     export default defineComponent({
         name: 'BulletinBody',
+        inject: ['viewer'],
         props: {
             data: {
                 type: Object as () => Ann,
@@ -109,6 +112,15 @@
                     // 点击了链接
                     const link = target.dataset.link
                     openLink(link)
+                }
+            },
+            /**
+             * 图片点击
+             * @param img
+             */
+            imgClick(img: Img) {
+                if (this.viewer) {
+                    (this.viewer as any).open(img)
                 }
             },
         },

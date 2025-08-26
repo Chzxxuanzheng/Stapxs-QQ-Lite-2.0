@@ -166,26 +166,11 @@
                 () => runtimeData.mergeMsgStack.length,
                 (newLength, oldLength) => {
                     // 最后一个保留下来做展开关闭动画
-                    if(this.stack.length === 0) {
-                        // 清理下垃圾
-                        runtimeData.mergeMessageImgList = undefined
-                    }
-                    else this.nowData = this.stack.at(-1)
+                    if(this.stack.length !== 0) this.nowData = this.stack.at(-1)
 
                     // 判断是增加还是减少
                     if (newLength > oldLength) this.addMode = true
                     else if (newLength < oldLength) this.addMode = false
-                }
-            )
-            this.$watch(
-                () => this.nowData?.id,
-                () => {
-                    if (!this.nowData?.content) return
-                    let imgList: {id: string, url: string}[] = []
-                    for (const msg of this.nowData.content) {
-                        imgList = imgList.concat(msg.imgList)
-                    }
-                    runtimeData.mergeMessageImgList = imgList
                 }
             )
         },

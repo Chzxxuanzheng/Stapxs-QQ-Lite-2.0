@@ -234,7 +234,6 @@ const baseRuntime = {
     inch: getInch(),
     nowChat: undefined,
     nowBox: undefined,
-    img_list: [],
     color_mod: 'light' as 'light' | 'dark',
 }
 

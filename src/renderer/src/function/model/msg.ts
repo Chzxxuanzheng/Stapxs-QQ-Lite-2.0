@@ -18,6 +18,7 @@ import { GroupSession, Session } from './session'
 import { delay } from '../utils/systemUtil'
 import { EssenceData, ForwardNodeData, MsgData, SegData } from '../adapter/interface'
 import { reactive, toRaw } from 'vue'
+import { Img } from './img'
 
 type IconData = { icon: string, rotate: boolean, desc: string, color: string }
 
@@ -50,7 +51,7 @@ export class Msg extends Message {
     /**
      * 包含的图片信息
      */
-    imgList: {url: string, id: string}[] = []
+    imgList: Img[] = []
     /**
      * 对应的会话
      */
@@ -110,14 +111,14 @@ export class Msg extends Message {
             })
         }
         // TODO: 文件图片支持
-        this.message.forEach(seg => {
-            if ('getImgData' in seg && typeof seg.getImgData === 'function') {
-                const imgData = seg.getImgData()
-                if (imgData) {
-                    this.imgList.push(imgData)
-                }
-            }
-        })
+        let last: undefined | Img
+        for (const seg of this.message) {
+            if (!('imgData' in seg)) continue
+            if (!(seg.imgData instanceof Img)) continue
+            if (last) last.insertNext(seg.imgData)
+            last = seg.imgData
+            this.imgList.push(last)
+        }
     }
 
     static parseSegs(data: SegData[]): Seg[] {

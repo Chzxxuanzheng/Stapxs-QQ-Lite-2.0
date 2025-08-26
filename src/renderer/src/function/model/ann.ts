@@ -11,6 +11,7 @@ import { GroupSession } from './session'
 import { Member } from './user'
 import { Time } from './data'
 import { GroupAnnouncementData } from '../adapter/interface'
+import { Img } from './img'
 
 export class Ann {
     content: string
@@ -20,6 +21,7 @@ export class Ann {
     session: GroupSession
     read?: boolean
     readNum?: number
+    imgData?: Img
 
     constructor(data: GroupAnnouncementData, session: GroupSession) {
         this.content = data.content
@@ -31,6 +33,7 @@ export class Ann {
         this.session = session
         const sender = this.session.getUserById(data.sender)
         if (sender) this.sender = sender
+        if (this.getImg()) this.imgData = new Img(this.getImg()!)
     }
 
     getImg(): string|undefined {

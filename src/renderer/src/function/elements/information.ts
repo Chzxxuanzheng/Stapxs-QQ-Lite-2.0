@@ -53,12 +53,10 @@ export interface RunTimeDataElem {
         backTimes: number
     }
     mergeMsgStack: ForwardSeg[]
-    mergeMessageImgList?: any[] | undefined
     stickerCache?: any[]
     nowChat?: Session
     nowBox?: SessionBox  // 当前的会话盒子
     nowAdapter?: AdapterInterface // 当前适配器
-    img_list: {url: string, id: string}[]
     color_mod: 'light' | 'dark'
     popBoxList: { id: string, data: PopBoxData }[],
 }
