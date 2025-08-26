@@ -177,16 +177,7 @@
         </TransitionGroup>
         <!-- 全局搜索栏 -->
         <GlobalSessionSearchBar />
-        <viewer v-show="runtimeData.tags.viewer.show" ref="viewer" class="viewer"
-            :options="viewerOpt"
-            :images="runtimeData.mergeMessageImgList ?? runtimeData.img_list"
-            @inited="viewerInited"
-            @hide="viewerHide"
-            @show="viewerShow">
-            <template #default="scope">
-                <img v-for="info in scope.images" :key="'imgView-' + info.id" :src="info.url">
-            </template>
-        </viewer>
+        <Viewer ref="viewer" />
         <FriendMenu ref="friendMenu" />
         <div id="mobile-css" />
     </div>
@@ -202,8 +193,7 @@ import * as App from './function/utils/appUtil'
 import {
     defineComponent,
     defineAsyncComponent,
-    ref,
-    Ref,
+    useTemplateRef,
     provide,
     markRaw,
 } from 'vue'
@@ -226,9 +216,12 @@ import Messages from '@renderer/pages/Messages.vue'
 import Boxes from '@renderer/pages/Boxes.vue'
 import FriendMenu from '@renderer/components/FriendMenu.vue'
 import GlobalSessionSearchBar from './components/GlobalSessionSearchBar.vue'
+import Viewer from './components/Viewer.vue'
 
-const friendMenu: Ref<undefined|InstanceType<typeof FriendMenu>> = ref()
+const friendMenu = useTemplateRef<InstanceType<typeof FriendMenu>>('friendMenu')
+const viewer = useTemplateRef<InstanceType<typeof Viewer>>('viewer')
 provide('friendMenu', friendMenu)
+provide('viewer', viewer)
 </script>
 
 <script lang="ts">
@@ -600,24 +593,6 @@ export default defineComponent({
                 this.fps.value = fps
             }
             requestAnimationFrame(this.rafLoop)
-        },
-
-        /**
-         * 图片查看器初始化
-         * @param viewer viewer 对象
-         */
-        viewerInited(viewer: HTMLDivElement) {
-            this.viewerBody = viewer
-        },
-
-        /**
-         * 图片查看器事件
-         */
-        viewerHide() {
-            runtimeData.tags.viewer.show = false
-        },
-        viewerShow() {
-            runtimeData.tags.viewer.show = true
         },
 
         /**
