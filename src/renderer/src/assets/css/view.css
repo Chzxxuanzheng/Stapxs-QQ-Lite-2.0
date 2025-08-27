@@ -1435,7 +1435,7 @@ textarea:focus {
 }
 
 .viewer-tool-config-bar {
-    bottom: calc(3% + 80px);
+    bottom: calc(3% + 80px + var(--safe-area-bottom));
 }
 
 .viewer-tool-config-bar > div.color {
@@ -1499,7 +1499,7 @@ textarea:focus {
 }
 
 .viewer-button-bar {
-    bottom: 3%;
+    bottom: calc(3% + var(--safe-area-bottom));
     opacity: 0;
 }
 
