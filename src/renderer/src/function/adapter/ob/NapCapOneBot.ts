@@ -24,7 +24,6 @@ export default class NapCapOneBot extends OneBotAdapter {
     //#region == API ===============================================
     //#region == 获取信息 ======================
     @api
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     override async getFriendList(_?: boolean): Promise<FriendData[]> {
         const data: NcObGetFriendsWithCategory = await this.connector.send('get_friends_with_category', {})
         const out: FriendData[] = []
@@ -42,7 +41,6 @@ export default class NapCapOneBot extends OneBotAdapter {
         return out
     }
     @api
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     override async getUserInfo(userId: number, _?: boolean): Promise<UserData> {
         // 获取用户信息
         const data: NcObGetStrangerInfo = await this.connector.send('get_stranger_info', {

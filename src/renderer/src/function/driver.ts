@@ -169,7 +169,6 @@ class BackendWs implements Ws {
         this.selfState = DriverState.Connecting
         return new Promise<boolean>((resolve) => {
             let isConnected = false
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const onopen = (_: any) => {
                 logger.info('WebSocket连接成功')
                 this.selfState = DriverState.Connected
@@ -195,7 +194,6 @@ class BackendWs implements Ws {
             r => resolve = r
         )
         this.selfState = DriverState.Close
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const onclose = (_: OnCloseData) => {
             resolve()
         }

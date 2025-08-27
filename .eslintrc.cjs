@@ -26,6 +26,11 @@ module.exports = {
         'multiline-ternary': ['warn', 'never'],
         // 分号
         'semi': ['warn', 'never'],
+        // 未使用的变量
+        '@typescript-eslint/no-unused-vars': [
+            'error',
+            { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }
+        ],
 
         // === Vue 相关规则 ===
         // html 缩进

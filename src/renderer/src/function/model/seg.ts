@@ -221,7 +221,6 @@ export class AtSeg extends Seg {
 @registerSegType
 export class AtAllSeg extends Seg {
     static readonly type = 'atall'
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     constructor(_: AtAllSegData) {
         super()
     }
@@ -408,7 +407,6 @@ export class ReplySeg extends Seg {
 @registerSegType
 export class PokeSeg extends Seg {
     static readonly type = 'poke'
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	constructor(_: PokeSegData) {super()}
     get plaintext(): string {
         return '戳了戳你'

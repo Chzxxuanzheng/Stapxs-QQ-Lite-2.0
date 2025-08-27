@@ -289,7 +289,6 @@ export class MilkyAdapter implements AdapterInterface {
      * @param useCache 是否使用缓存
      */
     @api
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async getUserInfo(userId: number, _?: boolean): Promise<UserData | undefined> {
         const data = await this.callApi(
             'get_user_profile',
@@ -861,7 +860,6 @@ export class MilkyAdapter implements AdapterInterface {
             user_id: data.data.user_id,
         }
     }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async mentionAllParser(_: ISeg.MentionAllSeg): Promise<AtAllSegData> {
         return {
             type: 'atall',
@@ -908,7 +906,6 @@ export class MilkyAdapter implements AdapterInterface {
     //         file_id: data.data.file_id,
     //     }
     // }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     // async pokeParser(_: ObPokeSeg): Promise<PokeSegData> {
     //     return { type: 'poke' }
     // }
@@ -991,7 +988,6 @@ export class MilkyAdapter implements AdapterInterface {
             },
         }
     }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async atallSerializer(_: AtAllSeg): Promise<OSeg.MentionAllSeg> {
         return {
             type: 'mention_all',
@@ -1052,11 +1048,9 @@ export class MilkyAdapter implements AdapterInterface {
     //         }
     //     }
     // }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async xmlSerializer(_: XmlSeg): Promise<OSeg.XmlSeg> {
         throw new Error('不支持发送xml消息')
     }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async jsonSerializer(_: JsonSeg): Promise<OSeg.LightAppSeg> {
         throw new Error('不支持发送json消息')
     }

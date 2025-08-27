@@ -21,7 +21,6 @@ import option from './option'
 /**
  * 给正在输入差屁股...
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 Session.newMessageHook.push((session: Session, _: Message) => {
     const { $t } = app.config.globalProperties
     if (session.appendInfo === $t('对方正在输入……')) session.appendInfo = undefined
