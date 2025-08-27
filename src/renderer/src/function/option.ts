@@ -243,10 +243,8 @@ function setLanguage(name: string) {
  */
 function setDarkMode(value = true) {
     if (value === true) {
-        runtimeData.color_mod = 'dark'
         changeColorMode('dark')
     } else {
-        runtimeData.color_mod = 'light'
         changeColorMode('light')
     }
 }

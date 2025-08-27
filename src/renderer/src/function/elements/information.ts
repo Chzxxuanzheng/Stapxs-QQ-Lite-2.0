@@ -57,7 +57,6 @@ export interface RunTimeDataElem {
     nowChat?: Session
     nowBox?: SessionBox  // 当前的会话盒子
     nowAdapter?: AdapterInterface // 当前适配器
-    color_mod: 'light' | 'dark'
     popBoxList: { id: string, data: PopBoxData }[],
 }
 

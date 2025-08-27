@@ -376,7 +376,7 @@ export class SessionBox {
     }
 
     get color(): string {
-        if (runtimeData.color_mod === 'dark') return `hsl(${this._color.value}deg, 50%, 35%)`
+        if (runtimeData.tags.darkMode) return `hsl(${this._color.value}deg, 50%, 35%)`
         return `hsl(${this._color.value}deg, 50%, 90%)`
     }
 

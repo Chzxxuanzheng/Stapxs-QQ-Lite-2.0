@@ -234,7 +234,6 @@ const baseRuntime = {
     inch: getInch(),
     nowChat: undefined,
     nowBox: undefined,
-    color_mod: 'light' as 'light' | 'dark',
 }
 
 export const runtimeData: RunTimeDataElem = reactive(baseRuntime)
