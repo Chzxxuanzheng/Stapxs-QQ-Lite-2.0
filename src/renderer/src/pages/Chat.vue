@@ -16,7 +16,7 @@
         :class="{
             'chat-pan': true,
             'open': runtimeData.tags.openSideBar,
-            'withBar': ['linux', 'win32'].includes(runtimeData.tags.platform ?? '')
+            'withBar': ['linux', 'win32'].includes(backend.platform ?? '')
         }"
         :style="`background-image: url(${runtimeData.sysConfig.chat_background});`"
         @touchstart="chatMoveStartEvent"
@@ -477,7 +477,6 @@ import Menu from '@renderer/components/Menu.vue'
 
 import { downloadFile, shouldAutoFocus } from '@renderer/function/utils/appUtil'
 import {
-    addBackendListener,
     delay,
     getViewTime,
 } from '@renderer/function/utils/systemUtil'
@@ -512,6 +511,7 @@ import {
     watch,
     onMounted,
 } from 'vue'
+import { backend } from '@renderer/runtime/backend'
 
 //#region == 常量声明 ====================================================================
 const { chat } = defineProps<{chat: Session}>()
@@ -604,9 +604,9 @@ onMounted(()=>{
     init()
 
     // Capacitor：系统返回操作（Android）
-    if(runtimeData.tags.clientType == 'capacitor' &&
-        runtimeData.tags.platform === 'android') {
-        addBackendListener('App', 'backButton', () => {
+    if(backend.type == 'capacitor' &&
+        backend.platform === 'android') {
+        backend.addListener('App', 'backButton', () => {
             exitWin()
         })
     }
@@ -1716,7 +1716,7 @@ function closeMultiselect() {
 //#endregion
 
 //#region == 窗口移动相关 ==================================================
-let chatMove = {
+const chatMove = {
     move: 0,
     onScroll: 'none' as 'none' | 'touch' | 'wheel',
     lastTime: null as null | number,

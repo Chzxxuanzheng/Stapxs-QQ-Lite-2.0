@@ -15,7 +15,6 @@ export interface RunTimeDataElem {
         chatView: any
         msgView: any
     }
-    plantform: {[key: string]: any},
     tags: {
         firstLoad: boolean
         openSideBar: boolean
@@ -24,22 +23,6 @@ export interface RunTimeDataElem {
             index: number
         }
         loginWaveTimer?: any
-        /**
-         * 客户端类型
-         */
-        clientType: 'electron' | 'tauri' | 'capacitor' | 'web'
-        /**
-         * 平台类型
-         */
-        platform: 'win32' | 'darwin' | 'linux' | 'android' | 'ios' | 'web' | undefined
-        /**
-         * 系统发行版本
-         */
-        release: string | undefined
-        /**
-         * 代理服务器端口
-         */
-        proxyPort?: number
         canCors: boolean
         sw?: boolean
         darkMode: boolean
@@ -81,4 +64,10 @@ export interface PopBoxData {
     }[]
     allowAutoClose?: boolean // 是否允许自带的关闭操作
     onClose?: () => void // 关闭回调
+}
+
+export interface MenuEventData {
+    x: number
+    y: number
+    target: HTMLElement
 }

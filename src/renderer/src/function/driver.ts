@@ -13,7 +13,7 @@
 import app from '@renderer/main'
 import { Logger, PopInfo, PopType } from './base'
 import { runtimeData } from './msg'
-import { callBackend } from './utils/systemUtil'
+import { backend } from '@renderer/runtime/backend'
 
 const logger = new Logger()
 
@@ -186,7 +186,7 @@ class BackendWs implements Ws {
             this._onMessageHook = (message: OnMessageData) => {
                 this.onmessageHook?.(message)
             }
-            callBackend('Onebot', 'onebot:connect', false, { url })
+            backend.call('Onebot', 'onebot:connect', false, { url })
         })
     }
     close(): Promise<void> {
@@ -200,7 +200,7 @@ class BackendWs implements Ws {
             resolve()
         }
         this._onCloseHook = onclose
-        callBackend('Onebot', 'onebot:close', false)
+        backend.call('Onebot', 'onebot:close', false)
         new PopInfo().add(
             PopType.INFO,
             app.config.globalProperties.$t('正在断开链接……'),
@@ -211,7 +211,7 @@ class BackendWs implements Ws {
 
     //#region == 发送数据 ============================================
     send(data: string): void {
-        callBackend('Onebot', 'onebot:send', false, data)
+        backend.call('Onebot', 'onebot:send', false, data)
     }
     //#endregion
 
@@ -322,7 +322,7 @@ const nativeFetch = new NativeFetch()
 
 class BackendFetch implements Fetch {
     async get(url: string, data: Record<string, any>, header: Record<string, any>): Promise<string> {
-        return await callBackend(
+        return await backend.call(
             undefined,
             'onebot:get',
             true,
@@ -330,7 +330,7 @@ class BackendFetch implements Fetch {
         )
     }
     async post(url: string, data: Record<string, any>, header: Record<string, any>): Promise<string> {
-        return await callBackend(
+        return await backend.call(
             undefined,
             'onebot:post',
             true,
@@ -376,7 +376,7 @@ class Driver {
         this.retry = retry
         this.path = path ?? ''
 
-        if (runtimeData.tags.clientType === 'web') {
+        if (backend.isWeb()) {
             this.ws = nativeWs
             this.fetch = nativeFetch
         }else {

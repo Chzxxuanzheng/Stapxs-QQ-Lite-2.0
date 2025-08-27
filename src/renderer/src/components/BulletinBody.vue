@@ -25,11 +25,11 @@
                 v-html="parseText(data.content)" />
             <img v-if="data.getImg()"
                 :src="data.getImg()"
-                @click.stop="imgClick(data.imgData!)"
                 :class="{
                     img: true,
                     all: showAll,
-                }">
+                }"
+                @click.stop="imgClick(data.imgData!)">
         </div>
         <span v-show="needShow && !showAll">{{ $t('点击展开') }}</span>
         <div class="info">

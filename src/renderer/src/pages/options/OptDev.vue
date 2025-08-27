@@ -7,7 +7,7 @@
 
 <template>
     <div class="opt-page">
-        <div v-if="!runtimeData.tags.proxyPort" class="ss-card">
+        <div v-if="backend.isWeb()" class="ss-card">
             <header>{{ $t('兼容选项') }}</header>
             <div class="tip">
                 {{
@@ -167,7 +167,7 @@
                     {{ $t('执行') }}
                 </button>
             </div>
-            <template v-if="['electron', 'tauri'].includes(runtimeData.tags.clientType)">
+            <template v-if="backend.isDesktop()">
                 <div class="opt-item">
                     <font-awesome-icon :icon="['fas', 'power-off']" />
                     <div>
@@ -223,7 +223,6 @@
 </template>
 
 <script setup lang="ts">
-import VConsole from 'vconsole'
 import app from '@renderer/main'
 import packageInfo from '../../../../../package.json'
 
@@ -238,14 +237,13 @@ import { PopInfo, PopType } from '@renderer/function/base'
 import { runtimeData } from '@renderer/function/msg'
 import { BrowserInfo, detect } from 'detect-browser'
 import { uptime } from '@renderer/main'
-import { callBackend } from '@renderer/function/utils/systemUtil'
+import { backend } from '@renderer/runtime/backend'
 import {
     defineComponent,
     computed,
 } from 'vue'
 import driver from '@renderer/function/driver'
 import { ensurePopBox, htmlPopBox } from '@renderer/function/utils/popBox'
-import { i } from 'vite/dist/node/types.d-aGj9QkWt'
 
 const illegalProxyUrl = computed(() => {
     if (!runtimeData.sysConfig.proxyUrl) return false
@@ -260,7 +258,6 @@ const illegalProxyUrl = computed(() => {
         data() {
             return {
                 dev: import.meta.env.DEV,
-
                 checkDefault: checkDefault,
                 runtimeData: runtimeData,
                 save: save,
@@ -284,17 +281,12 @@ const illegalProxyUrl = computed(() => {
                 )
             },
             printRuntime() {
-                if(runtimeData.tags.clientType === 'capacitor') {
-                    if(!runtimeData.plantform.vConsole) {
-                        runtimeData.plantform.vConsole = new VConsole({
-                            theme: runtimeData.tags.darkMode ? 'dark' : 'light',
-                        })
-                    }
+                if(backend.isMobile()) {
                     const switcher = document.getElementById('__vconsole')?.getElementsByClassName('vc-switch')[0]
                     if (switcher) {
                         (switcher as HTMLDivElement).click()
                     // safeArea
-                    callBackend('SafeArea', 'getSafeArea', true).then((safeArea) => {
+                    backend.call('SafeArea', 'getSafeArea', true).then((safeArea) => {
                         if (safeArea) {
                             const vcPanel = document.getElementById('__vconsole')?.getElementsByClassName('vc-panel')[0]
                             if (vcPanel) {
@@ -315,8 +307,8 @@ const illegalProxyUrl = computed(() => {
                 console.log(runtimeData)
                 console.log('=========================')
                 /* eslint-enable no-console */
-                if(runtimeData.tags.clientType !== 'capacitor') {
-                    callBackend(undefined, 'win:openDevTools', false)
+                if(!backend.isMobile()) {
+                    backend.call(undefined, 'win:openDevTools', false)
                 }
             },
             async printVersionInfo() {
@@ -326,9 +318,9 @@ const illegalProxyUrl = computed(() => {
                 )
 
                 // 索要框架信息
-                const addInfo = await callBackend('Onebot', 'opt:getSystemInfo', true)
-                if(runtimeData.tags.clientType === 'capacitor') {
-                    addInfo.vconsole = ['vConsole Version', runtimeData.plantform.vConsole?.version ?? 'Not loaded']
+                const addInfo = await backend.call('Onebot', 'opt:getSystemInfo', true)
+                if(backend.isMobile() && backend.function && 'vConsole' in backend.function && backend.function.vConsole) {
+                    addInfo.vconsole = ['vConsole Version', backend.function.vConsole.version ?? 'Not loaded']
                 }
 
                 const browser = detect() as BrowserInfo
@@ -349,23 +341,21 @@ const illegalProxyUrl = computed(() => {
                     })
                 }
                 // 获取安装信息，这儿主要判断几种已提交的包管理安装方式
-                if (['electron', 'tauri'].includes(runtimeData.tags.clientType) &&
-                    runtimeData.tags.release) {
+                if (backend.isDesktop() && backend.release) {
                     const process = window.electron?.process
                     switch (process && process.platform) {
                         case 'linux': {
                             // archlinux
-                            if (runtimeData.tags.release.toLowerCase().indexOf('arch') > 0) {
+                            if (backend.release.toLowerCase().indexOf('arch') > 0) {
                                 let pacmanInfo =
-                                    await callBackend(undefined, 'sys:runCommand', true,
+                                    await backend.call(undefined, 'sys:runCommand', true,
                                         'pacman -Q stapxs-qq-lite-bin',
                                     )
                                 if (pacmanInfo.success)
                                     systemInfo.push(['Install Type', 'aur'])
-                                else {
+                                else if(backend.function && 'invoke' in backend.function){
                                     // 也有可能是 stapxs-qq-lite，这是我自己打的原生包
-                                    pacmanInfo = await runtimeData.
-                                        plantform.reader.invoke(
+                                    pacmanInfo = await backend.function.invoke(
                                             'sys:runCommand',
                                             'pacman -Q stapxs-qq-lite',
                                         )
@@ -413,8 +403,8 @@ const illegalProxyUrl = computed(() => {
                 ] as [key: string, value: any][]
 
                 // capactior：索要 safeArea
-                if (runtimeData.tags.clientType === 'capacitor') {
-                    const safeArea = await callBackend('SafeArea', 'getSafeArea', true)
+                if (backend.isMobile()) {
+                    const safeArea = await backend.call('SafeArea', 'getSafeArea', true)
                     if (safeArea) {
                         // 按照前端习惯，这儿的 safeArea 顺序是 top, right, bottom, left
                         const safeAreaStr = safeArea.top + ', ' + safeArea.right + ', ' + safeArea.bottom + ', ' + safeArea.left
@@ -540,11 +530,11 @@ const illegalProxyUrl = computed(() => {
                     document.cookie = c.replace(/^ +/, '')
                         .replace(/=.*/,'=;expires=' + new Date().toUTCString() + ';path=/')
                 })
-                callBackend(undefined, 'opt:clearAll', false)
+                backend.call(undefined, 'opt:clearAll', false)
                 location.reload()
             },
             restartapp() {
-                callBackend(undefined, 'win:relaunch', false)
+                backend.call(undefined, 'win:relaunch', false)
             },
             // 查看配置文件
             rmNeedlessOption() {

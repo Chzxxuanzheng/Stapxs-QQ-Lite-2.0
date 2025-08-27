@@ -1,8 +1,8 @@
 <template>
     <Teleport to="body">
         <Transition name="global-session-search-bar">
-            <div v-if="currentImg" class="mask-background"
-                v-esc="escClose"
+            <div v-if="currentImg" v-esc="escClose"
+                class="mask-background"
                 @click="closeClick"
                 @mousemove="mouseMoveCheck">
                 <!-- 工具扩展设置 -->
@@ -11,26 +11,26 @@
                     <!-- 颜色 -->
                     <template v-if="currentTool !== 'hand'">
                         <div v-for="(color, key) in colorMap"
+                            :key="key"
                             class="color"
                             :style="{'--color': color}"
-                            :key="key"
                             :class="{'active': currentColor === key}"
                             @click.stop="selectColor(key)" />
                     </template>
                     <!-- 线条粗细 -->
                     <template v-if="currentTool !== 'hand'">
-                        <hr />
+                        <hr>
                         <div v-for="size in lineWidthList"
-                            class="line-width"
                             :key="size"
+                            class="line-width"
                             :class="{'active': currentLineWidth === size}"
                             @click.stop="selectLineWidth(size)">
-                            <div :style="{'--line-width': size + 'px'}"/>
+                            <div :style="{'--line-width': size + 'px'}" />
                         </div>
                     </template>
                     <!-- 是否填充 -->
                     <template v-if="currentTool === 'rect'">
-                        <hr />
+                        <hr>
                         <font-awesome-icon
                             class="rect-is-fill"
                             :icon="[toolConfig.rect.fill ? 'fas' : 'far', 'square']"
@@ -41,60 +41,60 @@
                 <div>
                     <Transition name="viewer-button" mode="out-in">
                         <div v-if="!edit"
+                            key="1"
                             class="viewer-bar viewer-button-bar"
                             :class="{
                                 'force-show': forceShowButton || moveTimeout
-                            }"
-                            key="1">
-                            <font-awesome-icon :icon="['fas', 'angle-left']"
-                                v-hide="!prev"
-                                @click.stop="prevImg"/>
+                            }">
+                            <font-awesome-icon v-hide="!prev"
+                                :icon="['fas', 'angle-left']"
+                                @click.stop="prevImg" />
                             <font-awesome-icon :icon="['fas', 'share']" style="transform: rotateY(180deg);"
-                                @click.stop="rotate(-90)"/>
-                            <hr />
+                                @click.stop="rotate(-90)" />
+                            <hr>
                             <font-awesome-icon v-if="runtimeData.tags.canCors" :icon="['fas', 'pen-to-square']"
-                                @click.stop="editImg"/>
+                                @click.stop="editImg" />
                             <font-awesome-icon :icon="['fas', 'undo']"
-                                @click.stop="resetModify"/>
+                                @click.stop="resetModify" />
                             <font-awesome-icon :icon="['fas', 'download']"
-                                @click.stop="download"/>
+                                @click.stop="download" />
                             <font-awesome-icon v-if="runtimeData.tags.canCors" :icon="['fas', 'clipboard']"
-                                @click.stop="copy"/>
-                            <hr />
+                                @click.stop="copy" />
+                            <hr>
                             <font-awesome-icon :icon="['fas', 'share']"
-                                @click.stop="rotate(90)"/>
-                            <font-awesome-icon :icon="['fas', 'angle-right']"
-                                v-hide="!next"
-                                @click.stop="nextImg"/>
+                                @click.stop="rotate(90)" />
+                            <font-awesome-icon v-hide="!next"
+                                :icon="['fas', 'angle-right']"
+                                @click.stop="nextImg" />
                         </div>
                         <div v-else
-                            class="viewer-bar viewer-button-bar force-show"
-                            key="2">
+                            key="2"
+                            class="viewer-bar viewer-button-bar force-show">
                             <font-awesome-icon :icon="['fas', 'hand']"
                                 :class="{ active: currentTool === 'hand' }"
-                                @click.stop="switchTool('hand')"/>
+                                @click.stop="switchTool('hand')" />
                             <font-awesome-icon :icon="['fas', 'pencil']"
                                 :class="{ active: currentTool === 'pen' }"
-                                @click.stop="switchTool('pen')"/>
+                                @click.stop="switchTool('pen')" />
                             <font-awesome-icon :icon="['fas', 'object-group']"
                                 :class="{ active: currentTool === 'rect' }"
-                                @click.stop="switchTool('rect')"/>
-                            <hr />
+                                @click.stop="switchTool('rect')" />
+                            <hr>
                             <font-awesome-icon :icon="['fas', 'share']" style="transform: rotateY(180deg);"
-                                @click.stop="rotate(-90)"/>
+                                @click.stop="rotate(-90)" />
                             <font-awesome-icon :icon="['fas', 'share']"
-                                @click.stop="rotate(90)"/>
-                            <hr />
+                                @click.stop="rotate(90)" />
+                            <hr>
                             <font-awesome-icon :icon="['fas', 'undo']"
-                                @click.stop="editUndo"/>
-                            <hr />
+                                @click.stop="editUndo" />
+                            <hr>
                             <font-awesome-icon :icon="['fas', 'download']"
-                                @click.stop="downloadCanvas"/>
+                                @click.stop="downloadCanvas" />
                             <font-awesome-icon :icon="['fas', 'clipboard']"
-                                @click.stop="editCopy"/>
-                            <hr />
+                                @click.stop="editCopy" />
+                            <hr>
                             <font-awesome-icon :icon="['fas', 'xmark']"
-                                @click.stop="editExit"/>
+                                @click.stop="editExit" />
                         </div>
                     </Transition>
                 </div>
@@ -119,14 +119,15 @@
                             <!-- 水平滚动条 -->
                             <div v-hide="!showScrollbarX" class="scrollbar x"
                                 @wheel.stop.prevent="onScrollbarWheel('x', $event)">
-                                <div class="scrollbar-thumb" :style="scrollbarThumbXStyle"></div>
+                                <div class="scrollbar-thumb" :style="scrollbarThumbXStyle" />
                             </div>
                             <!-- 垂直滚动条 -->
                             <div v-hide="!showScrollbarY" class="scrollbar y"
                                 @wheel.stop.prevent="onScrollbarWheel('y', $event)">
-                                <div class="scrollbar-thumb" :style="scrollbarThumbYStyle"></div>
+                                <div class="scrollbar-thumb" :style="scrollbarThumbYStyle" />
                             </div>
                             <img v-show="!edit"
+                                :key="currentImg?.src"
                                 :class="getImgCursorClassByTool()"
                                 :src="currentImg?.src"
                                 :style="{
@@ -137,7 +138,6 @@
                                     '--width': currentImgInfo?.width + 'px',
                                     '--height': currentImgInfo?.height + 'px',
                                 }"
-                                :key="currentImg?.src"
                                 @wheel.stop.prevent="onWheel"
                                 @click.stop.prevent="onClick"
                                 @mousedown="onMouseDown"
@@ -146,7 +146,7 @@
                                 @touchstart="onImgTouchStart"
                                 @touchmove="onImgTouchMove"
                                 @touchend="onImgTouchEnd"
-                                @mouseleave="mouseMoveInfo=undefined;" />
+                                @mouseleave="mouseMoveInfo=undefined;">
                             <canvas v-show="edit" ref="canvas"
                                 :class="getImgCursorClassByTool()"
                                 :style="{
@@ -186,7 +186,6 @@ import {
     shallowReactive,
     toRaw,
     useTemplateRef,
-    TransitionGroup,
 } from 'vue'
 import { downloadFile } from '@renderer/function/utils/appUtil'
 import { PopInfo, PopType } from '@renderer/function/base'
@@ -223,7 +222,7 @@ const currentColor = computed(() => toolConfig[currentTool.value].color)
 const currentLineWidth = computed(() => toolConfig[currentTool.value].width)
 const loading = shallowRef(true)
 const edit = shallowRef(false)
-let currentImgInfo = shallowRef<{
+const currentImgInfo = shallowRef<{
     width: number,
     height: number,
     dom: HTMLImageElement,
@@ -908,13 +907,13 @@ function getTouchDistance(point1: Touch, point2: Touch): number {
 //#region == 按键监听 ===============================================
 useKeyboard('ArrowLeft', 'a', ()=>{
     if (!currentImg.value) return
-    if (!prev) return
+    if (!prev.value) return
     prevImg()
     return true
 })
 useKeyboard('ArrowRight', 'd', ()=>{
     if (!currentImg.value) return
-    if (!next) return
+    if (!next.value) return
     nextImg()
     return true
 })

@@ -28,7 +28,7 @@
                         <hr>
                         <div ref="sessionList">
                             <div v-for="(session, key) in showSessions"
-                                :key="key"
+                                :key="session.id"
                                 :class="{
                                     'session-item': true,
                                     'selected': selectId === key,
@@ -62,10 +62,11 @@ import {
 import TinySessionBody from './TinySessionBody.vue'
 import { Session } from '@renderer/function/model/session'
 import { vSearch } from '@renderer/function/utils/vcmd'
-import { useEventListener } from '@renderer/function/utils/vuse'
+import { useKeyboard } from '@renderer/function/utils/vuse'
 import { changeSession } from '@renderer/function/utils/msgUtil'
 import { runtimeData } from '@renderer/function/msg'
 import { hasPopBox } from '@renderer/function/utils/popBox'
+import { backend } from '@renderer/runtime/backend'
 
 //#region == 常量声明 ====================================================================
 const show = ref<boolean>(false)
@@ -201,48 +202,55 @@ function scrollToSelected() {
         }
     })
 }
-
-/**
- * 匹配到事件处理
- * 会组织事件冒泡和默认行为
- * @param e 事件
- */
-function handleEvent(e: Event) {
-    e.stopPropagation()
-    e.preventDefault()
-}
 //#endregion
 
-//#region == 开启关闭 ====================================================================
-useEventListener(document, 'keydown', (e: KeyboardEvent) => {
-    if (e.ctrlKey && e.key === 'e') {
-        //开启
-        if (show.value) return
-        if (!runtimeData.nowAdapter) return
-        if (hasPopBox()) return
-        handleEvent(e)
-        open()
-    }else if (e.key === 'Escape') {
-        // 关闭
-        if (!show.value) return
-        handleEvent(e)
-        close()
-    }else if (e.key === 'ArrowDown') {
-        // 下
-        if (!show.value) return
-        handleEvent(e)
-        selectId.value ++
-    }else if (e.key === 'ArrowUp') {
-        // 上
-        if (!show.value) return
-        handleEvent(e)
-        selectId.value --
-    }else if (e.key === 'Enter') {
-        // 确认
-        if (!show.value) return
-        handleEvent(e)
-        choiceSessionById(selectId.value)
-    }
+//#region == 按键监听 ====================================================================
+// 开启
+useKeyboard('ctrl+e', ()=>{
+    //开启
+    if (show.value) return
+    if (!runtimeData.nowAdapter) return
+    if (hasPopBox()) return
+
+    // macOS 使用 Command + E
+    if(backend.platform === 'darwin') return
+    open()
+    return true
+})
+useKeyboard('meta+e', ()=>{
+    //开启
+    if (show.value) return
+    if (!runtimeData.nowAdapter) return
+    if (hasPopBox()) return
+
+    // macOS 使用 Command + E
+    if(backend.platform !== 'darwin') return
+    open()
+    return true
+})
+// 关闭
+useKeyboard('escape', ()=>{
+    if (!show.value) return
+    close()
+    return true
+})
+// 下
+useKeyboard('ArrowDown', ()=>{
+    if (!show.value) return
+    selectId.value ++
+    return true
+})
+// 上
+useKeyboard('ArrowUp', ()=>{
+    if (!show.value) return
+    selectId.value --
+    return true
+})
+// 确认
+useKeyboard('Enter', ()=>{
+    if (!show.value) return
+    choiceSessionById(selectId.value)
+    return true
 })
 //#endregion
 </script>

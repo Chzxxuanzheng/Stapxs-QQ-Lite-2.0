@@ -18,7 +18,7 @@
         :class="
             'chat-pan' +
                 (runtimeData.tags.openSideBar ? ' open' : '') +
-                (['linux', 'win32'].includes(runtimeData.tags.platform ?? '') ? ' withBar' : '')
+                (['linux', 'win32'].includes(backend.platform ?? '') ? ' withBar' : '')
         ">
         <div
             id="shell-pan"
@@ -171,7 +171,8 @@
     import { Session } from '@renderer/function/model/session'
     import { Notice, RecallNotice } from '@renderer/function/model/notice'
     import { Message } from '@renderer/function/model/message'
-import SystemNotice from './SystemNotice.vue'
+    import SystemNotice from './SystemNotice.vue'
+    import { backend } from '@renderer/runtime/backend'
 
     export default defineComponent({
         name: 'ChatShell',
@@ -183,6 +184,7 @@ import SystemNotice from './SystemNotice.vue'
         },
         data() {
             return {
+                backend,
                 tags: {
                     fullscreen: false,
                     fistget: true,
@@ -394,7 +396,7 @@ import SystemNotice from './SystemNotice.vue'
                                 'x' +
                                 window.screen.height,
                         } as { [key: string]: string }
-                        if (['electron', 'tauri'].includes(runtimeData.tags.clientType)) {
+                        if (backend.isDesktop()) {
                             infoList.Kernel = packageInfo.version + '-electron'
                         }
                         let info = ''

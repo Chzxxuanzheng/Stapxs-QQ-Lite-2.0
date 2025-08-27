@@ -111,10 +111,10 @@ import {
 import { runtimeData } from '@renderer/function/msg'
 import { reloadUsers } from '@renderer/function/utils/appUtil'
 import { vMenu } from '@renderer/function/utils/vcmd'
-import { callBackend } from '@renderer/function/utils/systemUtil'
 import { SessionClass, Session } from '@renderer/function/model/session'
 import { vAutoFocus } from '@renderer/function/utils/vcmd'
 import driver from '@renderer/function/driver'
+import { backend } from '@renderer/runtime/backend'
 
 const emit = defineEmits<{
     userClick: [session: Session],
@@ -164,15 +164,16 @@ function search(event: Event) {
         searchList.value = []
     }
     // macOS: 刷新 TouchBar
-    if(['electron', 'tauri'].includes(runtimeData.tags.clientType)) {
+    if(backend.isDesktop()) {
         // list 只需要 id 和 name
-        callBackend(undefined, 'sys:flushFriendSearch', false,
+        backend.call(undefined, 'sys:flushFriendSearch', false,
             searchList.value.map((item) => {
                 return {
                     id: item.id,
                     name: item.showName,
                 }
-            }))
+            }
+        ))
     }
 }
 

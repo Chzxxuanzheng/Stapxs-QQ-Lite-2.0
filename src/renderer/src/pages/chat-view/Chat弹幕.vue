@@ -13,7 +13,7 @@
         :class="
             'chat-pan' +
                 (runtimeData.tags.openSideBar ? ' open' : '') +
-                (['linux', 'win32'].includes(runtimeData.tags.platform ?? '') ? ' withBar' : '')
+                (['linux', 'win32'].includes(backend.platform ?? '') ? ' withBar' : '')
         ">
         <div class="danmu-pan">
             <vue-danmaku
@@ -325,6 +325,7 @@
     import { Msg } from '@renderer/function/model/msg'
     import { ImgSeg, Seg } from '@renderer/function/model/seg'
     import { Session } from '@renderer/function/model/session'
+    import { backend } from '@renderer/runtime/backend'
 
     export interface refs {
         danmakuRef: InstanceType<typeof vueDanmaku>|undefined
@@ -341,6 +342,7 @@
         },
         data() {
             return {
+                backend,
                 opt: {
                     speeds: 140,
                     loop: true,

@@ -9,10 +9,9 @@
 import xss from 'xss'
 
 import { openLink } from '@renderer/function/utils/appUtil'
-import { callBackend, getDeviceType } from '@renderer/function/utils/systemUtil'
+import { getDeviceType } from '@renderer/function/utils/systemUtil'
 import { linkView } from '../utils/linkViewUtil'
-import { runtimeData } from '../msg'
-
+import { backend } from '@renderer/runtime/backend'
 import app from '@renderer/main'
 import { JsonSeg, XmlSeg } from './seg'
 
@@ -246,14 +245,13 @@ export class MsgBodyFuns {
                 type = 'tencent.map'
             }
             if (json.app == 'com.tencent.miniapp_01' && info.name == '哔哩哔哩') {
-                try {
-                    callBackend('Onebot', 'sys:getFinalRedirectUrl', true, info.url).then((fistLink) => {
-                        linkView.bilibili(fistLink).then((result) => {
-                            card.$emit('page-view', fistLink, result)
-                        })
+                backend.call('Onebot', 'sys:getFinalRedirectUrl', true, info.url)
+                .then((fistLink) => {
+                    linkView.bilibili(fistLink).then((result) => {
+                        card.$emit('page-view', fistLink, result)
                     })
-                } catch (_) { /**/ }
-                if (runtimeData.tags.clientType != 'web') {
+                })
+                if (!backend.isWeb()) {
                     return null
                 }
             }

@@ -9,8 +9,8 @@ import { AdapterInterface } from './adapter/interface'
 import { resetRuntime, runtimeData } from './msg'
 import app from '@renderer/main'
 import { reloadUsers, updateMenu } from './utils/appUtil'
-import { callBackend } from './utils/systemUtil'
 import { User } from './model/user'
+import { backend } from '@renderer/runtime/backend'
 
 const popInfo = new PopInfo()
 
@@ -102,11 +102,11 @@ export async function login(originUrl: string, token: string): Promise<boolean>{
         value: loginData.nickname,
     })
     const title = `${loginData.nickname}（${loginData.uin}）`
-    if(runtimeData.tags.platform == 'web') {
+    if(backend.type == 'web') {
         document.title = title + '- Stapxs QQ Lite'
     } else {
         document.title = title
-        callBackend(undefined, 'win:setTitle', false, title)
+        backend.call(undefined, 'win:setTitle', false, title)
     }
 
     // 跳转标签卡

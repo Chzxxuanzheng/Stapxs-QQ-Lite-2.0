@@ -14,7 +14,7 @@
             <div v-if="show" ref="space"
                 :class="{
                     'menu': true,
-                    'with-bar': ['linux', 'win32'].includes(runtimeData.tags.platform ?? '')
+                    'with-bar': ['linux', 'win32'].includes(backend.type ?? '')
                 }"
                 @click="spaceClick">
                 <div ref="content" class="content">
@@ -26,6 +26,7 @@
 </template>
 <script lang="ts">
 import { runtimeData } from '@renderer/function/msg'
+import { backend } from '@renderer/runtime/backend'
 import { defineComponent, nextTick } from 'vue'
 
 export default defineComponent({
@@ -40,6 +41,7 @@ export default defineComponent({
     data() {
         return {
             runtimeData,
+            backend,
             show: false,
             showFinish: null as null | (() => void),
         }

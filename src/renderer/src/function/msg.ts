@@ -210,9 +210,6 @@ const baseRuntime = {
         viewer: { index: 0 },
         isElectron: false,
         isCapacitor: false,
-        clientType: 'web' as const,
-        platform: undefined,
-        release: undefined,
         connectSsl: false,
         darkMode: false,
         canCors: false,
@@ -247,7 +244,6 @@ export function resetRuntime(resetAll = false) {
     runtimeData.watch = reactive(baseRuntime.watch)
     if (resetAll) {
         runtimeData.selfInfo = undefined
-        runtimeData.tags = reactive(baseRuntime.tags)
         runtimeData.systemNoticesList = reactive([])
         runtimeData.loginInfo = reactive({} as unknown as {nickname: string, uin: number})
     }

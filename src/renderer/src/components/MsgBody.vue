@@ -409,8 +409,6 @@ import {
     vMenu
 } from '@renderer/function/utils/vcmd'
 import {
-    callBackend,
-    getSizeFromBytes,
     getTrueLang,
     getViewTime } from '@renderer/function/utils/systemUtil'
 import { linkView } from '@renderer/function/utils/linkViewUtil'
@@ -438,6 +436,7 @@ import { Role } from '@renderer/function/adapter/enmu'
 import CardMessage from './msg-component/CardMessage.vue'
 import { Img } from '@renderer/function/model/img'
 import { UserInfoPan } from './UserInfoPan.vue'
+import { backend } from '@renderer/runtime/backend'
 
 //#region == 声明变量 ================================================================
 const {
@@ -519,10 +518,8 @@ defineExpose({
         inject: ['viewer'],
         data() {
             return {
+                backend,
                 md: markdownit({ breaks: true }),
-                getFace: getFace,
-                getSizeFromBytes: getSizeFromBytes,
-                getViewTime: getViewTime,
                 isMe: false,
                 isDebugMsg: Option.get('debug_msg'),
                 linkViewStyle: '',
@@ -713,7 +710,7 @@ defineExpose({
                 let data = null as any
                 let finaLink = link
                 try {
-                    finaLink = await callBackend('Onebot', 'sys:getFinalRedirectUrl', true, link)
+                    finaLink = await backend.call('Onebot', 'sys:getFinalRedirectUrl', true, link)
                     if (!finaLink) {
                         finaLink = link
                     }
@@ -729,8 +726,8 @@ defineExpose({
                 }
                 // 通用 og 解析
                 if (!data) {
-                    if (runtimeData.tags.clientType != 'web') {
-                        let html = await callBackend('Onebot', 'sys:getHtml', true, finaLink)
+                    if (!backend.isWeb()) {
+                        let html = await backend.call('Onebot', 'sys:getHtml', true, finaLink)
                         if (html) {
                             const headEnd = html.indexOf('</head>')
                             html = html.slice(0, headEnd)
@@ -910,12 +907,12 @@ defineExpose({
                     width: number
                     height: number
                 } | null
-                if (['electron', 'tauri'].includes(runtimeData.tags.clientType)) {
-                    windowInfo = await callBackend('Onebot', 'win:getWindowInfo', true)
+                if (backend.isDesktop()) {
+                    windowInfo = await backend.call('Onebot', 'win:getWindowInfo', true)
                 }
                 const message = document.getElementById('chat-' + this.data.uuid)
                 let item = document.getElementById('app')
-                if (['electron', 'tauri'].includes(runtimeData.tags.clientType)) {
+                if (backend.isDesktop()) {
                     item = message?.getElementsByClassName('poke-hand')[0] as HTMLImageElement
                 }
                 this.$nextTick(() => {

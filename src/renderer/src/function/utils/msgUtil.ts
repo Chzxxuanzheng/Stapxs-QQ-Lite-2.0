@@ -2,7 +2,6 @@ import anime from 'animejs'
 
 import { runtimeData } from '@renderer/function/msg'
 import { sendStatEvent } from './appUtil'
-import { callBackend } from './systemUtil'
 import { Msg, SelfMsg } from '../model/msg'
 import { Seg } from '../model/seg'
 import { GroupSession, Session, UserSession } from '../model/session'
@@ -11,6 +10,7 @@ import { BubbleBox, SessionBox } from '../model/box'
 import { popBox } from './popBox'
 import { markRaw, toRaw } from 'vue'
 import app from '@renderer/main'
+import { backend } from '@renderer/runtime/backend'
 
 // dev下貌似能优化掉0.5s初次进入chat等待时间
 const facePathMap = new Map<number, string>()
@@ -90,8 +90,8 @@ export function pokeAnime(animeBody: HTMLElement | null, windowInfo = null as {
                 // 取整
                 num = Math.round(num)
                 // 输出 translateX
-                if (['electron', 'tauri'].includes(runtimeData.tags.clientType) && windowInfo) {
-                    await callBackend(undefined, 'win:move', false, {
+                if (backend.isDesktop() && windowInfo) {
+                    await backend.call(undefined, 'win:move', false, {
                             x: windowInfo.x + num,
                             y: windowInfo.y,
                         })
@@ -148,7 +148,7 @@ export function changeSession(session: Session, fromBox?: SessionBox) {
     }
 
     // 清理通知
-    callBackend(undefined, 'sys:closeAllNotice', false, session.id)
+    backend.call(undefined, 'sys:closeAllNotice', false, session.id)
 }
 
 /**
