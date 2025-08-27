@@ -1369,7 +1369,7 @@ textarea:focus {
 }
 
 .global-session-search-bar > div {
-    overflow: scroll;
+    overflow-y: scroll;
 }
 
 .global-session-search-bar > div > div {
@@ -1383,6 +1383,8 @@ textarea:focus {
 
 .global-session-search-bar > div > div.session-item {
     border-radius: 7px;
+    width: 100%;
+    overflow-x: hidden;
 }
 
 .global-session-search-bar > div > div.session-item:hover {
@@ -1395,11 +1397,13 @@ textarea:focus {
 
 .global-session-search-bar > div > div.session-item > div {
     pointer-events: none;
+    width: calc(100% - 20px - 4rem);
 }
 
 .global-session-search-bar > div > div.session-item > span {
     color: var(--color-font-1);
     font-size: 0.8rem;
+    min-width: 4rem;
     margin-right: 10px;
 }
 
