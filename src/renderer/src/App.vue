@@ -63,7 +63,7 @@
                             <p>{{ $t('连接到 协议端') }}</p>
                             <form @submit.prevent @submit="connect">
                                 <template v-if="loginInfo.quickLogin == null || loginInfo.quickLogin.length == 0">
-                                    <label v-if="!sse">
+                                    <label>
                                         <font-awesome-icon :icon="['fas', 'link']" />
                                         <input id="sev_address" v-model="loginInfo.address" :placeholder="$t('连接地址')"
                                             class="ss-input" autocomplete="off">
@@ -233,7 +233,6 @@ export default defineComponent({
         return {
             appClient: backend,
             dev: import.meta.env.DEV,
-            sse: import.meta.env.VITE_APP_SSE_MODE == 'true',
             defineAsyncComponent: defineAsyncComponent,
             save: Option.runASWEvent,
             get: Option.get,
