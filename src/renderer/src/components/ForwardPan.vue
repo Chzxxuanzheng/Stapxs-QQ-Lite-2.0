@@ -46,6 +46,7 @@ import {
     ShallowRef,
     shallowReactive,
     computed,
+    nextTick,
 } from 'vue'
 import { delay } from '@renderer/function/utils/systemUtil'
 import app from '@renderer/main'
