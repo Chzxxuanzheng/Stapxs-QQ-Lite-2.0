@@ -1674,7 +1674,7 @@ msgstr ""
 msgid "个性签名设置失败"
 msgstr ""
 
-msgid "代理地址不包含 \\{url\\}，请检查配置"
+msgid "代理地址不包含{url}"
 msgstr ""
 
 msgid "删除无用配置"

@@ -256,6 +256,8 @@ watchEffect(()=>{
     const thisId = testId
     runtimeData.tags.canCors = false
     const url = ProxyUrl.proxy(testUrl)
+    // 没有代理直接返回
+    if (url === testUrl) return
     fetch(url, { method: 'HEAD' }).then(res=>{
             if (testId > thisId) return
             runtimeData.tags.canCors = res.ok
