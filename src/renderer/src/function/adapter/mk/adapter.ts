@@ -970,7 +970,7 @@ export class MilkyAdapter implements AdapterInterface {
         return {
             type: 'image',
             data: {
-                uri: seg.url,
+                uri: seg.rawUrl,
                 sub_type: seg.isFace ? 'sticker' : 'normal',
             }
         }
@@ -1002,7 +1002,7 @@ export class MilkyAdapter implements AdapterInterface {
         return {
             type: 'video',
             data: {
-                uri: seg.url,
+                uri: seg.rawUrl,
             },
         }
     }
@@ -1037,7 +1037,7 @@ export class MilkyAdapter implements AdapterInterface {
         return {
             type: 'image',
             data: {
-                'uri': data.url,
+                'uri': data.rawUrl,
                 'sub_type': 'sticker',
                 'summary': data.summary,
             }

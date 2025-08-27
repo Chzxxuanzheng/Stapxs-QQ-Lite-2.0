@@ -44,4 +44,8 @@ export class Resource {
     get url(): string {
         return stdUrl(this._url)
     }
+
+    get rawUrl(): string {
+        return this._url
+    }
 }

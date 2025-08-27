@@ -597,8 +597,8 @@ export class OneBotAdapter implements AdapterInterface {
         return {
             type: 'image',
             data: {
-                url: seg.url,
-                file: seg.url,
+                url: seg.rawUrl,
+                file: seg.rawUrl,
             }
         }
     }
@@ -630,8 +630,8 @@ export class OneBotAdapter implements AdapterInterface {
         return {
             type: 'video',
             data: {
-                file: seg.file,
-                url: seg.url,
+                file: seg.rawUrl,
+                url: seg.rawUrl,
             },
         }
     }

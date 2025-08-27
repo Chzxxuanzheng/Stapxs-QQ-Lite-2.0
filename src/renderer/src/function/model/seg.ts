@@ -123,6 +123,10 @@ export class ImgSeg extends Seg {
         return this._url.url
     }
 
+    get rawUrl(): string {
+        return this._url.rawUrl
+    }
+
     get src(): string {
         if (this.url.startsWith('base64:')) return 'data:image/png;base64,' + this.url.substring(9)
         return this.url
@@ -133,6 +137,7 @@ export class ImgSeg extends Seg {
 export class MfaceSeg extends Seg {
     static readonly type = 'mface'
     url: string
+    rawUrl: string
     summary: string
     packageId: number
     id: string
@@ -141,6 +146,7 @@ export class MfaceSeg extends Seg {
 
     constructor(data: MfaceSegData) {
         super()
+        this.rawUrl = stdUrl(data.url)
         this.url = stdUrl(data.url)
         this.summary = data.summary
         this.packageId = data.packageId
@@ -319,6 +325,9 @@ export class VideoSeg extends Seg {
     }
     get url(): string {
         return this._url.url
+    }
+    get rawUrl(): string {
+        return this._url.rawUrl
     }
 }
 
