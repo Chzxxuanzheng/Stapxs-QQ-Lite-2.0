@@ -10,7 +10,6 @@ export interface RunTimeDataElem {
     sysConfig: Record<keyof typeof optDefault, any | null>
     loginInfo: LoginInfo,
     selfInfo?: User
-    onMsgList: (UserFriendElem & UserGroupElem)[]
     systemNoticesList?: { [key: string]: any }
     pageView: {
         chatView: any
@@ -19,7 +18,6 @@ export interface RunTimeDataElem {
     plantform: {[key: string]: any},
     tags: {
         firstLoad: boolean
-        canLoadHistory: boolean
         openSideBar: boolean
         viewer: {
             show?: boolean
@@ -42,8 +40,6 @@ export interface RunTimeDataElem {
          * 代理服务器端口
          */
         proxyPort?: number
-        connectSsl: boolean
-        classes: any[]
         sw?: boolean
         darkMode: boolean
     }
@@ -58,61 +54,6 @@ export interface RunTimeDataElem {
     nowBox?: SessionBox  // 当前的会话盒子
     nowAdapter?: AdapterInterface // 当前适配器
     popBoxList: { id: string, data: PopBoxData }[],
-}
-
-
-export interface BaseChatInfoElem {
-    type: 'group' | 'user' | 'temp'
-    id: number
-    name: string
-    avatar: string
-    appendInfo?: string
-    jump?: string
-    temp: number
-}
-
-export interface UserElem {
-    new_msg?: boolean
-    raw_msg?: string
-    time?: number
-    always_top?: boolean
-    message_id?: string
-    highlight?: string
-}
-
-export interface UserFriendElem extends UserElem {
-    group_id: number
-    group_name: string
-    py_name?: string
-    py_start?: string
-    member_count?: number
-    admin_flag?: boolean
-}
-
-export interface UserGroupElem extends UserElem {
-    user_id: number
-    nickname: string
-    remark: string
-    raw_msg_base?: string       // 给群收纳箱用的
-    py_name?: string
-    py_start?: string
-    class_id?: number
-    class_name?: string
-}
-
-export interface GroupMemberInfoElem {
-    user_id: number
-    title: string
-    card: string
-    join_time: number
-    last_sent_time: number
-    level: number
-    nickname: string
-    rank: string
-    role: string
-    sex: string
-    shutup_time: number
-    py_start?: string
 }
 
 export interface MenuEventData {

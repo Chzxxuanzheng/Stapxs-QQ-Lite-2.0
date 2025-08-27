@@ -200,7 +200,6 @@ const baseRuntime = {
     plantform: {} as any,
     tags: {
         firstLoad: false,
-        canLoadHistory: true,
         openSideBar: true,
         viewer: { index: 0 },
         isElectron: false,
@@ -209,7 +208,6 @@ const baseRuntime = {
         platform: undefined,
         release: undefined,
         connectSsl: false,
-        classes: [],
         darkMode: false,
     },
     watch: {
@@ -226,7 +224,6 @@ const baseRuntime = {
         ),
     },
     systemNoticesList: undefined,
-    onMsgList: [],
     loginInfo: {} as unknown as {nickname: string, uin: number},
     sysConfig: {} as Record<keyof typeof optDefault, any | null>,
     popBoxList: [],
@@ -245,7 +242,6 @@ export function resetRuntime(resetAll = false) {
         runtimeData.selfInfo = undefined
         runtimeData.tags = reactive(baseRuntime.tags)
         runtimeData.systemNoticesList = reactive([])
-        runtimeData.onMsgList = reactive([])
         runtimeData.loginInfo = reactive({} as unknown as {nickname: string, uin: number})
     }
 }
