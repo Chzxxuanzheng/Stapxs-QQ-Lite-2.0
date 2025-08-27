@@ -1,5 +1,5 @@
 import app from '@renderer/main'
-import { getSizeFromBytes, stdUrl } from '../utils/systemUtil'
+import { getSizeFromBytes } from '../utils/systemUtil'
 import { MsgBodyFuns } from './msg-body'
 import { getFace } from '../utils/msgUtil'
 import { PopInfo, PopType } from '../base'
@@ -9,6 +9,7 @@ import type { AtAllSegData, AtSegData, FaceSegData, FileSegData, ForwardSegData,
 import { Resource } from './ressource'
 import { Img } from './img'
 import { toRaw } from 'vue'
+import { ProxyUrl } from './proxyUrl'
 
 export const segType = {}
 type SegCon<T extends Seg> = { new(...args: any[]): T; type: string };
@@ -136,8 +137,7 @@ export class ImgSeg extends Seg {
 @registerSegType
 export class MfaceSeg extends Seg {
     static readonly type = 'mface'
-    url: string
-    rawUrl: string
+    _url: ProxyUrl
     summary: string
     packageId: number
     id: string
@@ -146,8 +146,7 @@ export class MfaceSeg extends Seg {
 
     constructor(data: MfaceSegData) {
         super()
-        this.rawUrl = stdUrl(data.url)
-        this.url = stdUrl(data.url)
+        this._url = new ProxyUrl(data.url)
         this.summary = data.summary
         this.packageId = data.packageId
         this.id = data.id
@@ -158,6 +157,14 @@ export class MfaceSeg extends Seg {
     get plaintext(): string {
         const { $t } = app.config.globalProperties
         return this.summary ?? '[' + $t('表情') + ']'
+    }
+
+    get url(): string {
+        return this._url.url
+    }
+
+    get rawUrl(): string {
+        return this._url.raw
     }
 
     get src(): string {
@@ -230,7 +237,7 @@ export class FileSeg extends Seg {
     static readonly type = 'file'
     name: string
     file_id?: string
-    url: string
+    _url: ProxyUrl
     size: number
     ext: string
     download_percent?: number
@@ -251,7 +258,7 @@ export class FileSeg extends Seg {
             const file = arg1
             const name = arg2 as string
             const size = arg3 as number
-            this.url = file
+            this._url = new ProxyUrl(file)
             this.name = name
             this.ext = name.split('.').pop() || 'unknown'
             this.size = size
@@ -262,7 +269,7 @@ export class FileSeg extends Seg {
             this.name = data.name
             this.size = data.size
             this.ext = this.name.split('.').pop() || 'unknown'
-            this.url = stdUrl(data.url)
+            this._url = new ProxyUrl(data.url)
         }
     }
 
@@ -277,6 +284,14 @@ export class FileSeg extends Seg {
         const { $t } = app.config.globalProperties
 
         return this.name ?? '[' + $t('文件') + ']'
+    }
+
+    get url(): string {
+        return this._url.url
+    }
+
+    get rawUrl(): string {
+        return this._url.raw
     }
 
     get fileView(): { url: string, ext: string, txt?: string } | undefined {

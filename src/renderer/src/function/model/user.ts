@@ -10,12 +10,12 @@
 
 import app from '@renderer/main'
 import { runtimeData } from '../msg'
-import { stdUrl } from '../utils/systemUtil'
 import { Name, Time } from './data'
 import { GroupSession, Session, TempSession, UserSession } from './session'
 import { computed } from 'vue'
 import { ForwardSenderData, MemberData, SenderData, UserData } from '@renderer/function/adapter/interface'
 import { Gender, Role } from '../adapter/enmu'
+import { ProxyUrl } from './proxyUrl'
 
 export interface IUser {
     user_id: number
@@ -167,7 +167,7 @@ export class Member implements IUser {
     }
 
     private _face = computed(()=>{
-        return stdUrl('https://q1.qlogo.cn/g?b=qq&s=0&nk=' + this.user_id)
+        return ProxyUrl.proxy('https://q1.qlogo.cn/g?b=qq&s=0&nk=' + this.user_id)
     })
 
     get face(): string {
@@ -303,7 +303,7 @@ export class User implements IUser {
     }
 
     private _face = computed(()=>{
-        return stdUrl('https://q1.qlogo.cn/g?b=qq&s=0&nk=' + this.user_id)
+        return ProxyUrl.proxy('https://q1.qlogo.cn/g?b=qq&s=0&nk=' + this.user_id)
     })
 
     get face(): string {
@@ -451,7 +451,7 @@ export class BaseUser {
     }
 
     private _face = computed(()=>{
-        return stdUrl('https://q1.qlogo.cn/g?b=qq&s=0&nk=' + this.user_id)
+        return ProxyUrl.proxy('https://q1.qlogo.cn/g?b=qq&s=0&nk=' + this.user_id)
     })
 
     get face(): string {
@@ -505,10 +505,13 @@ function isRobot(id: number): boolean {
 export class ForwardSender implements IUser{
     user_id = 0
     _nickname: Name
-    face: string
+    _face: ProxyUrl
     constructor(data: ForwardSenderData) {
         this._nickname = new Name(data.nickname)
-        this.face = stdUrl(data.face)
+        this._face = new ProxyUrl(data.face)
+    }
+    get face(): string {
+        return this._face.url
     }
     get nickname(): string {
         return this._nickname.toString()

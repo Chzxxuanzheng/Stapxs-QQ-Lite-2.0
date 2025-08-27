@@ -18,7 +18,6 @@ import {
     callBackend,
     rgbToHsl,
     addBackendListener,
-    stdUrl
 } from '@renderer/function/utils/systemUtil'
 import { changeSession, sendMsgRaw } from './msgUtil'
 import { parseMsg } from '../sender'
@@ -70,7 +69,7 @@ export function scrollToMsg(seqName: string, showAnimation: boolean, showHighlig
  */
 export function openLink(url: string, external = false) {
     // 判断是不是 Electron，是的话打开内嵌 iframe
-    url = stdUrl(url)
+    url = ProxyUrl.proxy(url)
     if (['electron', 'tauri'].includes(runtimeData.tags.clientType)) {
         if (!external && !runtimeData.sysConfig.close_browser) {
             runtimeData.popBoxList = []
@@ -621,6 +620,7 @@ import { SessionBox } from '../model/box'
 import driver, { backendWs } from '../driver'
 import { FriendData, GroupData } from '../adapter/interface'
 import { htmlPopBox, popBox } from './popBox'
+import { ProxyUrl } from '../model/proxyUrl'
 // import windowsCss from '@renderer/assets/css/append/mobile/append_windows.css?raw'
 /**
 * 装载补充样式

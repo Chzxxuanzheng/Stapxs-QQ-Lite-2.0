@@ -416,40 +416,6 @@ export function pastTimeFormat(time: number): string {
 }
 
 /**
- * 标准化url,处理通信协议,加http
- * @param url
- * @todo TODO: url改正响应式对象 已经标准还的重复url验证
- */
-export function stdUrl(url: string){
-    const $t = i18n.global.t
-    if (!url.toLowerCase().startsWith('http')) return url
-    if (document.location.protocol == 'https:') {
-        // 判断文件 URL 的协议
-        // PS：Chrome 不会对 http 文件进行协议升级
-        if (url.toLowerCase().startsWith('http:')) {
-            url = 'https' + url.substring(url.indexOf('://'))
-        }
-    }
-    // 获取跨域连接
-    let proxyUrl: string | undefined = undefined
-    if (runtimeData.tags.proxyPort)
-        proxyUrl = `http://localhost:${runtimeData.tags.proxyPort}/assets?url={url}`
-    else if (runtimeData.sysConfig.proxyUrl?.trim().length > 0)
-        proxyUrl = runtimeData.sysConfig.proxyUrl.trim()
-
-    // url 校验
-    if (proxyUrl && !proxyUrl.includes('{url}')) {
-        new PopInfo().add(PopType.ERR, $t('代理地址不包含 \\{url\\}，请检查配置'),)
-        proxyUrl = undefined
-    }
-
-    // 包装 url
-    if (proxyUrl)
-        url = proxyUrl.replace('{url}', encodeURIComponent(url))
-    return url
-}
-
-/**
  * 获得一英尺的像素点数
  */
 export function getInch(): number {

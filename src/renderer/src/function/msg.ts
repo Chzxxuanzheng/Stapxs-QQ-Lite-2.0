@@ -26,7 +26,12 @@ import {
 import {
     reloadUsers,
 } from '@renderer/function/utils/appUtil'
-import { reactive, markRaw, defineAsyncComponent } from 'vue'
+import {
+    reactive,
+    markRaw,
+    defineAsyncComponent,
+    watchEffect
+} from 'vue'
 import { PopInfo, PopType, Logger, LogType } from './base'
 import {
     RunTimeDataElem,
@@ -35,6 +40,7 @@ import { Notify } from './notify'
 import { Msg, SelfMsg } from './model/msg'
 import { Session } from './model/session'
 import { htmlPopBox } from './utils/popBox'
+import { ProxyUrl } from './model/proxyUrl'
 
 // 其他 tag
 const logger = new Logger()
@@ -209,6 +215,7 @@ const baseRuntime = {
         release: undefined,
         connectSsl: false,
         darkMode: false,
+        canCors: false,
     },
     watch: {
         backTimes: 0,
@@ -245,3 +252,16 @@ export function resetRuntime(resetAll = false) {
         runtimeData.loginInfo = reactive({} as unknown as {nickname: string, uin: number})
     }
 }
+
+let testId = 0
+const testUrl = 'https://q1.qlogo.cn/g?b=qq&s=0&nk=0'
+watchEffect(()=>{
+    testId++
+    const thisId = testId
+    runtimeData.tags.canCors = false
+    const url = ProxyUrl.proxy(testUrl)
+    fetch(url, { method: 'HEAD' }).then(res=>{
+            if (testId > thisId) return
+            runtimeData.tags.canCors = res.ok
+        })
+})

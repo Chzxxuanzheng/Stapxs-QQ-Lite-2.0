@@ -7,15 +7,15 @@
  */
 
 import { runtimeData } from '../msg'
-import { stdUrl } from '../utils/systemUtil'
+import { ProxyUrl } from './proxyUrl'
 
 export class Resource {
     _id?: string
-    _url: string
+    _url: ProxyUrl
 
     protected constructor(id: string | undefined, url: string) {
         this._id = id
-        this._url = url
+        this._url = new ProxyUrl(url)
     }
 
     /**
@@ -42,10 +42,10 @@ export class Resource {
     }
 
     get url(): string {
-        return stdUrl(this._url)
+        return this._url.url
     }
 
     get rawUrl(): string {
-        return this._url
+        return this._url.raw
     }
 }

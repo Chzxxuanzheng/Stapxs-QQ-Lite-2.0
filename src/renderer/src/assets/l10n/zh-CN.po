@@ -1350,13 +1350,7 @@ msgstr ""
 msgid "测试成功"
 msgstr ""
 
-msgid "测试ing"
-msgstr ""
-
-msgid "重新测试"
-msgstr ""
-
-msgid "代理地址不包含 \{url\}，请检查配置"
+msgid "代理地址不包含\{url\}"
 msgstr ""
 
 msgid "收纳盒"

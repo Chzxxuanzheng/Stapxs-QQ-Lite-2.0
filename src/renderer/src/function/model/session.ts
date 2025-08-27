@@ -18,7 +18,7 @@ import {
     computed,
     toRaw,
 } from 'vue'
-import { queueWait, stdUrl } from '../utils/systemUtil'
+import { queueWait } from '../utils/systemUtil'
 import { Name } from './data'
 import { Message } from './message'
 import { EssenceMsg, Msg } from './msg'
@@ -33,6 +33,7 @@ import { SessionBox } from './box'
 import { Role } from '../adapter/enmu'
 import { SessionData } from '../adapter/interface'
 import { Img } from './img'
+import { ProxyUrl } from './proxyUrl'
 
 /**
  * 会话基类
@@ -729,7 +730,7 @@ export class GroupSession extends Session {
     }
 
     override _face = computed(() => {
-        return stdUrl('https://p.qlogo.cn/gh/' + this.id + '/' + this.id + '/0')
+        return ProxyUrl.proxy('https://p.qlogo.cn/gh/' + this.id + '/' + this.id + '/0')
     })
 
     static override getSessionById(id: number): GroupSession | undefined {
@@ -932,7 +933,7 @@ export class UserSession extends Session {
     }
 
     override _face = computed(() => {
-        return stdUrl('https://q1.qlogo.cn/g?b=qq&s=0&nk=' + this.id)
+        return ProxyUrl.proxy('https://q1.qlogo.cn/g?b=qq&s=0&nk=' + this.id)
     })
 
     override get showName(): string {
@@ -1051,7 +1052,7 @@ export class TempSession extends Session {
     }
 
     override _face = computed(() => {
-        return stdUrl('https://q1.qlogo.cn/g?b=qq&s=0&nk=' + this.id)
+        return ProxyUrl.proxy('https://q1.qlogo.cn/g?b=qq&s=0&nk=' + this.id)
     })
 
     override get showName(): string {

@@ -40,6 +40,7 @@ export interface RunTimeDataElem {
          * 代理服务器端口
          */
         proxyPort?: number
+        canCors: boolean
         sw?: boolean
         darkMode: boolean
     }

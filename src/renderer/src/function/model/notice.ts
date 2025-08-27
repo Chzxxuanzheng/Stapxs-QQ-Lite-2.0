@@ -11,7 +11,6 @@ import { runtimeData } from '../msg'
 import { Message } from './message'
 import { GroupSession, Session } from './session'
 import { autoReactive, formatTime } from './utils'
-import { stdUrl } from '../utils/systemUtil'
 import { getSender, IUser } from './user'
 import type {
     BanEventData,
@@ -24,6 +23,7 @@ import type {
     SenderData,
     SessionData
 } from '../adapter/interface'
+import { ProxyUrl } from './proxyUrl'
 
 export abstract class Notice extends Message {
     abstract readonly type: string
@@ -154,7 +154,7 @@ export class PokeNotice extends ReceivedNotice {
     override readonly type = 'poke'
     action!: string
     suffix!: string
-    ico!: string
+    _ico: ProxyUrl
     user: IUser
     target: IUser
     constructor(data: PokeEventData) {
@@ -163,7 +163,7 @@ export class PokeNotice extends ReceivedNotice {
         this.target = this.getUser(data.target)
         this.action = data.action
         this.suffix = data.suffix
-        this.ico = stdUrl(data.ico)
+        this._ico = new ProxyUrl(data.ico)
         this.users.push(this.user, this.target)
     }
 
@@ -175,6 +175,10 @@ export class PokeNotice extends ReceivedNotice {
         const { $t } = app.config.globalProperties
         if (this.tome) return this.user.name + $t('戳了你')
         return this.user.name + this.action + this.target.name + this.suffix
+    }
+
+    get ico(): string {
+        return this._ico.url
     }
 }
 
