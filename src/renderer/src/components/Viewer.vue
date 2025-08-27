@@ -52,13 +52,13 @@
                             <font-awesome-icon :icon="['fas', 'share']" style="transform: rotateY(180deg);"
                                 @click.stop="rotate(-90)"/>
                             <hr />
-                            <font-awesome-icon :icon="['fas', 'pen-to-square']"
+                            <font-awesome-icon v-if="runtimeData.tags.canCors" :icon="['fas', 'pen-to-square']"
                                 @click.stop="editImg"/>
                             <font-awesome-icon :icon="['fas', 'undo']"
                                 @click.stop="resetModify"/>
                             <font-awesome-icon :icon="['fas', 'download']"
                                 @click.stop="download"/>
-                            <font-awesome-icon :icon="['fas', 'clipboard']"
+                            <font-awesome-icon v-if="runtimeData.tags.canCors" :icon="['fas', 'clipboard']"
                                 @click.stop="copy"/>
                             <hr />
                             <font-awesome-icon :icon="['fas', 'share']"
@@ -190,6 +190,7 @@ import {
 } from 'vue'
 import { downloadFile } from '@renderer/function/utils/appUtil'
 import { PopInfo, PopType } from '@renderer/function/base'
+import { runtimeData } from '@renderer/function/msg'
 
 type EditToolType = 'hand' | 'pen' | 'rect'
 
@@ -316,7 +317,8 @@ function init() {
 
         resetModify()
     }
-    img.crossOrigin = 'anonymous'
+    if (runtimeData.tags.canCors)
+        img.crossOrigin = 'anonymous'
     img.src = currentImg.value.src
     img.onload = loadFinish
     loading.value = true
@@ -359,12 +361,17 @@ function prevImg() {
  * 下载图片
  */
 async function download() {
-    const data = await getBlob()
-    if (!data) {
-        new PopInfo().add(PopType.ERR, $t('下载失败'))
-        return
+    if (runtimeData.tags.canCors) {
+        const data = await getBlob()
+        if (!data) {
+            new PopInfo().add(PopType.ERR, $t('下载失败'))
+            return
+        }
+        downloadFile(URL.createObjectURL(data), 'img.png', () => undefined, () => undefined)
+    }else {
+        if (!currentImg.value) return
+        downloadFile(currentImg.value.src, 'img.png', () => undefined, () => undefined)
     }
-    downloadFile(URL.createObjectURL(data), 'img.png', () => undefined, () => undefined)
 }
 /**
  * 复制图片
@@ -1029,7 +1036,8 @@ async function getBlob(): Promise<Blob|undefined> {
             newCanvas.height = currentImgInfo.value!.width
         }
 
-        tmpImg.crossOrigin = 'anonymous'
+        if (runtimeData.tags.canCors)
+            tmpImg.crossOrigin = 'anonymous'
         tmpImg.src = tmpUrl
         tmpImg.onload = () => {
             newCtx.translate(newCanvas.width / 2, newCanvas.height / 2)
