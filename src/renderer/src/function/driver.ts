@@ -116,7 +116,7 @@ class NativeWs implements Ws {
     }
     async reset(): Promise<void> {
         if (this.selfState === DriverState.Disconnected) return
-        await this.close()
+        if (this.selfState !== DriverState.Error) await this.close()
         this.websocket = undefined
         this.selfState = DriverState.Disconnected
         this.onErrorHook = undefined
