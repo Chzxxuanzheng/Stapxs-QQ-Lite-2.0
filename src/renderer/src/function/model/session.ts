@@ -217,7 +217,7 @@ export abstract class Session {
     static clear(): void {
         // 取消激活
         for (const session of Session.activeSessions)
-            session.unactive()
+            toRaw(session).unactive()
 
         Session.sessionList.length = 0
         Session.alwaysTopSessions.clear()
