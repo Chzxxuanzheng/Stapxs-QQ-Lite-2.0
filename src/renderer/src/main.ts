@@ -1,4 +1,3 @@
-import VueViewer from 'v-viewer'
 import VueClipboard from 'vue-clipboard2'
 import packageInfo from '../../../package.json'
 
@@ -42,7 +41,6 @@ export const i18n = createI18n({
 const app = createApp(App)
 app.use(i18n)
 app.use(createPinia())
-app.use(VueViewer)
 app.use(VueClipboard)
 
 library.add(fas)

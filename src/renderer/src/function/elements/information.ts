@@ -19,10 +19,6 @@ export interface RunTimeDataElem {
     tags: {
         firstLoad: boolean
         openSideBar: boolean
-        viewer: {
-            show?: boolean
-            index: number
-        }
         canCors: boolean
         sw?: boolean
         darkMode: boolean

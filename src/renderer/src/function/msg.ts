@@ -203,14 +203,12 @@ function updateSysInfo(
 // ==============================================================
 
 const baseRuntime = {
-    connectInfo: { address: undefined },
+    connectInfo: { address: undefined, token: undefined },
+    loginInfo: {} as unknown as {nickname: string, uin: number},
+    sysConfig: {} as Record<keyof typeof optDefault, any | null>,
     tags: {
         firstLoad: false,
         openSideBar: true,
-        viewer: { index: 0 },
-        isElectron: false,
-        isCapacitor: false,
-        connectSsl: false,
         darkMode: false,
         canCors: false,
     },
@@ -228,8 +226,6 @@ const baseRuntime = {
         ),
     },
     systemNoticesList: undefined,
-    loginInfo: {} as unknown as {nickname: string, uin: number},
-    sysConfig: {} as Record<keyof typeof optDefault, any | null>,
     popBoxList: [],
     mergeMsgStack: [],
     inch: getInch(),
