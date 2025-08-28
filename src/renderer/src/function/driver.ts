@@ -392,9 +392,10 @@ class Driver {
         this.ws.onMessage(msg => this.onMessageHook?.(msg))
         // 自动重连
         this.ws.onError(async(err) => {
+            // 自动重连
             if (this.state === DriverState.Close) return
             new PopInfo().add(PopType.INFO, '连接不稳定')
-            const re = await this.connectWs(this.path)
+            const re = await this.connectWs(this.path, true)
 
             if (re) return
 
@@ -416,7 +417,7 @@ class Driver {
         if (this.state !== DriverState.Disconnected)
             throw new Error('驱动器不处于断开状态，无法连接')
         this.state = DriverState.Connecting
-        const re = await this.connectWs(this.path)
+        const re = await this.connectWs(this.path, false)
         if (re) {
             this.state = DriverState.Connected
         }else {
@@ -427,9 +428,16 @@ class Driver {
     }
 
     async close(): Promise<void> {
+        let needCloseWs = true
+
+        if (this.state === DriverState.Disconnected) needCloseWs = false
+        if (this.state === DriverState.Error) needCloseWs = false
+
+        if (this.state === DriverState.Connecting) throw new Error('驱动器正在连接中，无法关闭')
+
         this.state = DriverState.Close
         runtimeData.nowAdapter = undefined
-        await this.ws.close()
+        if (needCloseWs) await this.ws.close()
     }
     //#endregion
 
@@ -515,10 +523,11 @@ class Driver {
      * 连接到WebSocket
      * @returns 是否成功
      */
-    private async connectWs(path: string): Promise<boolean> {
+    private async connectWs(path: string, useRetry: boolean): Promise<boolean> {
         for (let i = 0; i < this.retry; i++) {
             const re = await this.ws.open(this.wsUrl + '/' + path)
             if (re) return true
+            if (!useRetry) return false
         }
         return false
     }

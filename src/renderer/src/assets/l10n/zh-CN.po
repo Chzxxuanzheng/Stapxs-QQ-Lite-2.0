@@ -1898,3 +1898,6 @@ msgstr ""
 
 msgid "（试听）"
 msgstr ""
+
+msgid "登录失败: "
+msgstr ""

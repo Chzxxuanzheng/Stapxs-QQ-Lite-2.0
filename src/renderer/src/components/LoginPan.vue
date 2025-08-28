@@ -1,63 +1,63 @@
 <template>
-<div class="login-pan-card ss-card">
-    <font-awesome-icon :icon="['fas', 'circle-nodes']" />
-    <p>{{ $t('连接到 协议端') }}</p>
-    <form @submit.prevent @submit="connect">
-        <template v-if="loginInfo.quickLogin == null || loginInfo.quickLogin.length == 0">
-            <label>
-                <font-awesome-icon :icon="['fas', 'link']" />
-                <input id="sev_address" v-model="loginInfo.address" :placeholder="$t('连接地址')"
-                    class="ss-input" autocomplete="off">
-            </label>
-        </template>
-        <div v-else class="ss-card quick-login">
-            <div class="title">
-                <font-awesome-icon :icon="['fas', 'link']" />
-                <span>{{ $t('来自局域网的服务') }}</span>
-                <a @click="cancelQuickLogin">{{ $t('取消') }}</a>
-            </div>
-            <div class="list">
-                <div v-for="item in loginInfo.quickLogin" :key="item.address + ':' + item.port"
-                    :class="(loginInfo.quickLoginSelect == item.address + ':' + item.port) ? 'select' : ''"
-                    @click="selectQuickLogin(item.address + ':' + item.port)">
-                    <span>{{ item.address }}:{{ item.port }}</span>
-                    <div><div /></div>
+    <div class="login-pan-card ss-card">
+        <font-awesome-icon :icon="['fas', 'circle-nodes']" />
+        <p>{{ $t('连接到 协议端') }}</p>
+        <form @submit.prevent @submit="connect">
+            <template v-if="loginInfo.quickLogin == null || loginInfo.quickLogin.length == 0">
+                <label>
+                    <font-awesome-icon :icon="['fas', 'link']" />
+                    <input id="sev_address" v-model="loginInfo.address" :placeholder="$t('连接地址')"
+                        class="ss-input" autocomplete="off">
+                </label>
+            </template>
+            <div v-else class="ss-card quick-login">
+                <div class="title">
+                    <font-awesome-icon :icon="['fas', 'link']" />
+                    <span>{{ $t('来自局域网的服务') }}</span>
+                    <a @click="cancelQuickLogin">{{ $t('取消') }}</a>
+                </div>
+                <div class="list">
+                    <div v-for="item in loginInfo.quickLogin" :key="item.address + ':' + item.port"
+                        :class="(loginInfo.quickLoginSelect == item.address + ':' + item.port) ? 'select' : ''"
+                        @click="selectQuickLogin(item.address + ':' + item.port)">
+                        <span>{{ item.address }}:{{ item.port }}</span>
+                        <div><div /></div>
+                    </div>
                 </div>
             </div>
-        </div>
-        <label>
-            <font-awesome-icon :icon="['fas', 'lock']" />
-            <input id="access_token" v-model="loginInfo.token" :placeholder="$t('连接密钥')"
-                class="ss-input" type="password" autocomplete="off">
-        </label>
-        <div style="display: flex">
-            <label class="default">
-                <input id="in_" v-model="loginInfo.savePassword" type="checkbox"
-                    name="save_password"
-                    @click="savePassword">
-                <a>{{ $t('记住密码') }}</a>
+            <label>
+                <font-awesome-icon :icon="['fas', 'lock']" />
+                <input id="access_token" v-model="loginInfo.token" :placeholder="$t('连接密钥')"
+                    class="ss-input" type="password" autocomplete="off">
             </label>
-            <div style="flex: 1" />
-            <label class="default" style="justify-content: flex-end">
-                <input v-model="runtimeData.sysConfig.auto_connect" type="checkbox"
-                    name="auto_connect" @click="saveAutoConnect">
-                <a>{{ $t('自动连接') }}</a>
-            </label>
-        </div>
-        <button id="connect_btn" class="ss-button" type="submit"
-            :disabled="isLogging"
-            @mousemove="afd">
-            <template v-if="!isLogging">
-                {{ $t('连接') }}
-            </template>
-            <template v-else>
-                <font-awesome-icon :icon="['fas', 'spinner']" spin />
-            </template>
-        </button>
-    </form>
-    <a href="https://github.com/Stapxs/Stapxs-QQ-Lite-2.0#%E5%BF%AB%E9%80%9F%E4%BD%BF%E7%94%A8"
-        target="_blank">{{ $t('如何连接') }}</a>
-</div>
+            <div style="display: flex">
+                <label class="default">
+                    <input id="in_" v-model="loginInfo.savePassword" type="checkbox"
+                        name="save_password"
+                        @click="savePassword">
+                    <a>{{ $t('记住密码') }}</a>
+                </label>
+                <div style="flex: 1" />
+                <label class="default" style="justify-content: flex-end">
+                    <input v-model="runtimeData.sysConfig.auto_connect" type="checkbox"
+                        name="auto_connect" @click="saveAutoConnect">
+                    <a>{{ $t('自动连接') }}</a>
+                </label>
+            </div>
+            <button id="connect_btn" class="ss-button" type="submit"
+                :disabled="isLogging"
+                @mousemove="afd">
+                <template v-if="!isLogging">
+                    {{ $t('连接') }}
+                </template>
+                <template v-else>
+                    <font-awesome-icon :icon="['fas', 'spinner']" spin />
+                </template>
+            </button>
+        </form>
+        <a href="https://github.com/Stapxs/Stapxs-QQ-Lite-2.0#%E5%BF%AB%E9%80%9F%E4%BD%BF%E7%94%A8"
+            target="_blank">{{ $t('如何连接') }}</a>
+    </div>
 </template>
 
 <script setup lang="ts">
