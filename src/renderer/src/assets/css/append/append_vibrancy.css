@@ -13,9 +13,6 @@ body {
 .login-pan-card:hover {
     box-shadow: none !important;
 }
-.wave-pan {
-    display: none;
-}
 .login-pan-card label {
     border: 1px solid var(--color-main);
     opacity: 0.8;

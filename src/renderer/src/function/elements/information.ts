@@ -8,6 +8,7 @@ import { optDefault } from '../option'
 
 export interface RunTimeDataElem {
     sysConfig: Record<keyof typeof optDefault, any | null>
+    connectInfo: {address: string | undefined, token: string | undefined}
     loginInfo: LoginInfo,
     selfInfo?: User
     systemNoticesList?: { [key: string]: any }
@@ -22,7 +23,6 @@ export interface RunTimeDataElem {
             show?: boolean
             index: number
         }
-        loginWaveTimer?: any
         canCors: boolean
         sw?: boolean
         darkMode: boolean

@@ -203,7 +203,7 @@ function updateSysInfo(
 // ==============================================================
 
 const baseRuntime = {
-    plantform: {} as any,
+    connectInfo: { address: undefined },
     tags: {
         firstLoad: false,
         openSideBar: true,

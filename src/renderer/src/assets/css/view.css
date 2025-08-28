@@ -367,24 +367,6 @@ textarea:focus {
     opacity: 0.7;
 }
 
-.wave-pan {
-    width: calc(100% + 60px);
-    margin-bottom: -50px;
-    margin-top: -90px;
-    overflow: hidden;
-    z-index: -1;
-    float: left;
-}
-.wave-pan > svg {
-    fill: var(--color-card-2);
-}
-.wave-pan > svg > g > use {
-    opacity: 0.5;
-}
-.wave-pan > svg > g > use:last-child {
-    opacity: 1;
-}
-
 .friend-view {
     overflow: hidden;
     flex-direction: row;

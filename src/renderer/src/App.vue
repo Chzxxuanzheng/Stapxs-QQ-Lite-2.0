@@ -58,80 +58,7 @@
             <div :style="get('fs_adaptation') > 0 ? `height: calc(100% - ${75 + Number(get('fs_adaptation'))}px);` : ''">
                 <div v-if="pageInfo.page == 'Home'" :name="$t('主页')">
                     <div class="home-body">
-                        <div class="login-pan-card ss-card">
-                            <font-awesome-icon :icon="['fas', 'circle-nodes']" />
-                            <p>{{ $t('连接到 协议端') }}</p>
-                            <form @submit.prevent @submit="connect">
-                                <template v-if="loginInfo.quickLogin == null || loginInfo.quickLogin.length == 0">
-                                    <label>
-                                        <font-awesome-icon :icon="['fas', 'link']" />
-                                        <input id="sev_address" v-model="loginInfo.address" :placeholder="$t('连接地址')"
-                                            class="ss-input" autocomplete="off">
-                                    </label>
-                                </template>
-                                <div v-else class="ss-card quick-login">
-                                    <div class="title">
-                                        <font-awesome-icon :icon="['fas', 'link']" />
-                                        <span>{{ $t('来自局域网的服务') }}</span>
-                                        <a @click="cancelQuickLogin">{{ $t('取消') }}</a>
-                                    </div>
-                                    <div class="list">
-                                        <div v-for="item in loginInfo.quickLogin" :key="item.address + ':' + item.port"
-                                            :class="(loginTag.quickLoginSelect == item.address + ':' + item.port) ? 'select' : ''"
-                                            @click="selectQuickLogin(item.address + ':' + item.port)">
-                                            <span>{{ item.address }}:{{ item.port }}</span>
-                                            <div><div /></div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <label>
-                                    <font-awesome-icon :icon="['fas', 'lock']" />
-                                    <input id="access_token" v-model="loginInfo.token" :placeholder="$t('连接密钥')"
-                                        class="ss-input" type="password" autocomplete="off">
-                                </label>
-                                <div style="display: flex">
-                                    <label class="default">
-                                        <input id="in_" v-model="loginTag.savePassword" type="checkbox"
-                                            name="save_password"
-                                            @click="savePassword">
-                                        <a>{{ $t('记住密码') }}</a>
-                                    </label>
-                                    <div style="flex: 1" />
-                                    <label class="default" style="justify-content: flex-end">
-                                        <input v-model="runtimeData.sysConfig.auto_connect" type="checkbox"
-                                            name="auto_connect" @click="saveAutoConnect">
-                                        <a>{{ $t('自动连接') }}</a>
-                                    </label>
-                                </div>
-                                <button id="connect_btn" class="ss-button" type="submit"
-                                    :disabled="driver.isConnecting()"
-                                    @mousemove="afd">
-                                    <template v-if="!driver.isConnecting()">
-                                        {{ $t('连接') }}
-                                    </template>
-                                    <template v-else>
-                                        <font-awesome-icon :icon="['fas', 'spinner']" spin />
-                                    </template>
-                                </button>
-                            </form>
-                            <a href="https://github.com/Stapxs/Stapxs-QQ-Lite-2.0#%E5%BF%AB%E9%80%9F%E4%BD%BF%E7%94%A8"
-                                target="_blank" style="margin-bottom: -20px">{{ $t('如何连接') }}</a>
-                            <div class="wave-pan" style="margin-left: -30px">
-                                <svg id="login-wave" xmlns="http://www.w3.org/2000/svg"
-                                    xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 24 170 70"
-                                    preserveAspectRatio="none" shape-rendering="auto">
-                                    <defs>
-                                        <path id="gentle-wave" d="M -160 44 c 30 0 58 -18 88 -18 s 58 18 88 18 s 58 -18 88 -18 s 58 18 88 18 v 44 h -352 Z" />
-                                    </defs>
-                                    <g class="parallax">
-                                        <use xlink:href="#gentle-wave" x="83" y="0" />
-                                        <use xlink:href="#gentle-wave" x="135" y="3" />
-                                        <use xlink:href="#gentle-wave" x="185" y="5" />
-                                        <use xlink:href="#gentle-wave" x="54" y="7" />
-                                    </g>
-                                </svg>
-                            </div>
-                        </div>
+                        <LoginPan />
                     </div>
                 </div>
                 <div v-else-if="pageInfo.page == 'Messages'" id="messageTab">
@@ -185,7 +112,7 @@
 
 <script setup lang="ts">
 import Spacing from 'spacingjs/src/spacing'
-import app, { i18n } from '@renderer/main'
+import { i18n } from '@renderer/main'
 import Option from '@renderer/function/option'
 import Umami from '@stapxs/umami-logger-typescript'
 import * as App from './function/utils/appUtil'
@@ -197,6 +124,7 @@ import {
     provide,
     markRaw,
     watch,
+    onMounted,
 } from 'vue'
 import { Logger, popList as appMsgs, PopInfo, LogType } from '@renderer/function/base'
 import { runtimeData } from '@renderer/function/msg'
@@ -206,9 +134,8 @@ import { getDeviceType } from './function/utils/systemUtil'
 import { uptime } from '@renderer/main'
 import { Session } from './function/model/session'
 import driver from './function/driver'
-import { login, loginInfo } from './function/login'
 import PopBox from './components/PopBox.vue'
-import { ensurePopBox, noticePopBox } from './function/utils/popBox'
+import { ensurePopBox } from './function/utils/popBox'
 import { vHide } from './function/utils/vcmd'
 
 import Options from '@renderer/pages/Options.vue'
@@ -219,6 +146,7 @@ import FriendMenu from '@renderer/components/FriendMenu.vue'
 import GlobalSessionSearchBar from './components/GlobalSessionSearchBar.vue'
 import Viewer from './components/Viewer.vue'
 import { backend } from './runtime/backend'
+import LoginPan from './components/LoginPan.vue'
 
 //#region == 定义变量 ===================================================
 type PageType = 'Home' | 'Options' | 'Friends' | 'Messages' | 'Boxes'
@@ -231,10 +159,6 @@ const pageInfo = shallowReactive<{
 }>({
     page: 'Home',
     showChat: false,
-})
-const loginTag = shallowReactive({
-    savePassword: false,
-    quickLoginSelect: ''
 })
 const fps = shallowReactive({
     last: Date.now(),
@@ -270,7 +194,38 @@ if (dev) {
 // moYu彩蛋
 window.moYu = () => { return '\x75\x6e\x64\x65\x66\x69\x6e\x65\x64' }
 // 页面加载完成后
-window.onload = async () => {
+onMounted(init)
+window.onbeforeunload = () => {
+    logger.system('开发者阁下—— 唔，阁下离开的太匆忙了！让我来帮开发者阁下收拾下东西吧。')
+    new Notify().clear()
+    runtimeData.nowAdapter?.close()
+}
+//#endregion
+
+
+//#region == 监听器 ====================================================
+watch(() => Session.activeSessions.size, () => {
+    // macOS：刷新 Touch Bar 列表
+    if (backend.isDesktop()) {
+        const list = [] as
+            { id: number, name: string, image?: string }[]
+        for (const session of Session.activeSessions.values()) {
+            list.push({
+                id: session.id,
+                name: session.showName,
+                image: session.face
+            })
+        }
+        backend.call(undefined, 'sys:flushOnMessage', false, list)
+    }
+})
+//#endregion
+
+//#region == 方法函数 ===================================================
+/**
+ * 初始化
+ */
+async function init() {
     await backend.init() // Desktop：初始化客户端功能
 
     if(dev)
@@ -279,9 +234,6 @@ window.onload = async () => {
     else
         // eslint-disable-next-line
         console.log('[ SSystem Bootloader Complete took ' + (new Date().getTime() - uptime) + 'ms, welcome to ssqq on stapxs-qq-lite.user ]')
-
-    // 初始化波浪动画
-    waveAnimation(document.getElementById('login-wave'))
 
     // AMAP：初始化高德地图
     window._AMapSecurityConfig = import.meta.env.VITE_APP_AMAP_SECRET
@@ -297,8 +249,7 @@ window.onload = async () => {
         // FPS 检查
         rafLoop()
     }
-    // 加载设置项
-    runtimeData.sysConfig = await Option.load()
+
     if(dev) {
         logger.debug('stapxs-qq-lite.su:$/mnt/boot/dawnHunt/bin/core --pour /mnt/app/bin/main', true)
         logger.system('[ dawnHuntCore Version: 1.0 Beta, dawnHuntDB: 2025-04-24 ]')
@@ -341,20 +292,6 @@ window.onload = async () => {
             document.body.style.setProperty('--safe-area-right', safeArea.right + 'px')
         }
     }
-    // 加载密码保存和自动连接
-    loginInfo.address = runtimeData.sysConfig.address
-    if (
-        runtimeData.sysConfig.save_password &&
-        runtimeData.sysConfig.save_password != true
-    ) {
-        loginInfo.token = runtimeData.sysConfig.save_password
-        loginTag.savePassword = true
-    }
-
-    // 自动登陆
-    if (runtimeData.sysConfig.auto_connect == true)
-        connect()
-
     // 服务发现
     backend.call('Onebot', 'sys:findService', false)
     backend.call('OneBot', 'sys:frontLoaded', false)
@@ -411,97 +348,13 @@ window.onload = async () => {
     if (new Date().getMonth() == 3 && new Date().getDate() == 1)
         document.getElementById('connect_btn')?.classList.add('afd')
 }
-window.onbeforeunload = () => {
-    logger.system('开发者阁下—— 唔，阁下离开的太匆忙了！让我来帮开发者阁下收拾下东西吧。')
-    new Notify().clear()
-    if (import.meta.env.DEV) {
-        driver.close()
-    }
-}
-//#endregion
 
-
-//#region == 监听器 ====================================================
-watch(() => Session.activeSessions.size, () => {
-    // macOS：刷新 Touch Bar 列表
-    if (backend.isDesktop()) {
-        const list = [] as
-            { id: number, name: string, image?: string }[]
-        for (const session of Session.activeSessions.values()) {
-            list.push({
-                id: session.id,
-                name: session.showName,
-                image: session.face
-            })
-        }
-        backend.call(undefined, 'sys:flushOnMessage', false, list)
-    }
-})
-//#endregion
-
-//#region == 方法函数 ===================================================
 /**
  * electron 窗口操作
  */
 function controlWin(name: string) {
     backend.call(undefined, 'win:' + name, false)
 }
-
-//#region == 连接相关 ==============================
-/**
- * 发起连接
- */
-async function connect() {
-    if(loginTag.quickLoginSelect != '') {
-        // PS：快速连接的地址只会是局域网,没ssl,milky没做适配,所以默认 ob 协议
-        loginInfo.address = 'ob://' + loginTag.quickLoginSelect
-    }
-    const re = await login(loginInfo.address, loginInfo.token)
-
-    if (!re) return
-
-    Option.save('address', loginInfo.address)
-    if (Option.get('save_password'))
-        Option.save('save_password', loginInfo.token)
-
-}
-
-function selectQuickLogin(address: string) {
-    loginTag.quickLoginSelect = address
-}
-
-function cancelQuickLogin() {
-    loginInfo.quickLogin = null
-}
-
-/**
- * 保存密码
- * @param event 事件
- */
-function savePassword(event: Event) {
-    const sender = event.target as HTMLInputElement
-    const value = sender.checked
-    if (value) {
-        Option.save('save_password', true)
-        // 创建提示弹窗
-        noticePopBox($t('连接密钥将以明文存储在浏览器 Cookie 中，请确保设备安全以防止密钥泄漏。'))
-    } else {
-        Option.remove('save_password')
-    }
-}
-
-/**
- * 保存自动连接
- * @param event 事件
- */
-function saveAutoConnect(event: Event) {
-    Option.runASWEvent(event)
-    // 如果自动保存密码没开，那也需要开
-    if (!runtimeData.sysConfig.save_password) {
-        savePassword(event)
-    }
-}
-//#endregion
 
 //#region == 页面相关 ==============================
 /**
@@ -544,36 +397,6 @@ function barMainClick() {
 //#endregion
 
 /**
- * 水波动画启动器
- * @param wave HTML 对象
- * @returns 动画循环器对象
- */
-function waveAnimation(wave: HTMLElement | null) {
-    if (wave) {
-        const waves = wave.children[1].children
-        const min = 20
-        const max = 195
-        const add = 1
-        const timer = setInterval(() => {
-            // 遍历波浪体
-            for (let i = 0; i < waves.length; i++) {
-                const now = waves[i].getAttribute('x')
-                if (Number(now) + add > max) {
-                    waves[i].setAttribute('x', min.toString())
-                } else {
-                    waves[i].setAttribute(
-                        'x',
-                        (Number(now) + add).toString(),
-                    )
-                }
-            }
-        }, 50)
-        return timer
-    }
-    return -1
-}
-
-/**
  * 刷新页面 fps 数据
  * @param timestamp 时间戳
  */
@@ -589,38 +412,6 @@ function rafLoop() {
         fps.value = fpsValue
     }
     requestAnimationFrame(rafLoop)
-}
-
-function afd(event: MouseEvent) {
-    // 只在愚人节时生效
-    if (new Date().getMonth() == 3 && new Date().getDate() == 1) {
-        const sender = event.target as HTMLButtonElement
-        // 获取文档整体宽高
-        const docWidth = document.documentElement.clientWidth
-        const docHeight = document.documentElement.clientHeight
-        // 获取按钮宽高
-        const senderWidth = sender.offsetWidth
-        const senderHeight = sender.offsetHeight
-        // 获取鼠标位置
-        const mouseX = event.clientX
-        const mouseY = event.clientY
-        // 在宽高里随机抽一个位置，不能超出文档，不能让按钮在鼠标下
-        let x, y
-        do {
-            x = Math.floor(Math.random() * docWidth)
-            y = Math.floor(Math.random() * docHeight)
-        } while (
-            x + senderWidth > docWidth ||
-            y + senderHeight > docHeight ||
-            (x < mouseX &&
-                x + senderWidth > mouseX &&
-                y < mouseY &&
-                y + senderHeight > mouseY)
-        )
-        // 设置按钮位置
-        sender.style.left = x + 'px'
-        sender.style.top = y + 'px'
-    }
 }
 //#endregion
 

@@ -1,8 +1,6 @@
 import {
-    reactive,
     markRaw,
 } from 'vue'
-import { LoginCacheElem } from './elements/system'
 import { URL } from './model/data'
 import { PopInfo, PopType } from './base'
 import { AdapterInterface } from './adapter/interface'
@@ -18,12 +16,6 @@ function $t(key: string): string {
     return app.config.globalProperties.$t(key)
 }
 
-export const loginInfo: LoginCacheElem = reactive({
-    quickLogin: [],
-    address: '',
-    token: '',
-})
-
 const adapters = import.meta.glob('@renderer/function/adapter/*/adapter.ts', { eager: true })
 const adapterMap = new Map<string, AdapterInterface>()
 for (const key in adapters) {
@@ -33,7 +25,13 @@ for (const key in adapters) {
     }
 }
 
-export async function login(originUrl: string, token: string): Promise<boolean>{
+/**
+ * 尝试登录
+ * @param originUrl
+ * @param token
+ * @returns true表示登录成功，字符串表示失败原因
+ */
+async function tryLogin(originUrl: string, token: string): Promise<true | string>{
     const parseUrl = new URL(originUrl)
     let protocol: string = parseUrl.protocol
     const ssl: boolean = parseUrl.ssl
@@ -44,18 +42,14 @@ export async function login(originUrl: string, token: string): Promise<boolean>{
     }
 
     // 查询适配器
-    if (!adapterMap.has(protocol)) {
-        popInfo.add(PopType.ERR, $t('不支持的协议: ') + protocol)
-        return false
-    }
+    if (!adapterMap.has(protocol))
+        return $t('不支持的协议: ') + protocol
 
     let adapter = adapterMap.get(protocol) as AdapterInterface
     runtimeData.nowAdapter = markRaw(adapter)
     const re = await adapter.connect(url, ssl, token,)
-    if (!re) {
-        popInfo.add(PopType.ERR, $t('连接失败'))
-        return false
-    }
+    if (!re)
+        return $t('连接失败')
 
     // 初始化连接
     const redirect = await adapter.redirect?.()
@@ -66,14 +60,8 @@ export async function login(originUrl: string, token: string): Promise<boolean>{
 
     // 获取登陆信息
     const loginData = await adapter.getLoginInfo()
-    if (!loginData) {
-        popInfo.add(
-            PopType.ERR,
-            $t('获取登录信息失败')
-        )
-        adapter.close()
-        return false
-    }
+    if (!loginData)
+        return $t('获取登录信息失败')
 
     // 重置runtimeData
     resetRuntime(runtimeData.loginInfo.uin !== loginData.uin)
@@ -83,14 +71,9 @@ export async function login(originUrl: string, token: string): Promise<boolean>{
 
     // 获取个人信息
     const selfInfo = await adapter.getUserInfo(loginData.uin)
-    if (!selfInfo) {
-        new PopInfo().add(
-            PopType.ERR,
-            $t('获取个人信息失败')
-        )
-        adapter.close()
-        return false
-    }
+    if (!selfInfo)
+        return $t('获取个人信息失败')
+
     // 设置个人信息
     runtimeData.selfInfo = new User(selfInfo)
 
@@ -117,4 +100,24 @@ export async function login(originUrl: string, token: string): Promise<boolean>{
     await reloadUsers()
 
     return true
+}
+
+export async function login(originUrl: string, token: string): Promise<boolean> {
+    // 提前工作
+    runtimeData.connectInfo.address = originUrl
+    runtimeData.connectInfo.token = token
+
+    // 登陆
+    const re = await tryLogin(originUrl, token)
+
+    // 登陆成功
+    if (re === true) return re
+
+    // 登陆失败的垃圾回收
+    new PopInfo().add(PopType.ERR, $t('登录失败: ') + re)
+    runtimeData.connectInfo.address = undefined
+    runtimeData.connectInfo.token = undefined
+    runtimeData.nowAdapter?.close()
+    runtimeData.nowAdapter = undefined
+    return false
 }

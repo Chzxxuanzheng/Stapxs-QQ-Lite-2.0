@@ -11,7 +11,6 @@ import WelPan from '@renderer/components/WelPan.vue'
 
 import { KeyboardInfo } from '@capacitor/keyboard'
 import { LogType, Logger, PopInfo, PopType } from '@renderer/function/base'
-import { loginInfo } from '../login'
 import { runtimeData } from '@renderer/function/msg'
 import {
     hslToRgb,
@@ -465,7 +464,7 @@ export async function loadMobile() {
             switch(data.type) {
                 case 'onopen':
                     backendWs._onOpen({
-                        address: loginInfo.address,
+                        address: runtimeData.connectInfo.address!,
                     })
                     break
                 case 'onmessage':

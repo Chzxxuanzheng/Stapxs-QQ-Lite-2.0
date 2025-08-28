@@ -27,9 +27,6 @@ html {
 .login-pan-card:hover {
     box-shadow: unset !important;
 }
-.wave-pan {
-    display: none;
-}
 
 /* 一级侧栏 */
 .main-body > ul {
