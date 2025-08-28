@@ -22,6 +22,8 @@ import './assets/css/options.css'
 import './assets/css/sys_notice.css'
 
 import { getPortableFileLang } from './function/utils/systemUtil'
+import { runtimeData } from './function/msg'
+import Option from './function/option'
 
 /* eslint-disable no-console */
 const zh = getPortableFileLang('zh-CN')
@@ -36,7 +38,6 @@ export const i18n = createI18n({
     silentFallbackWarn: true,
     messages,
 })
-
 // 创建 App
 const app = createApp(App)
 app.use(i18n)
@@ -48,7 +49,6 @@ library.add(fas)
 library.add(faSquare)
 app.component('FontAwesomeIcon', FontAwesomeIcon)
 
-app.mount('#app')
 export default app
 export const uptime = new Date().getTime()
 
@@ -76,3 +76,10 @@ if(import.meta.env.DEV) {
     console.log('[ SSystem Bootloader Loading …… core/sardos-core ]')
 }
 console.log('[ SSystem Bootloader Loading …… core/ssqq-core ]')
+
+// 加载配置文件，挂在
+setTimeout(async () => {
+    // 加载设置项
+    runtimeData.sysConfig = await Option.load()
+    app.mount('#app')
+}, 0)
