@@ -1,7 +1,7 @@
 {
   "name": "ssqq-web",
   "version": "1.0.5",
-  "description": "一个兼容 OneBot 的非官方网页版 QQ 客户端，Web 端快速启动包。",
+  "description": "一个跨协议的 Stapxs QQ Lite 发行版。，Web 端快速启动包。",
   "main": "index.ts",
   "bin": {
     "ssqq-web": "bin/index.js"
@@ -12,9 +12,9 @@
     "build": "tsc",
     "test": "tsc && node bin/index.js help"
   },
-  "repository": "https://github.com/Stapxs/Stapxs-QQ-Lite-2.0",
-  "author": "Stapx Steve [林槐]",
-  "license": "Apache-2.0",
+  "repository": "https://github.com/Chzxxuanzheng/Stapxs-QQ-Lite-X",
+  "author": "Mr.Lee",
+  "license": "AGPL-3.0-only",
   "private": false,
   "dependencies": {
     "log4js": "^6.9.1",

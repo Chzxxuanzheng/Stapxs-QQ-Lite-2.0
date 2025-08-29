@@ -86,7 +86,7 @@ async function tryLogin(originUrl: string, token: string): Promise<true | string
     })
     const title = `${loginData.nickname}（${loginData.uin}）`
     if(backend.type == 'web') {
-        document.title = title + '- Stapxs QQ Lite'
+        document.title = title + '- Stapxs QQ Lite X'
     } else {
         document.title = title
         backend.call(undefined, 'win:setTitle', false, title)

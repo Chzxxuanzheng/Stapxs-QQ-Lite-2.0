@@ -11,14 +11,6 @@ export interface MsgIdInfoElem {
     seqid?: number
 }
 
-export interface ContributorElem {
-    url: string
-    link: string
-    title: string
-    isMe: boolean
-    isSuperThakns: boolean
-}
-
 export interface NotificationElem {
     body: string
     tag: string

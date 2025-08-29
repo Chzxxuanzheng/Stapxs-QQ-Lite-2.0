@@ -8,7 +8,7 @@ msgstr ""
 "PO-Revision-Date: 2024-09-19\n"
 "Language-Team: Stapx Steve (stapxs)\n"
 
-msgid "Stapxs QQ Lite"
+msgid "Stapxs QQ Lite X"
 msgstr ""
 
 # 这是当前语言的作者，请自行修改
@@ -1104,7 +1104,7 @@ msgstr ""
 msgid "咻咻 ——"
 msgstr ""
 
-msgid "欢迎使用 Stapxs QQ Lite"
+msgid "欢迎使用 Stapxs QQ Lite X"
 msgstr ""
 
 msgid "在开始之前，请阅读以下条款："
@@ -1365,9 +1365,6 @@ msgstr ""
 msgid "拟吼哇.欧四与个会所话读后组～"
 msgstr ""
 
-msgid "听说给stapxs-qq-lite给star会有好运发生"
-msgstr ""
-
 msgid "你就是我的新主人吗？请多多指教～"
 msgstr ""
 
@@ -1569,7 +1566,7 @@ msgstr ""
 msgid "拟吼哇.欧四与个会所话读后组～"
 msgstr ""
 
-msgid "听说给stapxs-qq-lite给star会有好运发生"
+msgid "听说给stapxs-qq-lite-X star会有好运发生"
 msgstr ""
 
 msgid "你就是我的新主人吗？请多多指教～"

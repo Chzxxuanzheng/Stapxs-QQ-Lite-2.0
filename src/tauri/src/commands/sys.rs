@@ -459,13 +459,13 @@ pub fn sys_create_menu(app: tauri::AppHandle, data: HashMap<String, String>) -> 
                     app.emit("bot:flushUser", "").unwrap();
                 }
                 "doc" => {
-                    app.emit("app:openLink", "https://github.com/Stapxs/Stapxs-QQ-Lite-2.0/wiki").unwrap();
+                    app.emit("app:openLink", "https://github.com/Chzxxuanzheng/Stapxs-QQ-Lite-X/wiki").unwrap();
                 }
                 "feedback" => {
-                    app.emit("app:openLink", "https://github.com/Stapxs/Stapxs-QQ-Lite-2.0/issues").unwrap();
+                    app.emit("app:openLink", "https://github.com/Chzxxuanzheng/Stapxs-QQ-Lite-X/issues").unwrap();
                 }
                 "license" => {
-                    app.emit("app:openLink", "https://github.com/Stapxs/Stapxs-QQ-Lite-2.0/blob/master/LICENSE").unwrap();
+                    app.emit("app:openLink", "https://github.com/Chzxxuanzheng/Stapxs-QQ-Lite-X/blob/master/LICENSE").unwrap();
                 }
                 _ => {}
             }

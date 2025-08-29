@@ -1,4 +1,4 @@
-import VueClipboard from 'vue-clipboard2'
+// import VueClipboard from 'vue-clipboard2'
 import packageInfo from '../../../package.json'
 
 import App from './App.vue'
@@ -11,8 +11,6 @@ import { library } from '@fortawesome/fontawesome-svg-core'
 import { fas } from '@fortawesome/free-solid-svg-icons'
 
 import { faSquare } from '@fortawesome/free-regular-svg-icons'
-
-import 'viewerjs/dist/viewer.css'
 
 import './assets/css/view.css'
 import './assets/css/chat.css'
@@ -41,7 +39,7 @@ export const i18n = createI18n({
 const app = createApp(App)
 app.use(i18n)
 app.use(createPinia())
-app.use(VueClipboard)
+// app.use(VueClipboard)
 
 library.add(fas)
 library.add(faSquare)
@@ -66,7 +64,7 @@ const colorList = [
 const color = colorList[Math.floor(Math.random() * colorList.length)]
 const str = strList[Math.floor(Math.random() * strList.length)]
 console.log(
-    `%c${str}%c Stapxs QQ Lite - ${packageInfo.version} ( ${import.meta.env.DEV ? 'development' : 'production'} ) `,
+    `%c${str}%c Stapxs QQ Lite X - ${packageInfo.version} ( ${import.meta.env.DEV ? 'development' : 'production'} ) `,
     `font-weight:bold;background:#${color};color:#fff;border-radius:7px 0 0 7px;padding:7px 14px;margin:7px 0 7px 7px;`,
     'background:#e3e8ec;color:#000;border-radius:0 7px 7px 0;display:inline-block;padding:7px 14px;margin:7px 7px 7px 0;',
 )

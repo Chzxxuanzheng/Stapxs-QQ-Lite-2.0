@@ -472,7 +472,7 @@ export function regIpcListener() {
                             click: () => {
                                 sendMenuClick(
                                     'app:openLink',
-                                    'https://github.com/Stapxs/Stapxs-QQ-Lite-2.0/wiki',
+                                    'https://github.com/Chzxxuanzheng/Stapxs-QQ-Lite-X/wiki',
                                 )
                             },
                         },
@@ -481,7 +481,7 @@ export function regIpcListener() {
                             click: () => {
                                 sendMenuClick(
                                     'app:openLink',
-                                    'https://github.com/Stapxs/Stapxs-QQ-Lite-2.0/issues',
+                                    'https://github.com/Chzxxuanzheng/Stapxs-QQ-Lite-X/issues',
                                 )
                             },
                         },
@@ -491,7 +491,7 @@ export function regIpcListener() {
                             click: () => {
                                 sendMenuClick(
                                     'app:openLink',
-                                    'https://github.com/Stapxs/Stapxs-QQ-Lite-2.0/blob/master/LICENSE',
+                                    'https://github.com/Chzxxuanzheng/Stapxs-QQ-Lite-X/blob/master/LICENSE',
                                 )
                             },
                         },

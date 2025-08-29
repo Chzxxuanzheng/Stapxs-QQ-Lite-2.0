@@ -19,7 +19,7 @@
         <img src="/img/icons/icon.svg">
         <span>WELCOME</span>
         <div>
-            <span>{{ $t('Stapxs QQ Lite') }}</span>
+            <span>{{ $t('Stapxs QQ Lite X') }}</span>
             <a>2.0</a>
         </div>
         <hr>
@@ -45,12 +45,12 @@
     </div>
     <div v-if="show == 'license'" class="base-box">
         <div class="lead">
-            <span>{{ $t('欢迎使用 Stapxs QQ Lite') }}</span>
+            <span>{{ $t('欢迎使用 Stapxs QQ Lite X') }}</span>
             <div />
             <div>
                 <span>{{ $t('在开始之前，请阅读以下条款：') }}</span>
-                <a @click="openLink('https://github.com/Stapxs/Stapxs-QQ-Lite-2.0/blob/next/DISCLAIMER.md', true)">Stapxs QQ Lite 免责条款（简体中文）</a>
-                <a @click="openLink('https://github.com/Stapxs/Stapxs-QQ-Lite-2.0/blob/next/LICENSE', true)">Stapxs QQ Lite 开源许可（英文）</a>
+                <a @click="openLink('https://github.com/Chzxxuanzheng/Stapxs-QQ-Lite-X/blob/test/DISCLAIMER.md', true)">Stapxs QQ Lite X 免责条款（简体中文）</a>
+                <a @click="openLink('https://github.com/Chzxxuanzheng/Stapxs-QQ-Lite-X/blob/test/LICENSE', true)">Stapxs QQ Lite 开源许可 X（英文）</a>
                 <br>
                 <span>{{ $t('并酌情阅读以下文档：') }}</span>
                 <a @click="openLink('https://www.chiark.greenend.org.uk/~sgtatham/bugs-cn.html', true)">《如何有效地报告 BUG》</a>

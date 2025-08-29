@@ -8,8 +8,8 @@ msgstr ""
 "PO-Revision-Date: 2023-05-24\n"
 "Language-Team: Doodle Huang (doodlehuang)\n"
 
-msgid "Stapxs QQ Lite"
-msgstr "Stapxs QQ Lite"
+msgid "Stapxs QQ Lite X"
+msgstr "Stapxs QQ Lite X"
 
 # 这是当前语言的作者，请自行修改
 msgid "Stapx Steve"

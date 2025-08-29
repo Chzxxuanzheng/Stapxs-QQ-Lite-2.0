@@ -35,7 +35,7 @@ if(argv['help'] || !hostname || !port) {
             --port      指定服务运行的端口
             --help      查看帮助
 
-        主仓库：https://github.com/Stapxs/Stapxs-QQ-Lite-2.0
+        主仓库：https://github.com/Chzxxuanzheng/Stapxs-QQ-Lite-X
         网页服务工具：https://www.npmjs.com/package/ssqq-web
 
         ** 欢迎 star 项目，如果有问题请在主仓库提 issue **

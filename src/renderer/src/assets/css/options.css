@@ -168,16 +168,6 @@
     border-radius: 35px;
     cursor: pointer;
 }
-.contributors-card > div > div.me {
-    outline: 2px solid var(--color-main);
-    border: 1px solid var(--color-card-1);
-    box-sizing: border-box;
-}
-.contributors-card > div > div.super-thanks {
-    outline: 2px dashed var(--color-main);
-    border: 1px solid var(--color-card-1);
-    box-sizing: border-box;
-}
 
 .opt-tab {
     height: calc(100% - 115px);

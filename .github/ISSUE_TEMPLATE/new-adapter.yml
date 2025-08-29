@@ -1,0 +1,17 @@
+name: 新协议适配
+description: 有什么新协议需要适配？欢迎提出来！
+body:
+    - type: input
+      attributes:
+          label: 协议名称
+          description: 这个协议叫什么呢？
+      required: true
+    - type: input
+      attributes:
+          label: 协议文档
+          description: 有文档吗？
+    - type: input
+      attributes:
+          label: 协议端
+          description: 那个协议端实现了这个协议？贴下项目连接
+      required: true

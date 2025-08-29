@@ -30,13 +30,14 @@
             <div class="ss-card end-card">
                 <div>
                     <div>
-                        <span>Stapxs QQ Lite</span>
+                        <span>Stapxs QQ Lite X </span>
                         <a>{{ packageInfo.version }}</a>
                     </div>
-                    <span>Copyright © 2022 - 2025 Stapx Steve [ 林槐 ]</span>
-                    <br>
-                    <span>Mr.Lee个人编译版。不代表官方，可能存在更多bug 仓库：</span>
-                    <a href="https://github.com/Chzxxuanzheng/Stapxs-QQ-Lite-2.0/tree/web" target="_blank">Chzxxuanzheng/Stapxs-QQ-Lite-2.0</a>
+                    <span>Copyright © 2022 - 2025 Mr.Lee</span>
+                    <span @click="openLink('https://github.com/Chzxxuanzheng/Stapxs-QQ-Lite-X')"
+                        style="color: var(--color-main);cursor: pointer;">
+                        Chzxxuanzheng/Stapxs-QQ-Lite-X
+                    </span>
                 </div>
                 <svg style="width: 50px"
                     xmlns="http://www.w3.org/2000/svg"

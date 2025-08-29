@@ -1,6 +1,6 @@
 {
     "$schema": "https://schema.tauri.app/config/2",
-    "productName": "Stapxs QQ Lite",
+    "productName": "Stapxs QQ Lite X",
     "version": "../../package.json",
     "identifier": "cn.stapxs.qqweb",
     "build": {
@@ -18,14 +18,14 @@
     "plugins": {
         "deep-link": {
             "desktop": {
-                "schemes": ["stapxs-qq-lite"]
+                "schemes": ["stapxs-qq-lite-x"]
             }
         }
     },
     "bundle": {
         "active": true,
-        "copyright": "Copyright © 2022-2025 Stapx Steve [林槐]",
-        "homepage": "https://github.com/Stapxs/Stapxs-QQ-Lite-2.0",
+        "copyright": "Copyright © 2022-2025 Mr.Lee",
+        "homepage": "https://github.com/Chzxxuanzheng/Stapxs-QQ-Lite-X",
         "longDescription": "一个兼容 OneBot 协议的非官方 QQ 全平台客户端实现。",
         "shortDescription": "一个兼容 OneBot 协议的非官方 QQ 全平台客户端实现。",
         "publisher": "stapxs",

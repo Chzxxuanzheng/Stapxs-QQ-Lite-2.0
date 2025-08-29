@@ -178,11 +178,11 @@ const titleList = [
     '这只是个普通的彩蛋！'
 ]
 if (dev) {
-    document.title = 'Stapxs QQ Lite (Dev)'
+    document.title = 'Stapxs QQ Lite X(Dev)'
 }else {
     const title = titleList[Math.floor(Math.random() * titleList.length)]
     if(backend.platform == 'web') {
-        document.title = title + '- Stapxs QQ Lite'
+        document.title = title + '- Stapxs QQ Lite X'
     } else {
         document.title = title
         backend.call(undefined, 'win:setTitle', false, title)
@@ -243,7 +243,7 @@ async function init() {
     App.createIpc() // Electron：创建 IPC 通信
     // 加载开发者相关功能
     if (dev) {
-        document.title = 'Stapxs QQ Lite (Dev)'
+        document.title = 'Stapxs QQ Lite X (Dev)'
         // 布局检查工具
         Spacing.start()
         // FPS 检查
@@ -270,7 +270,7 @@ async function init() {
         if (app) app.classList.add('withBar')
     }
     // 基础初始化完成
-    logger.system('欢迎回来，开发者。Stapxs QQ Lite 正处于 ' + (dev ? 'development' : 'production') + ' 模式。正在为您加载更多功能。')
+    logger.system('欢迎回来，开发者。Stapxs QQ Lite X 正处于 ' + (dev ? 'development' : 'production') + ' 模式。正在为您加载更多功能。')
     // 加载移动平台特性
     App.loadMobile()
     // 加载额外样式
@@ -303,7 +303,7 @@ async function init() {
             if(!driver.isConnected() || runtimeData.tags.openSideBar) {
                 // 离开提醒
                 ensurePopBox(
-                    $t('离开 Stapxs QQ Lite？'),
+                    $t('离开 Stapxs QQ Lite X？'),
                     $t('离开')
                 ).then(ensure => {
                     if (ensure) history.back()
@@ -333,7 +333,7 @@ async function init() {
         }
         Umami.initialize(config)
     } else if (dev) {
-        logger.system('开发者，由于 Stapxs QQ Lite 运行在调试模式下，分析组件并未初始化 …… 系统将无法捕获开发者阁下的访问状态，请悉知。')
+        logger.system('开发者，由于 Stapxs QQ Lite X 运行在调试模式下，分析组件并未初始化 …… 系统将无法捕获开发者阁下的访问状态，请悉知。')
     }
     App.sendStatEvent('version',
         import.meta.env.VITE_APP_CLIENT_TAG + ',' + packageInfo.version)

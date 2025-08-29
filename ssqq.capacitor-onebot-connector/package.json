@@ -19,10 +19,10 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Stapxs/Stapxs-QQ-Lite-2.0.git"
+    "url": "git+https://github.com/Chzxxuanzheng/Stapxs-QQ-Lite-X.git"
   },
   "bugs": {
-    "url": "https://github.com/Stapxs/Stapxs-QQ-Lite-2.0/issues"
+    "url": "https://github.com/Chzxxuanzheng/Stapxs-QQ-Lite-X/issues/new?template=bug-report.yml&assignees=Chzxxuanzheng&labels=%3Abug%3A+%E9%94%99%E8%AF%AF&title=%5B%E9%94%99%E8%AF%AF%5D"
   },
   "keywords": [
     "onebot",

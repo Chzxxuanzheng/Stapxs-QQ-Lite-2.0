@@ -49,7 +49,7 @@ impl WebSocketClient {
             .header("Upgrade", "websocket")
             .header("Sec-WebSocket-Extensions", "permessage-deflate; client_max_window_bits")
             .header("Host", host_header)
-            .header("User-Agent", "stapxs-qq-lite")
+            .header("User-Agent", "stapxs-qq-lite-x")
             .body(())?;
 
         let connect_result = timeout(timeout_duration, connect_async(req)).await;

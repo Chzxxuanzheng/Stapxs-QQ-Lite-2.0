@@ -269,7 +269,7 @@
                     },
                 },
                 sql: {
-                    info: 'Stapxs QQ Lite 2.0 Base Command.',
+                    info: 'Stapxs QQ Lite X Base Command.',
                     fun: (raw: string, item: string[]) => {
                         switch (item[1]) {
                             // 发送消息
@@ -380,7 +380,7 @@
                     info: 'print system info.',
                     fun: () => {
                         const infoList = {
-                            Application: 'Stapxs QQ Lite 2.0',
+                            Application: 'Stapxs QQ Lite X',
                             Kernel: packageInfo.version + '-web',
                             Shell: 'stsh Basic Shell 1.0',
                             Theme: 'ChatSHell',
@@ -546,7 +546,7 @@
                         runtimeData.nowChat?.type,
                     )
                     this.addCommandOutF(
-                        '* Stapxs QQ Lite 2.0 Shell requires "FiraCode Nerd Font" to display complete command line symbols, please ensure the device has installed this font.\n\n* Use the command "fullscreen" or return to the parent directory to exit the full screen mode.\n\n* 使用 "help" 命令查看所有可用命令。\n\n\n',
+                        '* Stapxs QQ Lite X Shell requires "FiraCode Nerd Font" to display complete command line symbols, please ensure the device has installed this font.\n\n* Use the command "fullscreen" or return to the parent directory to exit the full screen mode.\n\n* 使用 "help" 命令查看所有可用命令。\n\n\n',
                         'var(--color-font)',
                     )
                     this.addCommandOutF(

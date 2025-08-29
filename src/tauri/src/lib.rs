@@ -71,7 +71,7 @@ pub fn run() {
             // 初始化全局通知管理器 ============
             let app_id = app.config().identifier.clone();
             let manager =
-                get_notification_manager(app_id, Some("stapxs-qq-lite".to_owned()));
+                get_notification_manager(app_id, Some("stapxs-qq-lite-x".to_owned()));
             let categories = vec![NotificationCategory {
                 identifier: "cn.stapxs.qqweb.reply".to_string(),
                 actions: vec![NotificationCategoryAction::TextInputAction {
@@ -148,7 +148,7 @@ pub fn run() {
             info!("初始化通知管理器完成");
 
             // 创建主窗体 ============
-            info!("欢迎使用 Stapxs QQ Lite, 当前版本: {}", env!("CARGO_PKG_VERSION"));
+            info!("欢迎使用 Stapxs QQ Lite X, 当前版本: {}", env!("CARGO_PKG_VERSION"));
             info!("启动平台架构：{}", std::env::consts::OS);
             info!("正在创建窗体 ……");
             let window = create_window(app)?;
@@ -229,7 +229,7 @@ pub fn run() {
 /// 创建主窗体配置
 fn create_window(app: &mut tauri::App) -> tauri::Result<tauri::WebviewWindow> {
     let win_builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("/".into()))
-        .title("Stapxs QQ Lite")
+        .title("Stapxs QQ Lite X")
         .inner_size(850.0, 530.0)
         .transparent(true);
     #[cfg(target_os = "macos")]

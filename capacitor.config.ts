@@ -3,7 +3,7 @@ import { resolve } from 'path'
 
 const config: CapacitorConfig = {
     appId: 'cn.stapxs.webqq',
-    appName: 'Stapxs QQ Lite',
+    appName: 'Stapxs QQ Lite X',
     webDir: 'dist',
     loggingBehavior: 'none',
     ios: {

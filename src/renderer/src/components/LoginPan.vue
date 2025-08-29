@@ -55,7 +55,7 @@
                 </template>
             </button>
         </form>
-        <a href="https://github.com/Stapxs/Stapxs-QQ-Lite-2.0#%E5%BF%AB%E9%80%9F%E4%BD%BF%E7%94%A8"
+        <a href="https://github.com/Chzxxuanzheng/Stapxs-QQ-Lite-X#%E5%BF%AB%E9%80%9F%E4%BD%BF%E7%94%A8"
             target="_blank">{{ $t('如何连接') }}</a>
     </div>
 </template>
