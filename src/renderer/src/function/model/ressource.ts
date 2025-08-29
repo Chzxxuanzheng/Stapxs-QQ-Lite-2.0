@@ -45,6 +45,10 @@ export class Resource {
         return this._url.url
     }
 
+    get proxyUrl(): ProxyUrl {
+        return this._url
+    }
+
     get rawUrl(): string {
         return this._url.raw
     }

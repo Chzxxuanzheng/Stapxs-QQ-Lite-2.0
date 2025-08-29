@@ -7,11 +7,22 @@
  */
 
 import { shallowRef } from 'vue'
+import { ProxyUrl } from './proxyUrl'
 
 export class Img {
+    _src: ProxyUrl
     private _prev = shallowRef<Img | undefined>()
     private _next = shallowRef<Img | undefined>()
-    constructor(public src: string) {}
+    constructor(src: string | ProxyUrl) {
+        if (typeof src === 'string')
+            this._src = new ProxyUrl(src)
+        else
+            this._src = src
+    }
+
+    get src(): string {
+        return this._src.url
+    }
 
     /**
      * 删除图片

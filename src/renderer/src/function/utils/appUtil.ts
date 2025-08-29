@@ -66,10 +66,9 @@ export function scrollToMsg(seqName: string, showAnimation: boolean, showHighlig
  */
 export function openLink(url: string, external = false) {
     // 判断是不是 Electron，是的话打开内嵌 iframe
-    url = ProxyUrl.proxy(url)
     if (backend.isDesktop()) {
         if (!external && !runtimeData.sysConfig.close_browser) {
-            runtimeData.popBoxList = []
+            url = ProxyUrl.proxy(url)
             htmlPopBox(`<iframe src="${url}" class="view-iframe"></iframe>`, {
                 full: true,
                 button: [

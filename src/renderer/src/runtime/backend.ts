@@ -37,19 +37,6 @@ export const backend = {
     },
 
     /**
-     * 代理 URL 转换
-     * @param url 需要转换的 URL
-     * @returns 转换后的 URL
-     */
-    proxyUrl(url: string) {
-        if (this.proxy && url.startsWith('http')) {
-            return `http://localhost:${this.proxy}/proxy?url=${encodeURIComponent(url)}`
-        } else {
-            return url
-        }
-    },
-
-    /**
      * 初始化后端功能
      *
      * @returns {Promise<void>}
