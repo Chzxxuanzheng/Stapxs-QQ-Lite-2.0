@@ -298,7 +298,7 @@
                             <!-- 特殊 URL 的预览 -->
                             <div v-if="pageViewInfo.type == 'bilibili'" class="link-view-bilibili">
                                 <div class="user">
-                                    <img :src="runtimeData.tags.proxyPort ? `http://localhost:${runtimeData.tags.proxyPort}/assets?url=${encodeURIComponent(pageViewInfo.data.owner.face)}` : pageViewInfo.data.owner.face">
+                                    <img :src="ProxyUrl.proxy(pageViewInfo.data.owner.face)">
                                     <span>{{ pageViewInfo.data.owner.name }}</span>
                                     <a>{{ Intl.DateTimeFormat(trueLang, {
                                         year: 'numeric',
@@ -308,7 +308,7 @@
                                         minute: 'numeric'
                                     }).format(getViewTime(pageViewInfo.data.public)) }}</a>
                                 </div>
-                                <img :src="runtimeData.tags.proxyPort ? `http://localhost:${runtimeData.tags.proxyPort}/assets?url=${encodeURIComponent(pageViewInfo.data.pic)}` : pageViewInfo.data.pic">
+                                <img :src="ProxyUrl.proxy(pageViewInfo.data.pic)">
                                 <span>{{ pageViewInfo.data.title }}</span>
                                 <a>{{ pageViewInfo.data.desc }}</a>
                                 <div class="data">
@@ -330,7 +330,7 @@
                                             <a v-if="pageViewInfo.data.info.free != null">{{ $t('（试听）') }}</a>
                                         </a>
                                         <span>{{ pageViewInfo.data.info.author.join('/') }}</span>
-                                        <audio :src="runtimeData.tags.proxyPort ? `http://localhost:${runtimeData.tags.proxyPort}/proxy?url=${pageViewInfo.data.play_link}` : pageViewInfo.data.play_link"
+                                        <audio :src="ProxyUrl.proxy(pageViewInfo.data.play_link)"
                                             @loadedmetadata="audioLoaded()"
                                             @timeupdate="audioUpdate()" />
                                         <div>
@@ -437,6 +437,7 @@ import CardMessage from './msg-component/CardMessage.vue'
 import { Img } from '@renderer/function/model/img'
 import { UserInfoPan } from './UserInfoPan.vue'
 import { backend } from '@renderer/runtime/backend'
+import { ProxyUrl } from '@renderer/function/model/proxyUrl'
 
 //#region == 声明变量 ================================================================
 const {
