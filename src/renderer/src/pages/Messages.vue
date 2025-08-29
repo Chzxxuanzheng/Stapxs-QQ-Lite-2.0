@@ -109,6 +109,7 @@ import {
     inject,
     markRaw,
     useTemplateRef,
+    toRaw,
 } from 'vue'
 import { runtimeData } from '@renderer/function/msg'
 import { getRaw as getOpt, run as runOpt } from '@renderer/function/option'
@@ -153,10 +154,8 @@ onMounted(()=>{
         () => Session.alwaysTopSessions.size,
         refreshSessionList,
     )
-    Session.newMessageHook.push((_: Session, _1: Message)=>{
-        // 等到会话列表更新后再刷新
-        // TODO: 更好的钩子系统,支持before, on, after等
-        setTimeout(refreshSessionList, 100)
+    Session.afterNewMessageHook.push((_: Session, _1: Message)=>{
+        refreshSessionList()
     })
 })
 
@@ -286,7 +285,7 @@ function cleanList() {
     // 卸载非置顶会话
     for (const item of Session.activeSessions) {
         if (item.id === runtimeData.nowChat?.id) continue
-        item.unactive()
+        toRaw(item).unactive()
     }
 }
 </script>

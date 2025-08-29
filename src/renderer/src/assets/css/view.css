@@ -300,8 +300,8 @@ textarea:focus {
 }
 .login-pan-card > svg {
     color: var(--color-main);
-    height: 25%;
-    width: 25%;
+    height: 35%;
+    width: 35%;
 }
 .login-pan-card p {
     color: var(--color-main);

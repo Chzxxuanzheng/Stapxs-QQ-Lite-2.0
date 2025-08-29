@@ -491,7 +491,7 @@ export function regIpcListener() {
                             click: () => {
                                 sendMenuClick(
                                     'app:openLink',
-                                    'https://github.com/Chzxxuanzheng/Stapxs-QQ-Lite-X/blob/master/LICENSE',
+                                    'https://github.com/Chzxxuanzheng/Stapxs-QQ-Lite-X/blob/main/LICENSE',
                                 )
                             },
                         },

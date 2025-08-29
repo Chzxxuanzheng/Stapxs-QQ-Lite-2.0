@@ -465,7 +465,7 @@ pub fn sys_create_menu(app: tauri::AppHandle, data: HashMap<String, String>) -> 
                     app.emit("app:openLink", "https://github.com/Chzxxuanzheng/Stapxs-QQ-Lite-X/issues").unwrap();
                 }
                 "license" => {
-                    app.emit("app:openLink", "https://github.com/Chzxxuanzheng/Stapxs-QQ-Lite-X/blob/master/LICENSE").unwrap();
+                    app.emit("app:openLink", "https://github.com/Chzxxuanzheng/Stapxs-QQ-Lite-X/blob/main/LICENSE").unwrap();
                 }
                 _ => {}
             }

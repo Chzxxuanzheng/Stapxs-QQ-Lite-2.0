@@ -341,6 +341,7 @@ export class MilkyAdapter implements AdapterInterface {
      * 获取群公告信息
      * @param group
      */
+    @api
     async getGroupAnnouncement(group: GroupSession): Promise<GroupAnnouncementData[]> {
         const data = await this.callApi(
             'get_group_announcement_list',
@@ -361,6 +362,7 @@ export class MilkyAdapter implements AdapterInterface {
      * @param group
      * @todo TODO:加分页
      */
+    @api
     async getGroupEssence(group: GroupSession): Promise<EssenceData[]> {
         const data = await this.callApi(
             'get_group_essence_messages',
@@ -389,6 +391,7 @@ export class MilkyAdapter implements AdapterInterface {
      * 获取用户自定义表情
      * @param userId
      */
+    // @api
     async getCustomFace?(): Promise<string[] | undefined>
     //#endregion
 
@@ -398,6 +401,7 @@ export class MilkyAdapter implements AdapterInterface {
      * @param group 群组
      * @param name 新名称
      */
+    @api
     async setGroupName(group: GroupSession, name: string): Promise<true> {
         await this.callApi(
             'set_group_name',
@@ -414,6 +418,7 @@ export class MilkyAdapter implements AdapterInterface {
      * @param mem 群成员
      * @param card 新名称
      */
+    @api
     async setMemberCard(group: GroupSession, mem: Member, card: string): Promise<true> {
         await this.callApi(
             'set_group_member_card',
@@ -431,6 +436,7 @@ export class MilkyAdapter implements AdapterInterface {
      * @param mem
      * @param title
      */
+    @api
     async setMemberTitle(group: GroupSession, mem: Member, title: string): Promise<true> {
         await this.callApi(
             'set_group_member_special_title',
@@ -448,6 +454,7 @@ export class MilkyAdapter implements AdapterInterface {
      * @param mem 被禁言的成员
      * @param time 禁言时间
      */
+    @api
     async banMember(group: GroupSession, mem: Member, time: number): Promise<true> {
         await this.callApi(
             'set_group_member_mute',
@@ -464,6 +471,7 @@ export class MilkyAdapter implements AdapterInterface {
      * @param group 群组
      * @param mem 群成员
      */
+    @api
     async kickMember(group: GroupSession, mem: Member): Promise<true> {
         await this.callApi(
             'kick_group_member',
@@ -479,6 +487,7 @@ export class MilkyAdapter implements AdapterInterface {
      * 退出群组
      * @param group 群组
      */
+    @api
     async leaveGroup(group: GroupSession): Promise<true> {
         await this.callApi(
             'quit_group',
@@ -496,6 +505,7 @@ export class MilkyAdapter implements AdapterInterface {
      * @param session 目标会话
      * @param msg 目标消息
      */
+    @api
     async setMsgReaded(session: Session, msg: Msg): Promise<true> {
         await this.callApi(
             'mark_message_as_read',
@@ -739,11 +749,13 @@ export class MilkyAdapter implements AdapterInterface {
      * 设置昵称
      * @param nickname 新昵称
      */
+    // @api
     setNickname?(nickname: string): Promise<true | undefined>
     /**
      * 设置个性签名
      * @param sign 新签名
      */
+    // @api
     setSign?(sign: string): Promise<true | undefined>
     //#endregion
     //#endregion

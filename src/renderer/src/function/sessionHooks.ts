@@ -17,11 +17,13 @@ import { NotifyInfo } from './elements/system'
 import { Notify } from './notify'
 import { isImportant as userIsImportant } from './utils/msgUtil'
 import option from './option'
+import { backend } from '@renderer/runtime/backend'
+import { refreshFavicon } from './utils/favicon'
 
 /**
  * 给正在输入差屁股...
  */
-Session.newMessageHook.push((session: Session, _: Message) => {
+Session.afterNewMessageHook.push((session: Session, _: Message) => {
     const { $t } = app.config.globalProperties
     if (session.appendInfo === $t('对方正在输入……')) session.appendInfo = undefined
 })
@@ -29,7 +31,7 @@ Session.newMessageHook.push((session: Session, _: Message) => {
 /**
  * 通知处理(群组)
  */
-Session.newMessageHook.push((session: Session, msg: Message) => {
+Session.afterNewMessageHook.push((session: Session, msg: Message) => {
     if (!(session instanceof GroupSession)) return
     if (msg instanceof SystemNotice) return
     if (!needSendNotice(session)) return
@@ -45,7 +47,7 @@ Session.newMessageHook.push((session: Session, msg: Message) => {
 /**
  * 通知处理(非群组)
  */
-Session.newMessageHook.push((session: Session, msg: Message) => {
+Session.afterNewMessageHook.push((session: Session, msg: Message) => {
     if (session instanceof GroupSession) return
     if (msg instanceof SystemNotice) return
     if (!needSendNotice(session)) return
@@ -62,7 +64,7 @@ const atme = app.config.globalProperties.$t('@你')
 const atall = app.config.globalProperties.$t('@全体')
 const important = app.config.globalProperties.$t('特别关心')
 // const ann = app.config.globalProperties.$t('公告')
-Session.newMessageHook.push((session: Session, msg: Message) => {
+Session.afterNewMessageHook.push((session: Session, msg: Message) => {
     if (hasConnectionWithImport(msg)) addHighlightInfo(session, important)
     if (msg instanceof Msg) {
         if (msg.atme) addHighlightInfo(session, atme)
@@ -70,6 +72,34 @@ Session.newMessageHook.push((session: Session, msg: Message) => {
     }
 })
 //#endregion
+
+//#region == 图标更新 ==============================================
+Session.afterNewMessageHook.push((_session: Session, _msg: Message) => {
+    refreshFavicon()
+})
+Session.afterSetReadHook.push((_session: Session) => {
+    refreshFavicon()
+})
+Session.afterUnactiveHook.push((_session: Session) => {
+    refreshFavicon()
+})
+//#endregion
+
+// 本人无苹果设备,不保证可以用
+//#region == Touch Bar ============================================
+Session.afterActiveHook.push((_)=>{
+    if (!backend.isDesktop()) return
+    const list = [] as
+        { id: number, name: string, image?: string }[]
+    for (const session of Session.activeSessions.values()) {
+        list.push({
+            id: session.id,
+            name: session.showName,
+            image: session.face
+        })
+    }
+    backend.call(undefined, 'sys:flushOnMessage', false, list)
+})
 
 //#region == 工具函数 ==============================================
 /**
@@ -168,4 +198,5 @@ function groupNeedSendNotify(session: GroupSession): boolean {
     if (runtimeData.sysConfig.group_notice_type === 'all') return true
     return false
 }
+
 //#endregion

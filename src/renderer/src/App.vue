@@ -147,6 +147,7 @@ import GlobalSessionSearchBar from './components/GlobalSessionSearchBar.vue'
 import Viewer from './components/Viewer.vue'
 import { backend } from './runtime/backend'
 import LoginPan from './components/LoginPan.vue'
+import { refreshFavicon } from './function/utils/favicon'
 
 //#region == 定义变量 ===================================================
 type PageType = 'Home' | 'Options' | 'Friends' | 'Messages' | 'Boxes'
@@ -188,6 +189,7 @@ if (dev) {
         backend.call(undefined, 'win:setTitle', false, title)
     }
 }
+refreshFavicon()
 //#endregion
 
 //#region == 全局监听 ===================================================
@@ -200,25 +202,6 @@ window.onbeforeunload = () => {
     new Notify().clear()
     runtimeData.nowAdapter?.close()
 }
-//#endregion
-
-
-//#region == 监听器 ====================================================
-watch(() => Session.activeSessions.size, () => {
-    // macOS：刷新 Touch Bar 列表
-    if (backend.isDesktop()) {
-        const list = [] as
-            { id: number, name: string, image?: string }[]
-        for (const session of Session.activeSessions.values()) {
-            list.push({
-                id: session.id,
-                name: session.showName,
-                image: session.face
-            })
-        }
-        backend.call(undefined, 'sys:flushOnMessage', false, list)
-    }
-})
 //#endregion
 
 //#region == 方法函数 ===================================================

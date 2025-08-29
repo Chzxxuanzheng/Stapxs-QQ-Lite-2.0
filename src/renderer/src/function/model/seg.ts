@@ -112,7 +112,7 @@ export class ImgSeg extends Seg {
             this.summary = data.summary
             this.isFace = data.isFace
         }
-        this.imgData = new Img(this.src)
+        this.imgData = new Img(this._url.proxyUrl)
     }
 
     get plaintext(): string {
@@ -151,7 +151,7 @@ export class MfaceSeg extends Seg {
         this.packageId = data.packageId
         this.id = data.id
         this.key = data.key
-        this.imgData = new Img(this.src)
+        this.imgData = new Img(this._url)
     }
 
     get plaintext(): string {

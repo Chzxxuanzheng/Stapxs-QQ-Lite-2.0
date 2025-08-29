@@ -1,6 +1,6 @@
 <template>
     <div class="login-pan-card ss-card">
-        <font-awesome-icon :icon="['fas', 'circle-nodes']" />
+        <Icon :animation="true" />
         <p>{{ $t('连接到 协议端') }}</p>
         <form @submit.prevent @submit="connect">
             <template v-if="loginInfo.quickLogin == null || loginInfo.quickLogin.length == 0">
@@ -68,6 +68,7 @@ import Option from '@renderer/function/option'
 import { noticePopBox } from '@renderer/function/utils/popBox'
 import { i18n } from '@renderer/main'
 import { shallowReactive, shallowRef, computed } from 'vue'
+import Icon from './Icon.vue'
 const loginInfo = shallowReactive({
     savePassword: false,
     quickLoginSelect: '',

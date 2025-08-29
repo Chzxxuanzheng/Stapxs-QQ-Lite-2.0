@@ -66,10 +66,9 @@ export function scrollToMsg(seqName: string, showAnimation: boolean, showHighlig
  */
 export function openLink(url: string, external = false) {
     // 判断是不是 Electron，是的话打开内嵌 iframe
-    url = ProxyUrl.proxy(url)
     if (backend.isDesktop()) {
         if (!external && !runtimeData.sysConfig.close_browser) {
-            runtimeData.popBoxList = []
+            url = ProxyUrl.proxy(url)
             htmlPopBox(`<iframe src="${url}" class="view-iframe"></iframe>`, {
                 full: true,
                 button: [
@@ -725,11 +724,11 @@ function setQuickLogin(address: string, port: number) {
 export function checkUpdate() {
     // 获取最新的 release 信息
     const packageUrl =
-        'https://api.github.com/repos/stapxs/Stapxs-QQ-Lite-2.0/releases/latest'
+        'https://api.github.com/repos/chzxxuanzheng/Stapxs-QQ-Lite-X/releases/latest'
     fetch(packageUrl).then((response) => {
         if (response.ok) {
             response.json().then((data) => {
-                showUpadteLog(data)
+                showUpdateLog(data)
             })
         }
     })
@@ -740,7 +739,7 @@ export function checkUpdate() {
 * 展示更新弹窗
 * @param data 更新数据
 */
-function showUpadteLog(data: any) {
+function showUpdateLog(data: any) {
     const appVersion = appInfo.version // 当前版本
     const cacheVersion = localStorage.getItem('version') // 缓存版本
     // 这儿有两种情况：

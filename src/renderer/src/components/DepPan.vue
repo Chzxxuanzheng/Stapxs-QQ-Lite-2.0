@@ -113,7 +113,7 @@
                     <div>Apache 2.0</div>
                     <font-awesome-icon :icon="['fas', 'angle-right']" />
                 </div>
-                <div v-if="appClient.type == 'tauri'"
+                <div v-if="backend.type == 'tauri'"
                     class="ss-card jump-card"
                     @click="openLink('https://github.com/deltachat/deltachat-desktop')">
                     <header>
@@ -143,29 +143,23 @@
                     </header>
                     <font-awesome-icon :icon="['fas', 'angle-right']" />
                 </div>
+                <div class="ss-card jump-card"
+                    @click="openLink('https://github.com/Stapxs/Stapxs-QQ-Lite-2.0')">
+                    <header><div />Stapxs QQ Lite</header>
+                    <div>AGPL 3.0</div>
+                    <font-awesome-icon :icon="['fas', 'angle-right']" />
+                </div>
             </div>
         </div>
     </div>
 </template>
 
-<script lang="ts">
-    import { defineComponent } from 'vue'
-    import { openLink } from '@renderer/function/utils/appUtil'
-    import { runtimeData } from '@renderer/function/msg'
-    import { backend } from '@renderer/runtime/backend'
-
-    export default defineComponent({
-        name: 'DepPan',
-        props: [ 'type' ],
-        data() {
-            return {
-                backend,
-                appClient: backend,
-                runtimeData: runtimeData,
-                openLink: openLink
-            }
-        },
-    })
+<script setup lang="ts">
+import { openLink } from '@renderer/function/utils/appUtil'
+import { backend } from '@renderer/runtime/backend'
+const { type } = defineProps<{
+    type?: string
+}>()
 </script>
 
 <style scoped>
@@ -174,7 +168,6 @@
     }
 
     .main {
-        margin: -20px -20px 0 -20px;
         flex-direction: row;
         display: flex;
     }

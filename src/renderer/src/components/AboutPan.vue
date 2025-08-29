@@ -9,78 +9,7 @@
         <div
             id="logo-card"
             :class="'ss-card logo-card' + (showUI ? '' : ' hidd-sha')">
-            <svg viewBox="0 0 1000 1000" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <!-- 背景 -->
-                <circle
-                    cx="500"
-                    cy="500"
-                    r="500"
-                    style="fill: var(--color-main);"
-                    />
-                <!-- 围巾 -->
-                <path
-                    d="M 250 750 L 750 750 L 750 825 Q 500 925 250 825 Z"
-                    style="fill: red;"/>
-                <path
-                    d="M 310 750 L 275 900 L 325 915 L 365 750 Z"
-                    style="fill: red;"/>
-                <!-- 头 -->
-                <ellipse
-                    cx="500"
-                    cy="480"
-                    rx="400"
-                    ry="375"
-                    style="fill: black;"
-                    />
-                <!-- 脸 -->
-                <ellipse
-                    cx="420"
-                    cy="535"
-                    rx="250"
-                    ry="250"
-                    style="fill: white;"
-                    />
-                <ellipse
-                    cx="580"
-                    cy="535"
-                    rx="250"
-                    ry="250"
-                    style="fill: white;"
-                    />
-                <!-- 眼睛 -->
-                <ellipse
-                    cx="350"
-                    cy="535"
-                    rx="40"
-                    ry="60"
-                    style="fill: black;"
-                    />
-                <ellipse
-                    cx="650"
-                    cy="535"
-                    rx="40"
-                    ry="60"
-                    style="fill: black;"
-                    />
-                <!-- 高光 -->
-                <circle
-                    cx="370"
-                    cy="515"
-                    r="20"
-                    style="fill: white;"
-                    />
-                <circle
-                    cx="670"
-                    cy="515"
-                    r="20"
-                    style="fill: white;"
-                    />
-                <!-- 嘴巴 -->
-                <path
-                    d="M 430 725 Q 480 710 490 650 Q 500 640 510 650 Q 520 710 570 725 Q 500 750 430 725 Z"
-                    style="fill: #ECC425;"
-                    />
-            </svg>
+            <Icon />
             <div>
                 <span>{{ $t('Stapxs QQ Lite X') }}</span>
             </div>
@@ -261,6 +190,7 @@
 </template>
 
 <script setup lang="ts">
+import Icon from './Icon.vue'
 import DepPan from './DepPan.vue'
 import packageInfo from '../../../../package.json'
 
@@ -306,6 +236,7 @@ function dependencies(type = undefined as string | undefined, title = '许可版
     emit('closePopBox')
     popBox({
         title: $t(title),
+        svg: 'key',
         template: DepPan,
         templateValue: {
             type: type,
