@@ -34,8 +34,8 @@
                         <a>{{ packageInfo.version }}</a>
                     </div>
                     <span>Copyright © 2022 - 2025 Mr.Lee</span>
-                    <span @click="openLink('https://github.com/Chzxxuanzheng/Stapxs-QQ-Lite-X')"
-                        style="color: var(--color-main);cursor: pointer;">
+                    <span style="color: var(--color-main);cursor: pointer;"
+                        @click="openLink('https://github.com/Chzxxuanzheng/Stapxs-QQ-Lite-X')">
                         Chzxxuanzheng/Stapxs-QQ-Lite-X
                     </span>
                 </div>

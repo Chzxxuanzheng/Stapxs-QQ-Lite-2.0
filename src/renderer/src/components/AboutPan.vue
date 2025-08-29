@@ -14,13 +14,13 @@
                 <span>{{ $t('Stapxs QQ Lite X') }}</span>
             </div>
             <span style="text-align: center">
-                {{$t('一个跨协议的')}}
+                {{ $t('一个跨协议的') }}
                 <span
                     style="color: var(--color-main);cursor: pointer;"
                     @click="openLink('https://stapxs.github.io/Border-Card-UI/docs/')">
                     Stapxs QQ Lite
                 </span>
-                {{$t('发行版')}}
+                {{ $t('发行版') }}
             </span>
             <a>v{{ packageInfo.version }}</a>
             <div class="buttons">

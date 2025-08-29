@@ -1,6 +1,6 @@
 <template>
     <div class="login-pan-card ss-card">
-        <Icon :animation="true" />
+        <Icon animation />
         <p>{{ $t('连接到 协议端') }}</p>
         <form @submit.prevent @submit="connect">
             <template v-if="loginInfo.quickLogin == null || loginInfo.quickLogin.length == 0">
@@ -110,11 +110,9 @@ async function connect() {
             loginInfo.address = 'ob://' + loginInfo.quickLoginSelect
         }
         const re = await login(loginInfo.address, loginInfo.token)
-        console.log('登陆结果:', re)
         if (!re) return
 
         // 保存登陆地址密码
-        console.log('保存登陆地址:', loginInfo.address)
         Option.save('address', loginInfo.address)
         if (Option.get('save_password'))
             Option.save('save_password', loginInfo.token)
