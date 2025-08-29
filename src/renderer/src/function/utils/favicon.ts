@@ -1,12 +1,36 @@
+import { nextTick } from 'vue'
+import { Session } from '../model/session'
+
+let needRefreshFavicon = false
+
+/**
+ * 刷新 favicon
+ * @returns
+ */
+export function refreshFavicon() {
+    if (needRefreshFavicon) return
+    needRefreshFavicon = true
+    nextTick(() => {
+        needRefreshFavicon = false
+        let num = 0
+        for (const session of Session.activeSessions.values()) {
+            if (session.newMsg > 0) num ++
+        }
+        main(num)
+    })
+}
+
+function main(num: number) {
+    const width = num.toString().length * 150
+    const svg = `
 <svg width="1000" height="1000" viewBox="0 0 1000 1000" fill="none" xmlns="http://www.w3.org/2000/svg">
     <!-- 背景 -->
     <circle
         cx="500"
         cy="500"
         r="500"
-        style="fill: #606E7A"
+        style="fill: ${getComputedStyle(document.documentElement).getPropertyValue('--color-main').trim()}"
         />
-    <!-- <rect width="1000" height="1000" fill="#606E7A"/> -->
     <!-- 围巾 -->
     <path
         d="M 250 750 L 750 750 L 750 825 Q 500 925 250 825 Z"
@@ -89,20 +113,34 @@
         d="M 430 725 Q 480 710 490 650 Q 500 640 510 650 Q 520 710 570 725 Q 500 775 430 725 Z"
         style="fill: #ECC425"
         />
-    <!-- 新消息数量 -->
-    <!-- <path
-        d="M 350 400 L 650 400 L 650 1000 L 350 1000 Z"
-        style="fill: red"
-    />
-    <circle cx="350" cy="700" r="300" style="fill: red" />
-    <circle cx="650" cy="700" r="300" style="fill: red" />
-    <text
-        x="500"
-        y="925"
-        font-size="600"
-        text-anchor="middle"
-        style="fill: white"
-        >
-        99
-    </text> -->
+    ${num > 0 ? `
+        <!-- 新消息数量 -->
+        <path
+            d="M ${600-width} 400 L ${400+width} 400 L  ${400+width} 1000 L ${600-width} 1000 Z"
+            style="fill: red"
+        />
+        <circle cx="${600 - width}" cy="700" r="300" style="fill: red" />
+        <circle cx="${400 + width}" cy="700" r="300" style="fill: red" />
+        <text
+            x="500"
+            y="925"
+            font-size="600"
+            text-anchor="middle"
+            style="fill: white; font-weight: bold;"
+            >
+            ${num}
+        </text>
+        ` : ''}
 </svg>
+`
+
+    const svgDataUrl = 'data:image/svg+xml;charset=utf8,' + encodeURIComponent(svg)
+    let link: HTMLLinkElement | null = document.querySelector('link[rel~="icon"]')
+    if (!link) {
+        link = document.createElement('link')
+        link.rel = 'icon'
+        document.head.appendChild(link)
+    }
+    link.href = svgDataUrl
+    link.type = 'image/svg+xml'
+}

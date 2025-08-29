@@ -109,6 +109,7 @@ import {
     inject,
     markRaw,
     useTemplateRef,
+    toRaw,
 } from 'vue'
 import { runtimeData } from '@renderer/function/msg'
 import { getRaw as getOpt, run as runOpt } from '@renderer/function/option'
@@ -284,7 +285,7 @@ function cleanList() {
     // 卸载非置顶会话
     for (const item of Session.activeSessions) {
         if (item.id === runtimeData.nowChat?.id) continue
-        item.unactive()
+        toRaw(item).unactive()
     }
 }
 </script>

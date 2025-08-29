@@ -18,11 +18,12 @@ import { Notify } from './notify'
 import { isImportant as userIsImportant } from './utils/msgUtil'
 import option from './option'
 import { backend } from '@renderer/runtime/backend'
+import { refreshFavicon } from './utils/favicon'
 
 /**
  * 给正在输入差屁股...
  */
-Session.beforeNewMessageHook.push((session: Session, _: Message) => {
+Session.afterNewMessageHook.push((session: Session, _: Message) => {
     const { $t } = app.config.globalProperties
     if (session.appendInfo === $t('对方正在输入……')) session.appendInfo = undefined
 })
@@ -30,7 +31,7 @@ Session.beforeNewMessageHook.push((session: Session, _: Message) => {
 /**
  * 通知处理(群组)
  */
-Session.beforeNewMessageHook.push((session: Session, msg: Message) => {
+Session.afterNewMessageHook.push((session: Session, msg: Message) => {
     if (!(session instanceof GroupSession)) return
     if (msg instanceof SystemNotice) return
     if (!needSendNotice(session)) return
@@ -46,7 +47,7 @@ Session.beforeNewMessageHook.push((session: Session, msg: Message) => {
 /**
  * 通知处理(非群组)
  */
-Session.beforeNewMessageHook.push((session: Session, msg: Message) => {
+Session.afterNewMessageHook.push((session: Session, msg: Message) => {
     if (session instanceof GroupSession) return
     if (msg instanceof SystemNotice) return
     if (!needSendNotice(session)) return
@@ -63,12 +64,24 @@ const atme = app.config.globalProperties.$t('@你')
 const atall = app.config.globalProperties.$t('@全体')
 const important = app.config.globalProperties.$t('特别关心')
 // const ann = app.config.globalProperties.$t('公告')
-Session.beforeNewMessageHook.push((session: Session, msg: Message) => {
+Session.afterNewMessageHook.push((session: Session, msg: Message) => {
     if (hasConnectionWithImport(msg)) addHighlightInfo(session, important)
     if (msg instanceof Msg) {
         if (msg.atme) addHighlightInfo(session, atme)
         if (msg.atall) addHighlightInfo(session, atall)
     }
+})
+//#endregion
+
+//#region == 图标更新 ==============================================
+Session.afterNewMessageHook.push((_session: Session, _msg: Message) => {
+    refreshFavicon()
+})
+Session.afterSetReadHook.push((_session: Session) => {
+    refreshFavicon()
+})
+Session.afterUnactiveHook.push((_session: Session) => {
+    refreshFavicon()
 })
 //#endregion
 
@@ -185,4 +198,5 @@ function groupNeedSendNotify(session: GroupSession): boolean {
     if (runtimeData.sysConfig.group_notice_type === 'all') return true
     return false
 }
+
 //#endregion

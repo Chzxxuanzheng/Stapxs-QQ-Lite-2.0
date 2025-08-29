@@ -147,6 +147,7 @@ import GlobalSessionSearchBar from './components/GlobalSessionSearchBar.vue'
 import Viewer from './components/Viewer.vue'
 import { backend } from './runtime/backend'
 import LoginPan from './components/LoginPan.vue'
+import { refreshFavicon } from './function/utils/favicon'
 
 //#region == 定义变量 ===================================================
 type PageType = 'Home' | 'Options' | 'Friends' | 'Messages' | 'Boxes'
@@ -188,6 +189,7 @@ if (dev) {
         backend.call(undefined, 'win:setTitle', false, title)
     }
 }
+refreshFavicon()
 //#endregion
 
 //#region == 全局监听 ===================================================

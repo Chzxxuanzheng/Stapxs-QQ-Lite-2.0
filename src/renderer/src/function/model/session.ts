@@ -436,6 +436,8 @@ export abstract class Session {
 
         if (!targetMsg) return
 
+        await this.runHook('beforeSetReadHook')
+
         this.newMsg = 0
         this.showNotice = false
         this.highlightInfo.length = 0
@@ -447,6 +449,7 @@ export abstract class Session {
 
         // 调用api
         await runtimeData.nowAdapter?.setMsgReaded?.(this, targetMsg)
+        await this.runHook('afterSetReadHook')
     }
 
     /**
@@ -500,6 +503,11 @@ export abstract class Session {
     beforeRmMessageHook: ((session: Session, msg: Msg) => void|Promise<void>)[] = []
     static afterRmMessageHook: ((session: Session, msg: Msg) => void|Promise<void>)[] = []
     afterRmMessageHook: ((session: Session, msg: Msg) => void|Promise<void>)[] = []
+    // 设置已读消息钩子
+    static beforeSetReadHook: ((session: Session) => void|Promise<void>)[] = []
+    beforeSetReadHook: ((session: Session) => void|Promise<void>)[] = []
+    static afterSetReadHook: ((session: Session) => void|Promise<void>)[] = []
+    afterSetReadHook: ((session: Session) => void|Promise<void>)[] = []
     /**
      * 执行钩子
      * @param hookList 钩子列表
@@ -511,6 +519,7 @@ export abstract class Session {
     async runHook(hookNames: 'beforeLoadHistoryHook'): Promise<void>
     async runHook(hookNames: 'afterLoadHistoryHook', state: 'success' | 'fail' | 'end', msgs: Message[]): Promise<void>
     async runHook(hookNames: 'beforeRmMessageHook' | 'afterRmMessageHook', msg: Msg): Promise<void>
+    async runHook(hookNames: 'beforeSetReadHook' | 'afterSetReadHook'): Promise<void>
     async runHook(hookNames: string, ...args: any[]): Promise<void> {
         const tasks: Promise<any>[] = []
         const hooks: ((...args: any[]) => void | Promise<void>)[]
