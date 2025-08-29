@@ -1,11 +1,11 @@
 <svg width="1000" height="1000" viewBox="0 0 1000 1000" fill="none" xmlns="http://www.w3.org/2000/svg">
     <!-- 背景 -->
-    <!-- <circle
+    <circle
         cx="500"
         cy="500"
         r="500"
         fill="#606E7A"
-        /> -->
+        />
     <!-- <rect width="1000" height="1000" fill="#606E7A"/> -->
     <!-- 围巾 -->
     <path
