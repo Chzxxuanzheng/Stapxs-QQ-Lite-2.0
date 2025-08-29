@@ -236,6 +236,7 @@ function dependencies(type = undefined as string | undefined, title = '许可版
     emit('closePopBox')
     popBox({
         title: $t(title),
+        svg: 'key',
         template: DepPan,
         templateValue: {
             type: type,
