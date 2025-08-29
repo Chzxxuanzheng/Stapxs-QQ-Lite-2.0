@@ -123,7 +123,6 @@ import {
     useTemplateRef,
     provide,
     markRaw,
-    watch,
     onMounted,
 } from 'vue'
 import { Logger, popList as appMsgs, PopInfo, LogType } from '@renderer/function/base'
@@ -132,7 +131,6 @@ import { Notify } from './function/notify'
 import { changeSession } from './function/utils/msgUtil'
 import { getDeviceType } from './function/utils/systemUtil'
 import { uptime } from '@renderer/main'
-import { Session } from './function/model/session'
 import driver from './function/driver'
 import PopBox from './components/PopBox.vue'
 import { ensurePopBox } from './function/utils/popBox'
@@ -147,7 +145,6 @@ import GlobalSessionSearchBar from './components/GlobalSessionSearchBar.vue'
 import Viewer from './components/Viewer.vue'
 import { backend } from './runtime/backend'
 import LoginPan from './components/LoginPan.vue'
-import { refreshFavicon } from './function/utils/favicon'
 
 //#region == 定义变量 ===================================================
 type PageType = 'Home' | 'Options' | 'Friends' | 'Messages' | 'Boxes'
@@ -189,7 +186,6 @@ if (dev) {
         backend.call(undefined, 'win:setTitle', false, title)
     }
 }
-refreshFavicon()
 //#endregion
 
 //#region == 全局监听 ===================================================

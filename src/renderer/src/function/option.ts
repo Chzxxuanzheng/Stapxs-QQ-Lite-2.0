@@ -30,6 +30,7 @@ import { GroupSession, Session } from './model/session'
 import { BubbleBox } from './model/box'
 import { textPopBox } from './utils/popBox'
 import { backend } from '@renderer/runtime/backend'
+import { refreshFavicon } from './utils/favicon'
 
 let cacheConfigs: { [key: string]: any }
 
@@ -58,6 +59,7 @@ export const optDefault = {
     opt_always_top: false,
     opt_revolve: false,
     merge_forward_width_type: false,
+    use_favicon_notice: true,
     // Function
     close_notice: false,
     bubble_sort_user: true,
@@ -98,6 +100,11 @@ const configFunction: { [key: string]: (value: any) => void } = {
     opt_fast_animation: updateFarstAnimation,
     bubble_sort_user: switchBubbleBox,
     merge_forward_width_type: setMergeForwardWidth,
+    use_favicon_notice: setFaviconNotice,
+}
+
+function setFaviconNotice(_: boolean) {
+    refreshFavicon()
 }
 
 function setMergeForwardWidth(value: boolean | null) {
@@ -370,6 +377,8 @@ function changeTheme(id: number) {
             document.documentElement,
         ).getPropertyValue('--color-main-' + id)
     }
+    // 避免 css 未加载完
+    setTimeout(refreshFavicon, 10)
 }
 
 /**
