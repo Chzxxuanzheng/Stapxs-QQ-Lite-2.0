@@ -466,7 +466,7 @@ export class BubbleBox extends SessionBox {
 
         setTimeout(()=>{
             // 添加到群收纳盒
-            Session.prepareActiveHook.push((session: Session) => {
+            Session.afterActiveHook.push((session: Session) => {
                 if (!runtimeData.sysConfig.bubble_sort_user) return
                 if (session.alwaysTop) return
                 if (session.boxes.length > 0) return
@@ -475,7 +475,7 @@ export class BubbleBox extends SessionBox {
             })
 
             // 卸载时移除
-            Session.unactiveHook.push((session: Session) => {
+            Session.afterUnactiveHook.push((session: Session) => {
                 if (this._content.has(session))
                     this.removeSession(session)
             })

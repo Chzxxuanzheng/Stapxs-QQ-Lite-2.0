@@ -202,25 +202,6 @@ window.onbeforeunload = () => {
 }
 //#endregion
 
-
-//#region == 监听器 ====================================================
-watch(() => Session.activeSessions.size, () => {
-    // macOS：刷新 Touch Bar 列表
-    if (backend.isDesktop()) {
-        const list = [] as
-            { id: number, name: string, image?: string }[]
-        for (const session of Session.activeSessions.values()) {
-            list.push({
-                id: session.id,
-                name: session.showName,
-                image: session.face
-            })
-        }
-        backend.call(undefined, 'sys:flushOnMessage', false, list)
-    }
-})
-//#endregion
-
 //#region == 方法函数 ===================================================
 /**
  * 初始化

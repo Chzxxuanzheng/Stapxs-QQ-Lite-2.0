@@ -611,8 +611,7 @@ onMounted(()=>{
         })
     }
     // 新消息滚动到底部
-    // eslint-disable-next-line
-    Session.newMessageHook.push(async (session, _msg)=>{
+    Session.beforeNewMessageHook.push(async (session, _msg)=>{
         if (session !== chat) return
 
         const pan = msgPan.value

@@ -104,11 +104,13 @@ export abstract class Session {
     private async _activate() {
         if (this.isActive) return
 
-        await this.prepareActive()
-        await this.runHook('prepareActiveHook')
+        await this.runHook('beforeActiveHook')
 
+        await this.prepareActive()
         this.isActive = true
         Session.activeSessions.add(this)
+
+        await this.runHook('afterActiveHook')
     }
     /**
      * 准备激活会话
@@ -118,6 +120,7 @@ export abstract class Session {
      * 卸载
      */
     unactive() {
+        this.runHook('beforeUnactiveHook')
         this.messageList.length = 0
         this.imgHead = undefined
         this.imgTail = undefined
@@ -132,7 +135,7 @@ export abstract class Session {
         this.lastLoadFaileFlag.value = false
         this.canLoadMoreHistory.value = true
         Session.activeSessions.delete(this)
-        this.runHook('unactiveHook')
+        this.runHook('afterUnactiveHook')
     }
     abstract prepareUnactive(): void
     //#endregion
@@ -303,8 +306,8 @@ export abstract class Session {
 
             const mainPromise = (async ()=>{
                 if (!this.isActive) await this.activate()
+                this.runHook('beforeNewMessageHook', msg)
                 this.imgFromNewMsg(msg)
-                this.runHook('newMessageHook', msg)
                 clearTimeout(timeout)
             })
             await Promise.race([mainPromise(), timeoutPromise])
@@ -322,6 +325,7 @@ export abstract class Session {
         for (const box of this.boxes) {
             box.sessionNewMessage(this, msg)
         }
+        this.runHook('afterNewMessageHook', msg)
     }
 
     private loadHistoryLock: ShallowRef<number|undefined> = shallowRef(undefined)
@@ -347,6 +351,8 @@ export abstract class Session {
             return false
         }
         try {
+            await this.runHook('beforeLoadHistoryHook')
+
             // 调API
             const data = await runtimeData.nowAdapter.getHistoryMsg(this, 20, this.headMsg)
 
@@ -369,7 +375,14 @@ export abstract class Session {
 
             // 重设headMsg
             this.headMsg = <Msg>msgs[0]
+
+            await this.runHook(
+                'afterLoadHistoryHook',
+                this.canLoadMoreHistory.value ? 'success' : 'end',
+                msgs
+            )
         } catch (e) {
+            await this.runHook('afterLoadHistoryHook', 'fail', [])
             new Logger().error(e as Error, '加载历史消息失败')
             this.lastLoadFaileFlag.value = true
             new PopInfo().add(
@@ -442,9 +455,10 @@ export abstract class Session {
     async removeMsg(msg: Msg) {
         const index = this.messageList.indexOf(msg)
         if (index < 0) return
+        await this.runHook('beforeRmMessageHook', msg)
         this.messageList.splice(index, 1)
         this.removeImgList(msg.imgList)
-        await this.runHook('rmMessageHook', msg)
+        await this.runHook('afterRmMessageHook', msg)
     }
 
     /**
@@ -461,25 +475,43 @@ export abstract class Session {
 
     //#region == 钩子相关 ==============================================================
     // 我为啥要写这东西?我自己也不知道...照着nb抄着抄着就有这东西了...
-    static prepareActiveHook: ((session: Session) => void|Promise<void>)[] = []
-    prepareActiveHook: ((session: Session) => void|Promise<void>)[] = []
-    static unactiveHook: ((session: Session) => void|Promise<void>)[] = []
-    unactiveHook: ((session: Session) => void|Promise<void>)[] = []
-    static newMessageHook: ((session: Session, msg: Message) => void|Promise<void>)[] = []
-    newMessageHook: ((session: Session, msg: Message) => void|Promise<void>)[] = []
-    static loadHistoryHook: ((session: Session, state: 'success' | 'fail' | 'end', msgs: Msg[]) => Promise<boolean>)[] = []
-    loadHistoryHook: ((session: Session, state: 'success' | 'fail' | 'end', msgs: Msg[]) => Promise<boolean>)[] = []
-    static rmMessageHook: ((session: Session, msg: Msg) => void|Promise<void>)[] = []
-    rmMessageHook: ((session: Session, msg: Msg) => void|Promise<void>)[] = []
+    // 激活
+    static beforeActiveHook: ((session: Session) => void|Promise<void>)[] = []
+    beforeActiveHook: ((session: Session) => void|Promise<void>)[] = []
+    static afterActiveHook: ((session: Session) => void|Promise<void>)[] = []
+    afterActiveHook: ((session: Session) => void|Promise<void>)[] = []
+    // 取消激活
+    static beforeUnactiveHook: ((session: Session) => void|Promise<void>)[] = []
+    beforeUnactiveHook: ((session: Session) => void|Promise<void>)[] = []
+    static afterUnactiveHook: ((session: Session) => void|Promise<void>)[] = []
+    afterUnactiveHook: ((session: Session) => void|Promise<void>)[] = []
+    // 新消息
+    static beforeNewMessageHook: ((session: Session, msg: Message) => void|Promise<void>)[] = []
+    beforeNewMessageHook: ((session: Session, msg: Message) => void|Promise<void>)[] = []
+    static afterNewMessageHook: ((session: Session, msg: Message) => void|Promise<void>)[] = []
+    afterNewMessageHook: ((session: Session, msg: Message) => void|Promise<void>)[] = []
+    // 历史消息加载
+    static beforeLoadHistoryHook: ((session: Session) => Promise<boolean>)[] = []
+    beforeLoadHistoryHook: ((session: Session) => Promise<boolean>)[] = []
+    static afterLoadHistoryHook: ((session: Session, state: 'success' | 'fail' | 'end', msgs: Message[]) => Promise<boolean>)[] = []
+    afterLoadHistoryHook: ((session: Session, state: 'success' | 'fail' | 'end', msgs: Message[]) => Promise<boolean>)[] = []
+    // 删除消息钩子
+    static beforeRmMessageHook: ((session: Session, msg: Msg) => void|Promise<void>)[] = []
+    beforeRmMessageHook: ((session: Session, msg: Msg) => void|Promise<void>)[] = []
+    static afterRmMessageHook: ((session: Session, msg: Msg) => void|Promise<void>)[] = []
+    afterRmMessageHook: ((session: Session, msg: Msg) => void|Promise<void>)[] = []
     /**
      * 执行钩子
      * @param hookList 钩子列表
      * @param args 参数
      */
-    async runHook(
-        hookNames: 'prepareActiveHook' | 'unactiveHook' | 'newMessageHook' | 'loadHistoryHook' | 'rmMessageHook',
-        ...args: any[]
-    ): Promise<void> {
+    async runHook(hookNames: 'beforeActiveHook' | 'afterActiveHook'): Promise<void>
+    async runHook(hookNames: 'beforeUnactiveHook' | 'afterUnactiveHook'): Promise<void>
+    async runHook(hookNames: 'beforeNewMessageHook' | 'afterNewMessageHook', msg: Message): Promise<void>
+    async runHook(hookNames: 'beforeLoadHistoryHook'): Promise<void>
+    async runHook(hookNames: 'afterLoadHistoryHook', state: 'success' | 'fail' | 'end', msgs: Message[]): Promise<void>
+    async runHook(hookNames: 'beforeRmMessageHook' | 'afterRmMessageHook', msg: Msg): Promise<void>
+    async runHook(hookNames: string, ...args: any[]): Promise<void> {
         const tasks: Promise<any>[] = []
         const hooks: ((...args: any[]) => void | Promise<void>)[]
             = [...this[hookNames], ...Session[hookNames]] as any
