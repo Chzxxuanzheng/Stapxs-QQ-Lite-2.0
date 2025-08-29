@@ -1,7 +1,10 @@
 import { nextTick } from 'vue'
 import { Session } from '../model/session'
+import { runtimeData } from '../msg'
 
 let needRefreshFavicon = false
+
+let cacheInfo = ''
 
 /**
  * 刷新 favicon
@@ -13,6 +16,7 @@ export function refreshFavicon() {
     nextTick(() => {
         needRefreshFavicon = false
         let num = 0
+        if (runtimeData.sysConfig.use_favicon_notice === false) return main(0)
         for (const session of Session.activeSessions.values()) {
             if (session.newMsg > 0) num ++
         }
@@ -22,6 +26,11 @@ export function refreshFavicon() {
 
 function main(num: number) {
     const width = num.toString().length * 150
+    const color = getComputedStyle(document.documentElement).getPropertyValue('--color-main').trim()
+    // 对比缓存
+    if (cacheInfo === `${num}-${color}`) return
+    // 存储缓存信息
+    cacheInfo = `${num}-${color}`
     const svg = `
 <svg width="1000" height="1000" viewBox="0 0 1000 1000" fill="none" xmlns="http://www.w3.org/2000/svg">
     <!-- 背景 -->
@@ -29,7 +38,7 @@ function main(num: number) {
         cx="500"
         cy="500"
         r="500"
-        style="fill: ${getComputedStyle(document.documentElement).getPropertyValue('--color-main').trim()}"
+        style="fill: ${color}"
         />
     <!-- 围巾 -->
     <path

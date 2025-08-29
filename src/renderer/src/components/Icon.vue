@@ -6,46 +6,41 @@
  * @Description: App 封装了眼睛动画
 -->
 <template>
-    <svg ref="svg" viewBox="0 0 1000 1000" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg ref="svg" viewBox="0 0 1000 1000" fill="none"
+        xmlns="http://www.w3.org/2000/svg">
         <!-- 背景 -->
         <circle
             cx="500"
             cy="500"
             r="500"
-            style="fill: var(--color-main)"
-            />
+            style="fill: var(--color-main)" />
         <!-- 围巾 -->
         <path
             d="M 250 750 L 750 750 L 750 825 Q 500 925 250 825 Z"
-            style="fill: red"
-            />
+            style="fill: red" />
         <path
             d="M 310 750 L 275 900 L 325 915 L 365 750 Z"
-            style="fill: red"
-            />
+            style="fill: red" />
         <!-- 头 -->
         <ellipse
             cx="500"
             cy="480"
             rx="400"
             ry="375"
-            style="fill: black"
-            />
+            style="fill: black" />
         <!-- 脸 -->
         <ellipse
             cx="420"
             cy="535"
             rx="250"
             ry="250"
-            style="fill: white"
-            />
+            style="fill: white" />
         <ellipse
             cx="580"
             cy="535"
             rx="250"
             ry="250"
-            style="fill: white"
-            />
+            style="fill: white" />
         <!-- 眼睛 -->
         <!-- 左眼 -->
         <!-- 睁开 -->
@@ -57,23 +52,20 @@
             :cy="535 + animationInfo.leftEyeY"
             style="
                 fill: black;
-            "
-            />
+            " />
         <!-- 高光 -->
         <circle
             v-show="!animationInfo.closeEye"
             :cx="370 + animationInfo.leftEyeX"
             :cy="515 + animationInfo.leftEyeY"
             r="20"
-            style="fill: white"
-            />
+            style="fill: white" />
         <!-- 闭合 -->
         <path
             v-show="animationInfo.closeEye"
             d="M 300 535 Q 350 580 400 535"
             stroke-width="10"
-            style="stroke: black"
-        />
+            style="stroke: black" />
         <!-- 右眼 -->
         <ellipse
             v-show="!animationInfo.closeEye"
@@ -81,35 +73,31 @@
             :cy="535 + animationInfo.rightEyeY"
             rx="40"
             ry="60"
-            style="fill: black"
-            />
+            style="fill: black" />
         <!-- 高光 -->
         <circle
             v-show="!animationInfo.closeEye"
             :cx="670 + animationInfo.rightEyeX"
             :cy="515 + animationInfo.rightEyeY"
             r="20"
-            style="fill: white"
-            />
+            style="fill: white" />
         <!-- 闭合 -->
         <path
             v-show="animationInfo.closeEye"
             d="M 600 535 Q 650 580 700 535"
             stroke-width="10"
-            style="stroke: black"
-        />
+            style="stroke: black" />
         <!-- 嘴巴 -->
         <path
             d="M 430 700 Q 480 685 490 625 Q 500 615 510 625 Q 520 685 570 700 Q 500 750 430 700 Z"
-            style="fill: #ECC425"
-            />
+            style="fill: #ECC425" />
     </svg>
 </template>
 
 <script setup lang="ts">
-import { useTemplateRef, shallowReactive, watchEffect } from 'vue'
-import { useEventListener, useInterval } from '@renderer/function/utils/vuse';
-import { delay, randomNum } from '@renderer/function/utils/systemUtil';
+import { useTemplateRef, shallowReactive } from 'vue'
+import { useEventListener, useInterval } from '@renderer/function/utils/vuse'
+import { delay, randomNum } from '@renderer/function/utils/systemUtil'
 
 const svg = useTemplateRef('svg')
 
@@ -130,7 +118,6 @@ const targetInfo = shallowReactive({
     rightEyeX: 0,
     rightEyeY: 0,
 })
-if (animation) {
 
 let frame: ReturnType<typeof requestAnimationFrame>
 
@@ -144,6 +131,8 @@ function step() {
     }
     if (hasChange) frame = requestAnimationFrame(step)
 }
+
+if (animation) {
 
 let moveTimeout: ReturnType<typeof setTimeout> | undefined
 const moveRange = 15
