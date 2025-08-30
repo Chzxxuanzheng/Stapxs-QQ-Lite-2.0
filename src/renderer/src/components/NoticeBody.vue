@@ -17,8 +17,12 @@
             <template v-if="data instanceof RecallNotice">
                 <template v-if="data.selfRevoke">
                     <a v-user="data.user" />
-                    <span>{{ $t('撤回了一条消息') }}</span>
-                    <div />
+                    <span>
+                        {{ $t('撤回了一条消息') }}
+                        <template v-if="data.suffix">
+                            ，{{ data.suffix }}
+                        </template>
+                    </span>
                 </template>
                 <template v-else>
                     <a v-user="data.operator" />

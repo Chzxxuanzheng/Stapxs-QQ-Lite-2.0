@@ -1208,6 +1208,7 @@ export class MilkyAdapter implements AdapterInterface {
             operator: createSender(data.operator_id),
             recallId: data.message_seq.toString(),
             time: event.time,
+            suffix: data.display_suffix ?? '',
         }
     }
     async pokeEvent(
