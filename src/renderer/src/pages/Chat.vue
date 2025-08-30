@@ -272,7 +272,7 @@
                     </div>
                     <div v-if="chat instanceof UserSession"
                         :title="$t('戳一戳')"
-                        @click="sendPrivatePoke()">
+                        @click="sendPoke(chat.baseUser)">
                         <font-awesome-icon :icon="['fas', 'fa-hand-point-up']" />
                     </div>
                     <div v-if="chat instanceof GroupSession"
@@ -407,7 +407,7 @@
                     <div><font-awesome-icon :icon="['fas', 'at']" /></div>
                     <a>{{ $t('提及') }}</a>
                 </div>
-                <div v-show="menuDisplay.poke" @click="menuDisplay.menuSelectedUser ? sendGroupPoke(menuDisplay.menuSelectedUser as Member) : ''">
+                <div v-show="menuDisplay.poke" @click="menuDisplay.menuSelectedUser ? sendPoke(menuDisplay.menuSelectedUser as Member) : ''">
                     <div><font-awesome-icon :icon="['fas', 'fa-hand-point-up']" /></div>
                     <a>{{ $t('戳一戳') }}</a>
                 </div>

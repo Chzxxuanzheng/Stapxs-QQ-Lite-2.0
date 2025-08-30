@@ -575,8 +575,7 @@ defineExpose({
                     new PopInfo().add(PopType.INFO, this.$t('定位消息失败'))
                     return
                 }
-                const re = scrollToMsgFunc(msg, true)
-                console.log(re)
+                scrollToMsgFunc(msg, true)
             },
 
             /**
