@@ -56,12 +56,14 @@ export class RecallNotice extends ReceivedNotice {
     override readonly type = 'recall'
     user: IUser
     operator: IUser
+    suffix: string
 
     constructor(data: RecallEventData) {
         super(data)
         this.user = this.getUser(data.user)
         this.operator = this.getUser(data.operator)
         this.users.push(this.user, this.operator)
+        this.suffix = data.suffix
     }
 
     get selfRevoke(): boolean {

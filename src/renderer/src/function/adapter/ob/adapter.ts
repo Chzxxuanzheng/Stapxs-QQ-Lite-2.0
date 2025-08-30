@@ -829,6 +829,7 @@ export class OneBotAdapter implements AdapterInterface {
             operator: createSender(event.operator_id),
             time: event.time,
             recallId: event.message_id.toString(),
+            suffix: '',
         }
     }
     async friendRecallEvent (event: ObFriendRecallEvent): Promise<RecallEventData> {
@@ -842,6 +843,7 @@ export class OneBotAdapter implements AdapterInterface {
             operator: createSender(event.user_id),
             time: event.time,
             recallId: event.message_id.toString(),
+            suffix: '',
         }
     }
     async pokeEvent(event: ObPokeEvent): Promise<PokeEventData> {

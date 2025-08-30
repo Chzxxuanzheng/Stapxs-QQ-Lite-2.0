@@ -14,12 +14,9 @@
                         <span>{{ $t('超级表情') }}</span>
                     </div>
                     <div class="base-face">
-                        <template v-for="num in Emoji.superList">
+                        <template v-for="num in Emoji.superList" :key="'base-face-' + num">
                             <div>
-                                <EmojiFace v-if="Emoji.has(num)"
-                                    :key="'base-face-' + num"
-                                    :emoji="Emoji.get(num)!"
-                                    @click="addBaseFace(num)" />
+                                <EmojiFace :emoji="Emoji.get(num)" @click="addBaseFace(num)" />
                             </div>
                         </template>
                     </div>
@@ -27,12 +24,9 @@
                         <span>{{ $t('小黄脸表情') }}</span>
                     </div>
                     <div class="base-face">
-                        <template v-for="num in Emoji.normalList">
+                        <template v-for="num in Emoji.normalList" :key="'base-face-' + num">
                             <div>
-                                <EmojiFace v-if="Emoji.has(num)"
-                                    :key="'base-face-' + num"
-                                    :emoji="Emoji.get(num)!"
-                                    @click="addBaseFace(num)" />
+                                <EmojiFace :emoji="Emoji.get(num)" @click="addBaseFace(num)" />
                             </div>
                         </template>
                     </div>
@@ -40,11 +34,8 @@
                         <span>{{ $t('emoji 表情') }}</span>
                     </div>
                     <div class="base-face">
-                        <div v-for="num in Emoji.emojiList">
-                            <EmojiFace
-                                :key="'base-face-' + num"
-                                :emoji="Emoji.get(num)!"
-                                @click="addBaseFace(num)" />
+                        <div v-for="num in Emoji.emojiList" :key="'base-face-' + num">
+                            <EmojiFace :emoji="Emoji.get(num)" @click="addBaseFace(num)" />
                         </div>
                     </div>
                 </div>

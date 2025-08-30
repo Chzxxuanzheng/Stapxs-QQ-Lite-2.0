@@ -30,33 +30,45 @@ const logger = new Logger()
 
 /**
  * 滚动到目标消息（不自动加载）
- * @param seqName DOM 名（chat-xx）
+ * @param msg 目标消息
+ * @param showAnimation 是否显示动画
+ * @param showHighlight 是否高亮显示
+ * @returns 跳转是否成功
  */
-export function scrollToMsg(seqName: string, showAnimation: boolean, showHighlight = true): boolean {
-    const msg = document.getElementById(seqName)
-    if (msg) {
-        const pan = document.getElementById('msgPan')
-        if (pan !== null) {
-            if (showAnimation === false) {
-                pan.style.scrollBehavior = 'unset'
-            } else {
-                pan.style.scrollBehavior = 'smooth'
-            }
-            pan.scrollTop = msg.offsetTop - msg.offsetHeight + 10
-            pan.style.scrollBehavior = 'smooth'
-            if(showHighlight) {
-                msg.style.transition = 'background 1s'
-                msg.style.background = 'rgba(0, 0, 0, 0.06)'
-                setTimeout(() => {
-                    msg.style.background = 'unset'
-                    setTimeout(() => {
-                        msg.style.transition = 'background .3s'
-                    }, 1100)
-                }, 3000)
-            }
-            return true
-        }
+export function scrollToMsg(msg: Message, showAnimation: boolean, showHighlight = true): boolean {
+    if (msg.session === undefined) return false
+    if (msg.session !== runtimeData.nowChat) return false
+    if (msg.session.isActive === false) return false
+
+    const msgDom = document.getElementById(`chat-${msg.uuid}`)
+    const panDom = document.getElementById('msgPan')
+
+    if (!msgDom) return false
+    if (!panDom) return false
+
+    // 设置滚动动画
+    if (showAnimation === false)
+        panDom.style.scrollBehavior = 'unset'
+    else
+        panDom.style.scrollBehavior = 'smooth'
+
+    const vh = window.innerHeight / 100
+    panDom.scrollTop = msgDom.offsetTop - msgDom.offsetHeight - 20 * vh
+    panDom.style.scrollBehavior = 'smooth'
+
+    // 加高亮特效
+    if(showHighlight) {
+        msgDom.style.transition = 'background 1s'
+        msgDom.style.background = 'rgba(0, 0, 0, 0.06)'
+        setTimeout(() => {
+            msgDom.style.background = 'unset'
+            setTimeout(() => {
+                msgDom.style.transition = 'background .3s'
+            }, 1100)
+        }, 3000)
     }
+    return true
+
     return false
 }
 
@@ -215,26 +227,23 @@ export async function reloadUsers(useCache: boolean = true) {
  * 通过用户和消息 ID 跳转到对应的消息
  * @param id
  * @param msgId
- * @deprecated 待维护
  */
-export function jumpToChat(userId: string, msgId: string) {
-    const session = Session.getSessionById(Number(userId))
-    if (!session) return
-    if (!session.isActive) return // 未激活哪里来的消息?
-    const msg = session.messageList.filter(msg => msg.message_id === msgId)[0]
-    if (!msg) return // 没有找到对应的消息
+export function jumpToSession(session: Session, msg?: Message) {
+    if (!session.isActive) session.activate()
 
     // 当前聊天已经打开，是没有焦点触发的消息通知；直接滚动到消息。
     if (runtimeData.nowChat === session) {
-        scrollToMsg(`chat-${msg.uuid}`, true)
+        if (msg) scrollToMsg(msg, true)
         return
     }
 
     changeSession(session)
-    // 跳转到对应消息
-    setTimeout(()=>{
-        scrollToMsg(`chat-${msg.uuid}`, true)
-    }, 500)
+    session.activate().then(()=>{
+        // 跳转到对应消息
+        setTimeout(()=>{
+            if (msg) scrollToMsg(msg, true)
+        }, 500)
+    })
 }
 
 /**
@@ -435,7 +444,7 @@ export function createIpc() {
     })
     backend.addListener(undefined, 'app:jumpChat', (event, data) => {
         const info = data ?? event.payload
-        jumpToChat(info.userId, info.msgId)
+        jumpToSession(info.userId, info.msgId)
         new Notify().closeAll(info.userId)
     })
     // 后端连接模式
@@ -522,7 +531,7 @@ export async function loadMobile() {
                     info.notification as LocalNotificationSchema
                 if(info.actionId == 'tap') {
                     // PS：通知被点击后会自动被关闭，所以这里不需要处理
-                    jumpToChat(notification.extra.userId,
+                    jumpToSession(notification.extra.userId,
                         notification.extra.msgId)
                 } else if(info.actionId == 'REPLY_ACTION') {
                     // 快速回复
@@ -618,6 +627,7 @@ import { FriendData, GroupData } from '../adapter/interface'
 import { htmlPopBox, popBox } from './popBox'
 import { ProxyUrl } from '../model/proxyUrl'
 import { backend } from '@renderer/runtime/backend'
+import { Message } from '../model/message'
 
 /**
 * 装载补充样式

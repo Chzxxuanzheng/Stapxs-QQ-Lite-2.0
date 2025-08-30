@@ -1208,6 +1208,7 @@ export class MilkyAdapter implements AdapterInterface {
             operator: createSender(data.operator_id),
             recallId: data.message_seq.toString(),
             time: event.time,
+            suffix: data.display_suffix ?? '',
         }
     }
     async pokeEvent(
@@ -1222,9 +1223,9 @@ export class MilkyAdapter implements AdapterInterface {
             },
             sender: createSender(data.sender_id),
             target: createSender(data.receiver_id),
-            action: '戳了戳',
-            suffix: '',
-            ico: 'https://tianquan.gtimg.cn/nudgeaction/item/0/expression.jpg',
+            action: data.display_action ?? '戳了戳',
+            suffix: data.display_suffix ?? '',
+            ico: data.display_action_img_url ?? 'https://tianquan.gtimg.cn/nudgeaction/item/0/expression.jpg',
             time: event.time,
         }
     }

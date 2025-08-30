@@ -285,8 +285,12 @@ export abstract class Session {
         await queueWait(this._addMessage(msg), `addMessage-${this.type}-${this.id}`, 10000)
     }
     private async _addMessage(msg: Message) {
+        let beforeActive = false
         // 激活消息
-        if (!this.isActive) await this.activate()
+        if (!this.isActive) {
+            beforeActive = true
+            await this.activate()
+        }
 
         const lastMsg = this.messageList.at(-1)
 
@@ -295,7 +299,14 @@ export abstract class Session {
             (msg instanceof Msg) &&
             (lastMsg instanceof Msg) &&
             lastMsg.message_id === msg.message_id
-        ) return
+        ) {
+            // 第一条消息钩子缺失的补偿
+            if (beforeActive) {
+                this.runHook('beforeNewMessageHook', msg)
+                this.runHook('afterNewMessageHook', msg)
+            }
+            return
+        }
 
         // 消息其他处理
         try {
@@ -317,7 +328,7 @@ export abstract class Session {
 
         // 保存消息
         this.messageList.push(msg)
-        this.refushPreMsg()
+        this.refreshPreMsg()
         if(msg instanceof Msg && msg.sender.user_id !== runtimeData.loginInfo.uin)
             this.newMsg ++
 
@@ -406,7 +417,7 @@ export abstract class Session {
     /**
      * 刷新预览消息
      */
-    refushPreMsg(): void {
+    refreshPreMsg(): void {
         for (let i= this.messageList.length - 1; i >= 0; i--) {
             const msg = this.messageList[i]
             // 启用预览通知
@@ -709,7 +720,7 @@ export class GroupSession extends Session {
         if(this.messageList.length < 20)await this.loadHistory()
 
         // 刷新预览消息 ============================================
-        this.refushPreMsg()
+        this.refreshPreMsg()
     }
 
     async reloadUserList(useCache: boolean = true): Promise<void> {
@@ -960,7 +971,7 @@ export class UserSession extends Session {
         if(this.messageList.length < 20)await this.loadHistory()
 
         // 刷新预览消息 ============================================
-        this.refushPreMsg()
+        this.refreshPreMsg()
     }
 
     override prepareUnactive(): void {/**/}

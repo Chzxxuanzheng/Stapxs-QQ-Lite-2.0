@@ -121,7 +121,7 @@
     import { Logger, PopInfo, PopType } from '@renderer/function/base'
     import app from '@renderer/main'
     import { downloadFile } from '@renderer/function/utils/appUtil'
-    import { getViewTime } from '@renderer/function/utils/systemUtil'
+    import { copyToClipboard, getViewTime } from '@renderer/function/utils/systemUtil'
     import { Message } from '@renderer/function/model/message'
 
     type ComponentRefs = {
@@ -433,14 +433,12 @@
                 if (!msg) return
 
                 const popInfo = new PopInfo()
-                app.config.globalProperties.$copyText(msg.plaintext).then(
-                    () => {
-                        popInfo.add(PopType.INFO, this.$t('复制成功'), true)
-                    },
-                    () => {
-                        popInfo.add(PopType.ERR, this.$t('复制失败'), true)
-                    },
-                )
+                copyToClipboard(msg.plaintext)
+                    .then(
+                        () => popInfo.add(PopType.INFO, this.$t('复制成功'))
+                    ).catch(
+                        () => popInfo.add(PopType.ERR, this.$t('复制失败'))
+                    )
 
                 this.closeMsgMenu()
             },
@@ -534,16 +532,12 @@
                 })
                 msg = msg.trim()
                 const popInfo = new PopInfo()
-                app.config.globalProperties.$copyText(msg).then(
-                    () => {
-                        popInfo.add(PopType.INFO, this.$t('复制成功'), true)
-
-                        this.closeMultiselect()
-                    },
-                    () => {
-                        popInfo.add(PopType.ERR, this.$t('复制失败'), true)
-                    },
-                )
+                copyToClipboard(msg)
+                    .then(
+                        () => popInfo.add(PopType.INFO, this.$t('复制成功'))
+                    ).catch(
+                        () => popInfo.add(PopType.ERR, this.$t('复制失败'))
+                    )
             },
             closeMultiselect() {
                 const msgBar = this.refs().msgBar

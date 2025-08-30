@@ -54,7 +54,7 @@
             </div>
         </div>
         <!-- 消息显示区 -->
-        <div ref="msgPan" class="chat"
+        <div ref="msgPan" id="msgPan" class="chat"
             style="scroll-behavior: smooth"
             @scroll="chatScroll">
             <!-- 前缀 -->
@@ -90,7 +90,6 @@
                 :show-msg-menu="showMsgMenu"
                 :show-user-menu="showUserMenu"
                 :user-info-pan="userInfoPanFunc"
-                @scroll-to-msg="scrollToMsgMethod"
                 @image-loaded="imgLoadedScroll"
                 @left-move="replyMsg"
                 @sender-double-click="(user)=>sendPoke(user)"
@@ -146,8 +145,8 @@
                                             v-for="(seg, indexc) in item.message"
                                             :key="'jinc-' + index + '-' + indexc">
                                             <span v-if="seg instanceof TxtSeg">{{ seg.text }}</span>
-                                            <img v-if="seg instanceof FaceSeg"
-                                                class="face" :src="seg.src">
+                                            <EmojiFace v-if="seg instanceof FaceSeg"
+                                                :emoji="seg.face" class="msg-face" />
                                             <img v-if="seg instanceof ImgSeg" :src="seg.src">
                                         </template>
                                     </div>
@@ -273,7 +272,7 @@
                     </div>
                     <div v-if="chat instanceof UserSession"
                         :title="$t('戳一戳')"
-                        @click="sendPrivatePoke()">
+                        @click="sendPoke(chat.baseUser)">
                         <font-awesome-icon :icon="['fas', 'fa-hand-point-up']" />
                     </div>
                     <div v-if="chat instanceof GroupSession"
@@ -351,9 +350,8 @@
                         'open': menuDisplay.respond
                     }">
                     <template v-for="(num, index) in Emoji.responseId" :key="'respond-' + num">
-                        <EmojiFace v-if="Emoji.has(num)" :emoji="Emoji.get(num)!"
-                            @click="menuDisplay.menuSelectedMsg ?
-                                    changeRespond(String(num), menuDisplay.menuSelectedMsg as Msg): ''" />
+                        <EmojiFace :emoji="Emoji.get(num)!" @click="menuDisplay.menuSelectedMsg ?
+                            changeRespond(String(num), menuDisplay.menuSelectedMsg as Msg): ''" />
                         <font-awesome-icon v-if="index == 4" :icon="['fas', 'angle-up']" @click="menuDisplay.respond = true" />
                     </template>
                 </div>
@@ -409,7 +407,7 @@
                     <div><font-awesome-icon :icon="['fas', 'at']" /></div>
                     <a>{{ $t('提及') }}</a>
                 </div>
-                <div v-show="menuDisplay.poke" @click="menuDisplay.menuSelectedUser ? sendGroupPoke(menuDisplay.menuSelectedUser as Member) : ''">
+                <div v-show="menuDisplay.poke" @click="menuDisplay.menuSelectedUser ? sendPoke(menuDisplay.menuSelectedUser as Member) : ''">
                     <div><font-awesome-icon :icon="['fas', 'fa-hand-point-up']" /></div>
                     <a>{{ $t('戳一戳') }}</a>
                 </div>
@@ -480,6 +478,7 @@ import Menu from '@renderer/components/Menu.vue'
 
 import { downloadFile, shouldAutoFocus } from '@renderer/function/utils/appUtil'
 import {
+    copyToClipboard,
     delay,
     getViewTime,
 } from '@renderer/function/utils/systemUtil'
@@ -514,7 +513,6 @@ import {
     onMounted,
 } from 'vue'
 import { backend } from '@renderer/runtime/backend'
-import { emoji } from 'zod'
 import Emoji from '@renderer/function/model/emoji'
 import EmojiFace from '@renderer/components/EmojiFace.vue'
 
@@ -899,12 +897,13 @@ function showMsgMenu(data: MenuEventData, msg: Msg): Promise<void> | undefined {
     const textBody = selection?.anchorNode?.parentElement
     const textMsg = null as HTMLElement | null
 
+
     if (
+        textMsg &&
+        textMsg.id == data.target.id &&
         textBody &&
         textBody.className.indexOf('msg-text') > -1 &&
-        selection.focusNode == selection.anchorNode &&
-        textMsg &&
-        textMsg.id == data.target.id
+        selection.focusNode == selection.anchorNode
     ) {
         // 用于判定是否选中了 msg-text 且开始和结束是同一个 Node（防止跨消息复制）
         menuDisplay.selectCache = selection.toString()
@@ -1549,14 +1548,12 @@ function copyMsg() {
     if (!msg) return
 
     const popInfo = new PopInfo()
-    app.config.globalProperties.$copyText(msg.plaintext).then(
-        () => {
-            popInfo.add(PopType.INFO, $t('复制成功'), true)
-        },
-        () => {
-            popInfo.add(PopType.ERR, $t('复制失败'), true)
-        },
-    )
+    copyToClipboard(msg.plaintext)
+        .then(
+            () => popInfo.add(PopType.INFO, $t('复制成功'))
+        ).catch(
+            () => popInfo.add(PopType.ERR, $t('复制失败'))
+        )
 
     closeMsgMenu()
 }
@@ -1567,14 +1564,12 @@ function copySelectMsg() {
     if (menuDisplay.selectCache === '') return
 
     const popInfo = new PopInfo()
-    app.config.globalProperties.$copyText(menuDisplay.selectCache).then(
-        () => {
-            popInfo.add(PopType.INFO, $t('复制成功'), true)
-        },
-        () => {
-            popInfo.add(PopType.ERR, $t('复制失败'), true)
-        },
-    )
+    copyToClipboard(menuDisplay.selectCache)
+        .then(
+            () => popInfo.add(PopType.INFO, $t('复制成功'))
+        ).catch(
+            () => popInfo.add(PopType.ERR, $t('复制失败'))
+        )
 
     closeMsgMenu()
 }
@@ -1613,11 +1608,13 @@ function jumpSearchMsg() {
     closeSearch()
     setTimeout(() => {
         if (!menuDisplay.menuSelectedMsg) return
-        scrollToMsgMethod(`chat-${menuDisplay.menuSelectedMsg.uuid}`)
+        if (!scrollToMsg(menuDisplay.menuSelectedMsg, true))
+            new PopInfo().add(PopType.INFO, $t('无法定位上下文'))
         closeMsgMenu()
     }, 100)
 }
 function consoleLogMsg() {
+    // eslint-disable-next-line no-console
     console.log(menuDisplay.menuSelectedMsg)
 }
 //#endregion
@@ -1697,16 +1694,12 @@ function copyMsgs() {
     })
     msg = msg.trim()
     const popInfo = new PopInfo()
-    app.config.globalProperties.$copyText(msg).then(
-        () => {
-            popInfo.add(PopType.INFO, $t('复制成功'), true)
-
-            closeMultiselect()
-        },
-        () => {
-            popInfo.add(PopType.ERR, $t('复制失败'), true)
-        },
-    )
+    copyToClipboard(msg)
+        .then(
+            () => popInfo.add(PopType.INFO, $t('复制成功'))
+        ).catch(
+            () => popInfo.add(PopType.ERR, $t('复制失败'))
+        )
 }
 function closeMultiselect() {
     if (!msgBar.value) return
@@ -1965,11 +1958,6 @@ function scrollBottom(showAnimation = false) {
     const pan = msgPan.value
     if (!pan) return
     scrollTo(pan.scrollHeight, showAnimation)
-}
-function scrollToMsgMethod(id: string) {
-    if (!scrollToMsg(id, true)) {
-        new PopInfo().add(PopType.INFO, $t('无法定位上下文'))
-    }
 }
 function imgLoadedScroll(height: number) {
     const pan = msgPan.value

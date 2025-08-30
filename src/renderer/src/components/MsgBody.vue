@@ -88,7 +88,7 @@
                     <template v-else-if="isSuperFaceMsg()">
                         <div class="msg-img face alone"
                             style="--width: 35vh">
-                            <Lottie :animationLink="(data.message[0] as FaceSeg).face!.superValue!" />
+                            <Lottie :animation-link="(data.message[0] as FaceSeg).face!.superValue!" />
                         </div>
                     </template>
                     <template v-else-if="!hasCard()">
@@ -120,11 +120,7 @@
                                 @error="imgLoadFail"
                                 @click="imgClick(item.imgData)">
                             <template v-else-if="item instanceof FaceSeg">
-                                <EmojiFace v-if="item.face" :emoji="item.face" class="msg-face" />
-                                <font-awesome-icon v-else :class="{
-                                    'msg-face-svg': true,
-                                    'me': needSpecialMe(),
-                                }" :icon="['fas', 'face-grin-wide']" />
+                                <EmojiFace :emoji="item.face" class="msg-face" />
                             </template>
                             <div v-else-if="item instanceof AtSeg"
                                 :class="{
@@ -405,6 +401,7 @@ import { Logger, LogType, PopInfo, PopType } from '@renderer/function/base'
 import { pokeAnime } from '@renderer/function/utils/msgUtil'
 import {
     openLink,
+    scrollToMsg as scrollToMsgFunc,
     sendStatEvent,
 } from '@renderer/function/utils/appUtil'
 import { useStayEvent } from '@renderer/function/utils/vuse'
@@ -464,7 +461,6 @@ const {
 }>()
 
 const emit = defineEmits<{
-    scrollToMsg: [id: string]
     imageLoaded: [height: number]
     leftMove: [msg: Msg]
     rightMove: [msg: Msg]
@@ -573,20 +569,13 @@ defineExpose({
              * @param message_id 消息 id
              */
             scrollToMsg(message_id: string) {
-                let uuid: string|undefined = undefined
-                for (const item of runtimeData.nowChat!.messageList) {
-                    if (!(item instanceof Msg)) continue
-                    if (item.message_id === message_id) {
-                        uuid = item.uuid
-                        break
-                    }
-                }
-                if (!uuid) {
+                if (!this.data.session) return
+                const msg = this.data.session.getMsgById(message_id)
+                if (!msg) {
                     new PopInfo().add(PopType.INFO, this.$t('定位消息失败'))
                     return
                 }
-                // eslint-disable-next-line vue/require-explicit-emits
-                this.$emit('scrollToMsg', 'chat-' + uuid)
+                scrollToMsgFunc(msg, true)
             },
 
             /**
@@ -908,7 +897,8 @@ defineExpose({
                 if (this.data.message.length !== 1) return false
                 const seg = this.data.message.at(0)
                 if (!(seg instanceof FaceSeg)) return false
-                return seg.face?.superValue !== ''
+                if (!seg.face) return false
+                return seg.face.superValue !== ''
             },
 
             async showPock() {

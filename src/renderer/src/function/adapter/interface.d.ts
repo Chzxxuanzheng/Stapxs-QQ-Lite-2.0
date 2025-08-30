@@ -415,6 +415,7 @@ export interface MsgEventData extends MessageEventData {
 export interface RecallEventData extends MessageEventData {
     type: 'recall'              // 事件类型
     recallId: string            // 被撤回的消息ID
+    suffix: string              // 撤回消息后缀
     user: SenderData            // 撤回消息的用户信息
     operator: SenderData        // 撤回操作员信息
 }
