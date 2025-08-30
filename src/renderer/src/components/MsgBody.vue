@@ -7,7 +7,7 @@
  * @Version:
  *      1.0 - 初始版本
  *      1.5 - 重构为 ts 版本，代码格式优化
- -->
+-->
 
 <template>
     <div :id="'chat-' + data.uuid"
@@ -84,6 +84,13 @@
                     <template v-if="data.message.length === 0">
                         <span class="msg-text" style="opacity: 0.5">{{ $t('空消息') }}</span>
                     </template>
+                    <!-- 超级表情 -->
+                    <template v-else-if="isSuperFaceMsg()">
+                        <div class="msg-img face alone"
+                            style="--width: 35vh">
+                            <Lottie :animationData="(data.message[0] as FaceSeg).face!.superValue!" />
+                        </div>
+                    </template>
                     <template v-else-if="!hasCard()">
                         <div v-for="(item, index) in data.message"
                             :key="data.uuid + '-m-' + index"
@@ -113,11 +120,7 @@
                                 @error="imgLoadFail"
                                 @click="imgClick(item.imgData)">
                             <template v-else-if="item instanceof FaceSeg">
-                                <img v-if="item.src"
-                                    :alt="item.text"
-                                    class="msg-face"
-                                    :src="item.src"
-                                    :title="item.text">
+                                <EmojiFace v-if="item.face" :emoji="item.face" class="msg-face" />
                                 <font-awesome-icon v-else :class="{
                                     'msg-face-svg': true,
                                     'me': needSpecialMe(),
@@ -373,16 +376,17 @@
             }">
             <div class="emoji-like-body">
                 <TransitionGroup name="emoji-like">
-                    <div v-for="info, id in data.emojis"
-                        v-show="getFace(Number(id)) != ''"
-                        :key="'respond-' + data.uuid + '-' + id"
-                        :class="{
-                            'me-send': info.includes(runtimeData.loginInfo.uin),
-                        }"
-                        @click="$emit('emojiClick', id as string, data)">
-                        <img loading="lazy" :src="getFace(Number(id)) as any">
-                        <span>{{ info.length }}</span>
-                    </div>
+                    <template v-for="info, id in data.emojis">
+                        <div v-if="Emoji.has(Number(id))"
+                            :key="'respond-' + data.uuid + '-' + id"
+                            :class="{
+                                'me-send': info.includes(runtimeData.loginInfo.uin),
+                            }"
+                            @click="$emit('emojiClick', id as string, data)">
+                            <EmojiFace :emoji="Emoji.get(Number(id))!" />
+                            <span>{{ info.length }}</span>
+                        </div>
+                    </template>
                 </TransitionGroup>
             </div>
         </div>
@@ -398,7 +402,7 @@ import { MsgBodyFuns as ViewFuns } from '@renderer/function/model/msg-body'
 import { defineComponent } from 'vue'
 import { runtimeData } from '@renderer/function/msg'
 import { Logger, LogType, PopInfo, PopType } from '@renderer/function/base'
-import { getFace, pokeAnime } from '@renderer/function/utils/msgUtil'
+import { pokeAnime } from '@renderer/function/utils/msgUtil'
 import {
     openLink,
     sendStatEvent,
@@ -438,6 +442,10 @@ import { Img } from '@renderer/function/model/img'
 import { UserInfoPan } from './UserInfoPan.vue'
 import { backend } from '@renderer/runtime/backend'
 import { ProxyUrl } from '@renderer/function/model/proxyUrl'
+import Emoji from '@renderer/function/model/emoji'
+import EmojiFace from './EmojiFace.vue'
+import { Vue3Lottie as Lottie } from 'vue3-lottie'
+import { fa } from 'zod/v4/locales/index.cjs'
 
 //#region == 声明变量 ================================================================
 const {
@@ -896,6 +904,14 @@ defineExpose({
                 return hasMarkdown
             },
 
+            isSuperFaceMsg() {
+                if (runtimeData.sysConfig.use_super_face === false) return false
+                if (this.data.message.length !== 1) return false
+                const seg = this.data.message.at(0)
+                if (!(seg instanceof FaceSeg)) return false
+                return seg.face?.superValue !== undefined && seg.face?.superValue !== ''
+            },
+
             async showPock() {
                 // 如果是最后一条消息并且在最近发送
                 if (this.data.uuid != runtimeData.nowChat?.messageList.at(-1)?.uuid) return
@@ -1257,6 +1273,12 @@ defineExpose({
         font-size: 0.8rem;
         margin: auto;
         margin-left: 10px;
+    }
+    .emoji-like-body .emoji {
+        width: 20px;
+        height: 20px;
+        font-size: 1rem;
+        margin: 0;
     }
     .emoji-like-body div.me-send{
         background-color: var(--color-main);

@@ -1,7 +1,6 @@
 import app from '@renderer/main'
 import { getSizeFromBytes } from '../utils/systemUtil'
 import { MsgBodyFuns } from './msg-body'
-import { getFace } from '../utils/msgUtil'
 import { PopInfo, PopType } from '../base'
 import { downloadFile } from '../utils/appUtil'
 import { ForwardMsg, Msg } from './msg'
@@ -10,6 +9,7 @@ import { Resource } from './ressource'
 import { Img } from './img'
 import { toRaw } from 'vue'
 import { ProxyUrl } from './proxyUrl'
+import Emoji from './emoji'
 
 export const segType = {}
 type SegCon<T extends Seg> = { new(...args: any[]): T; type: string };
@@ -177,7 +177,7 @@ export class FaceSeg extends Seg {
     static readonly type = 'face'
     text?: string
     id: number
-    src?: string
+    face?: Emoji
     constructor(id: number)
     constructor(data: FaceSegData)
     constructor(arg: number | FaceSegData) {
@@ -188,7 +188,7 @@ export class FaceSeg extends Seg {
             this.text = arg.text
             this.id = arg.id
         }
-        this.src = getFace(this.id)
+        this.face = Emoji.get(this.id)
     }
 
     get plaintext(): string {

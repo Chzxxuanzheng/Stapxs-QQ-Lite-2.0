@@ -350,11 +350,10 @@
                         'respond': true,
                         'open': menuDisplay.respond
                     }">
-                    <template v-for="(num, index) in respondIds" :key="'respond-' + num">
-                        <img v-if="getFace(num) != ''" loading="lazy"
-                            :src="getFace(num) as any" @click="
-                                menuDisplay.menuSelectedMsg ?
-                                    changeRespond(String(num), menuDisplay.menuSelectedMsg as Msg): ''">
+                    <template v-for="(num, index) in Emoji.responseId" :key="'respond-' + num">
+                        <EmojiFace v-if="Emoji.has(num)" :emoji="Emoji.get(num)!"
+                            @click="menuDisplay.menuSelectedMsg ?
+                                    changeRespond(String(num), menuDisplay.menuSelectedMsg as Msg): ''" />
                         <font-awesome-icon v-if="index == 4" :icon="['fas', 'angle-up']" @click="menuDisplay.respond = true" />
                     </template>
                 </div>
@@ -394,6 +393,10 @@
                 <div v-show="menuDisplay.jumpToMsg" @click="jumpSearchMsg">
                     <div><font-awesome-icon :icon="['fas', 'arrow-up-right-from-square']" /></div>
                     <a>{{ $t('跳转到消息') }}</a>
+                </div>
+                <div v-show="menuDisplay.dev" @click="consoleLogMsg">
+                    <div><font-awesome-icon :icon="['fas', 'screwdriver-wrench']" /></div>
+                    <a>{{ $t('调试信息') }}</a>
                 </div>
             </div>
         </Menu>
@@ -482,7 +485,6 @@ import {
 } from '@renderer/function/utils/systemUtil'
 import {
     sendMsgRaw,
-    getFace,
     closeSession,
     mergeForward,
     singleForward,
@@ -512,6 +514,9 @@ import {
     onMounted,
 } from 'vue'
 import { backend } from '@renderer/runtime/backend'
+import { emoji } from 'zod'
+import Emoji from '@renderer/function/model/emoji'
+import EmojiFace from '@renderer/components/EmojiFace.vue'
 
 //#region == 常量声明 ====================================================================
 const { chat } = defineProps<{chat: Session}>()
@@ -552,19 +557,7 @@ const userInfoPanFunc: UserInfoPan = {
     },
 }
 //#endregion
-// 响应表情支持的列表
-// TODO: 改为自动检测
-const respondIds: readonly number[] = [
-    4, 5, 8, 9, 10, 12, 14, 16, 21, 23, 24, 25, 26, 27, 28, 29,
-    30, 32, 33, 34, 38, 39, 41, 42, 43, 49, 53, 60, 63, 66, 74,
-    75, 76, 78, 79, 85, 89, 96, 97, 98, 99, 100, 101, 102, 103,
-    104, 106, 109, 111, 116, 118, 120, 122, 123, 124, 125, 129,
-    144, 147, 171, 173, 174, 175, 176, 179, 180, 181, 182, 183,
-    201, 203, 212, 214, 219, 222, 227, 232, 240, 243, 246, 262,
-    264, 265, 266, 267, 268, 269, 270, 271, 272, 273, 277, 278,
-    281, 282, 284, 285, 287, 289, 290, 293, 294, 297, 298, 299,
-    305, 306, 307, 314, 315, 318, 319, 320, 322, 324, 326,
-]
+
 const tagsDefault = {
     showBottomButton: false,
     showMoreDetail: false,
@@ -851,6 +844,7 @@ const menuDisplayDefault = {
     respond: false,
     showRespond: true,
     config: false,
+    dev: false,
 }
 const menuDisplay = shallowReactive({...menuDisplayDefault})
 /**
@@ -931,6 +925,10 @@ function showMsgMenu(data: MenuEventData, msg: Msg): Promise<void> | undefined {
             data.target as HTMLImageElement
         ).src
     }
+
+    // 开发者工具
+    menuDisplay.dev = import.meta.env.DEV
+
 
     const promise = menu.value.showMenu(data.x, data.y) as Promise<void>
 
@@ -1618,6 +1616,9 @@ function jumpSearchMsg() {
         scrollToMsgMethod(`chat-${menuDisplay.menuSelectedMsg.uuid}`)
         closeMsgMenu()
     }, 100)
+}
+function consoleLogMsg() {
+    console.log(menuDisplay.menuSelectedMsg)
 }
 //#endregion
 
