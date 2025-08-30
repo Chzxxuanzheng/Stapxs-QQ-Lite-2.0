@@ -88,7 +88,7 @@
                     <template v-else-if="isSuperFaceMsg()">
                         <div class="msg-img face alone"
                             style="--width: 35vh">
-                            <Lottie :animationData="(data.message[0] as FaceSeg).face!.superValue!" />
+                            <Lottie :animationLink="(data.message[0] as FaceSeg).face!.superValue!" />
                         </div>
                     </template>
                     <template v-else-if="!hasCard()">
@@ -445,7 +445,6 @@ import { ProxyUrl } from '@renderer/function/model/proxyUrl'
 import Emoji from '@renderer/function/model/emoji'
 import EmojiFace from './EmojiFace.vue'
 import { Vue3Lottie as Lottie } from 'vue3-lottie'
-import { fa } from 'zod/v4/locales/index.cjs'
 
 //#region == 声明变量 ================================================================
 const {
@@ -909,7 +908,7 @@ defineExpose({
                 if (this.data.message.length !== 1) return false
                 const seg = this.data.message.at(0)
                 if (!(seg instanceof FaceSeg)) return false
-                return seg.face?.superValue !== undefined && seg.face?.superValue !== ''
+                return seg.face?.superValue !== ''
             },
 
             async showPock() {
