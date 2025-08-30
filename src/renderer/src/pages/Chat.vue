@@ -1504,7 +1504,9 @@ function forwardSelf() {
     if (!menuDisplay.menuSelectedMsg) return
     sendMsgRaw(
         chat,
-        menuDisplay.menuSelectedMsg.message,
+        menuDisplay.menuSelectedMsg.message.map(
+            item=>item.copy()
+        ),
     )
     closeMsgMenu()
 }

@@ -4,7 +4,7 @@ import { MsgBodyFuns } from './msg-body'
 import { PopInfo, PopType } from '../base'
 import { downloadFile } from '../utils/appUtil'
 import { ForwardMsg, Msg } from './msg'
-import type { AtAllSegData, AtSegData, FaceSegData, FileSegData, ForwardSegData, ImgSegData, MdSegData, MfaceSegData, PokeSegData, ReplySegData, SegData, TextSegData, UnknownSegData, VideoSegData } from '../adapter/interface'
+import type { AtAllSegData, AtSegData, FaceSegData, FileSegData, ForwardSegData, ImgSegData, JsonSegData, MdSegData, MfaceSegData, PokeSegData, ReplySegData, SegData, TextSegData, UnknownSegData, VideoSegData, XmlSegData } from '../adapter/interface'
 import { Resource } from './ressource'
 import { Img } from './img'
 import { toRaw } from 'vue'
@@ -23,6 +23,8 @@ export abstract class Seg {
 
     abstract get plaintext(): string;
 
+    abstract serializeData(): SegData;
+
     init?(): void | Promise<void>
     getImgData?(): {url: string, id: string} | undefined
 
@@ -38,6 +40,10 @@ export abstract class Seg {
 
     toString(): string {
         return this.plaintext
+    }
+
+    copy(): typeof this {
+        return Seg.parse(this.serializeData()) as typeof this
     }
 }
 
@@ -63,6 +69,13 @@ export class TxtSeg extends Seg {
     get plaintext(): string {
         return this.text
     }
+
+    override serializeData(): TextSegData {
+        return {
+            type: 'text',
+            text: this.text,
+        }
+    }
 }
 
 @registerSegType
@@ -79,9 +92,10 @@ export class MdSeg extends Seg {
         return this.content
     }
 
-    serializeData(): any {
+    override serializeData(): MdSegData {
         return {
-            text: this.content,
+            type: 'md',
+            content: this.content,
         }
     }
 }
@@ -132,6 +146,15 @@ export class ImgSeg extends Seg {
         if (this.url.startsWith('base64:')) return 'data:image/png;base64,' + this.url.substring(9)
         return this.url
     }
+
+    override serializeData(): ImgSegData {
+        return {
+            type: 'image',
+            url: this._url,
+            summary: this.summary,
+            isFace: this.isFace,
+        }
+    }
 }
 
 @registerSegType
@@ -170,6 +193,17 @@ export class MfaceSeg extends Seg {
     get src(): string {
         return this.url
     }
+
+    override serializeData(): MfaceSegData {
+        return {
+            type: 'mface',
+            url: this._url.raw,
+            summary: this.summary,
+            packageId: this.packageId,
+            id: this.id,
+            key: this.key,
+        }
+    }
 }
 
 @registerSegType
@@ -196,6 +230,14 @@ export class FaceSeg extends Seg {
         if (this.text) return '[' + this.text + ']'
         else return '[' + $t('表情') + ']'
     }
+
+    override serializeData(): FaceSegData {
+        return {
+            type: 'face',
+            id: this.id,
+            text: this.text,
+        }
+    }
 }
 
 @registerSegType
@@ -216,6 +258,13 @@ export class AtSeg extends Seg {
     get plaintext(): string {
         return `@${this.user_id}`
     }
+
+    override serializeData(): AtSegData {
+        return {
+            type: 'at',
+            user_id: this.user_id,
+        }
+    }
 }
 
 @registerSegType
@@ -228,6 +277,12 @@ export class AtAllSeg extends Seg {
     get plaintext(): string {
         const { $t } = app.config.globalProperties
         return '@' + $t('所有人')
+    }
+
+    override serializeData(): AtAllSegData {
+        return {
+            type: 'atall',
+        }
     }
 }
 
@@ -321,6 +376,17 @@ export class FileSeg extends Seg {
             this.download_percent = undefined
         })
     }
+
+    override serializeData(): FileSegData {
+        if (!this.file_id) throw new Error('文件ID缺失')
+        return {
+            type: 'file',
+            name: this.name,
+            size: this.size,
+            url: this.url,
+            file_id: this.file_id,
+        }
+    }
 }
 
 @registerSegType
@@ -342,6 +408,14 @@ export class VideoSeg extends Seg {
     }
     get rawUrl(): string {
         return this._url.rawUrl
+    }
+
+    override serializeData(): VideoSegData {
+        return {
+            type: 'video',
+            file: this.file,
+            url: this._url,
+        }
     }
 }
 
@@ -383,6 +457,15 @@ export class ForwardSeg extends Seg {
 	get sending(): boolean {
 		return this.id === undefined
 	}
+
+    override serializeData(): ForwardSegData {
+        if (!this.id) throw new Error('转发消息ID缺失')
+        return {
+            type: 'forward',
+            id: this.id,
+            content: this.content.map(item => (item as ForwardMsg).serializeNodeData()),
+        }
+    }
 }
 
 @registerSegType
@@ -402,6 +485,14 @@ export class ReplySeg extends Seg {
     get plaintext(): string {
         return ''
     }
+
+    override serializeData(): ReplySegData {
+        if (!this.id) throw new Error('回复消息ID缺失')
+        return {
+            type: 'reply',
+            id: this.id,
+        }
+    }
 }
 
 @registerSegType
@@ -411,6 +502,12 @@ export class PokeSeg extends Seg {
     get plaintext(): string {
         return '戳了戳你'
     }
+
+    override serializeData(): PokeSegData {
+        return {
+            type: 'poke',
+        }
+    }
 }
 
 @registerSegType
@@ -418,10 +515,10 @@ export class XmlSeg extends Seg {
     static readonly type = 'xml'
     readonly data: string
     readonly id: string
-    constructor(data: object) {
+    constructor(data: XmlSegData) {
         super()
-        this.data = data['data']
-        this.id = data['id']
+        this.data = data.data
+        this.id = data.id
     }
 
     get plaintext(): string {
@@ -431,15 +528,25 @@ export class XmlSeg extends Seg {
         name = name.substring(0, name.indexOf('"'))
         return '[' + name + ']'
     }
+
+    override serializeData(): XmlSegData {
+        return {
+            type: 'xml',
+            data: this.data,
+            id: this.id,
+        }
+    }
 }
 
 @registerSegType
 export class JsonSeg extends Seg {
     static readonly type = 'json'
     readonly data: string
-    constructor(data: object) {
+    readonly id: string
+    constructor(data: JsonSegData) {
         super()
-        this.data = data['data']
+        this.data = data.data
+        this.id = data.id
     }
 
     get plaintext(): string {
@@ -451,9 +558,11 @@ export class JsonSeg extends Seg {
         }
     }
 
-    serializeData() {
+    override serializeData(): JsonSegData {
         return {
+            type: 'json',
             data: this.data,
+            id: this.id
         }
     }
 }
@@ -474,5 +583,13 @@ export class UnknownSeg extends Seg {
 
     get plaintext(): string {
         return `[不支持的消息类型: ${this._type}]`
+    }
+
+    override serializeData(): UnknownSegData {
+        return {
+            type: 'unknown',
+            segType: this._type,
+            data: this.data,
+        }
     }
 }

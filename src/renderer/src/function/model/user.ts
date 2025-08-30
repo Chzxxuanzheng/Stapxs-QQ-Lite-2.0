@@ -27,6 +27,7 @@ export interface IUser {
     canBeAdmined?(other: Role): boolean
     canAdmin?(other: Role): boolean
     role?: Role
+    serializeData(): SenderData | ForwardSenderData
 }
 
 /**
@@ -221,6 +222,18 @@ export class Member implements IUser {
         this.role = newData.role
         if(newData._banTime) this._banTime = newData._banTime
     }
+
+    serializeData(): SenderData {
+        return {
+            id: this.user_id,
+            nickname: this._nickname?.toString() ?? this.user_id.toString(),
+            card: this._card?.toString(),
+            sex: this.sex,
+            level: this.level,
+            role: this.role,
+            title: this._title?.toString(),
+        }
+    }
 }
 
 /**
@@ -320,12 +333,22 @@ export class User implements IUser {
         if (this.user_id.toString().includes(search)) return true
         return false
     }
+
+    serializeData(): SenderData {
+        return {
+            id: this.user_id,
+            nickname: this._nickname?.toString() ?? this.user_id.toString(),
+            sex: this.sex,
+            age: this.age,
+            level: this.level,
+        }
+    }
 }
 
 /**
  * 信息不全,保底的
  */
-export class BaseUser {
+export class BaseUser implements IUser {
     user_id: number
     _nickname?: Name
     _remark?: Name
@@ -469,6 +492,20 @@ export class BaseUser {
         if (this._remark?.matchStr(search)) return true
         return false
     }
+
+    serializeData(): SenderData {
+        return {
+            id: this.user_id,
+            nickname: this._nickname?.toString() ?? this.user_id.toString(),
+            card: this._card?.toString(),
+            sex: this.sex,
+            age: this.age,
+            area: this.area,
+            level: this.level,
+            role: this.role,
+            title: this.title?.toString()
+        }
+    }
 }
 
 function canAdmin(target: Role, other: Role): boolean {
@@ -528,6 +565,13 @@ export class ForwardSender implements IUser{
     match(search: string): boolean {
         search = search.trim().toLowerCase()
         return this._nickname.matchStr(search)
+    }
+
+    serializeData(): ForwardSenderData {
+        return {
+            nickname: this._nickname?.toString() ?? this.user_id.toString(),
+            face: this._face.url
+        }
     }
 }
 

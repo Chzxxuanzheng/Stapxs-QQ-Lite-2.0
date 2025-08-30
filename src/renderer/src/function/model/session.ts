@@ -565,6 +565,7 @@ export abstract class Session {
             this.imgTail = imgList.at(-1)
         }else {
             this.imgTail.concatNext(imgList.at(0)!)
+            this.imgTail = imgList.at(-1)
         }
     }
     private imgFromHistory(msgs: Message[]): void {
