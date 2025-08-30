@@ -9,17 +9,43 @@
     <div class="ss-card face-pan">
         <BcTab>
             <div icon="fa-solid fa-face-laugh-squint">
-                <div class="title">
-                    <span>{{ $t('小黄脸表情') }}</span>
-                </div>
-                <div class="base-face">
-                    <div v-for="num in baseFaceMax"
-                        v-show="getFace(num) != ''"
-                        :key="'base-face-' + num"
-                        :data-id="num"
-                        @click="addBaseFace(num)">
-                        <img loading="lazy"
-                            :src="getFace(num) as any">
+                <div class="system-face-bar">
+                    <div class="title">
+                        <span>{{ $t('超级表情') }}</span>
+                    </div>
+                    <div class="base-face">
+                        <template v-for="num in Emoji.superList">
+                            <div>
+                                <EmojiFace v-if="Emoji.has(num)"
+                                    :key="'base-face-' + num"
+                                    :emoji="Emoji.get(num)!"
+                                    @click="addBaseFace(num)" />
+                            </div>
+                        </template>
+                    </div>
+                    <div class="title">
+                        <span>{{ $t('小黄脸表情') }}</span>
+                    </div>
+                    <div class="base-face">
+                        <template v-for="num in Emoji.normalList">
+                            <div>
+                                <EmojiFace v-if="Emoji.has(num)"
+                                    :key="'base-face-' + num"
+                                    :emoji="Emoji.get(num)!"
+                                    @click="addBaseFace(num)" />
+                            </div>
+                        </template>
+                    </div>
+                    <div class="title">
+                        <span>{{ $t('emoji 表情') }}</span>
+                    </div>
+                    <div class="base-face">
+                        <div v-for="num in Emoji.emojiList">
+                            <EmojiFace
+                                :key="'base-face-' + num"
+                                :emoji="Emoji.get(num)!"
+                                @click="addBaseFace(num)" />
+                        </div>
                     </div>
                 </div>
             </div>
@@ -31,19 +57,19 @@
                         @click="reloadRoamingStamp" />
                 </div>
                 <div class="face-stickers">
-                    <template v-if="!support">
+                    <template v-if="roamingState === 'no-support'">
                         <div class="ss-card">
                             <font-awesome-icon :icon="['fas', 'face-dizzy']" />
                             <span>{{ $t('当前适配器不支持漫游表情') }}</span>
                         </div>
                     </template>
-                    <template v-else-if="error">
+                    <template v-else-if="roamingState === 'err'">
                         <div class="ss-card">
                             <font-awesome-icon :icon="['fas', 'face-dizzy']" />
                             <span>{{ $t('加载漫游表情失败') }}</span>
                         </div>
                     </template>
-                    <template v-else-if="loaderLock">
+                    <template v-else-if="roamingState === 'loading'">
                         <div class="ss-card">
                             <font-awesome-icon :icon="['fas', 'spinner']" spin />
                             <span>{{ $t('正在加载漫游表情') }}</span>
@@ -70,85 +96,75 @@
     </div>
 </template>
 
-<script lang="ts">
-    import { defineComponent } from 'vue'
-    import { runtimeData } from '@renderer/function/msg'
-    import { getFace } from '@renderer/function/utils/msgUtil'
+<script setup lang="ts">
+import { shallowRef } from 'vue'
+import { runtimeData } from '@renderer/function/msg'
 
-    import Option from '@renderer/function/option'
+import BcTab from 'vue3-bcui/packages/bc-tab'
+import { FaceSeg, ImgSeg, Seg, TxtSeg } from '@renderer/function/model/seg'
+import Emoji from '@renderer/function/model/emoji'
+import EmojiFace from './EmojiFace.vue'
 
-    import BcTab from 'vue3-bcui/packages/bc-tab'
-    import { FaceSeg, ImgSeg, Seg } from '@renderer/function/model/seg'
+const emit = defineEmits<{
+    addSpecialSeg: [seg: Seg]
+    sendMsg: []
+}>()
 
-    export default defineComponent({
-        name: 'FacePan',
-        components: {
-            BcTab,
-        },
-        props: ['display'],
-        emits: ['addSpecialSeg', 'sendMsg'],
-        data() {
-            return {
-                getFace: getFace,
-                Option: Option,
-                runtimeData: runtimeData,
-                baseFaceMax: 348,
-                stickerPage: 1,
-                support: true, // 是否支持漫游表情
-                error: false, // 是否发生错误
-                loaderLock: false, // 是否正在加载
-            }
-        },
-        mounted() {
-            // 初次加载漫游表情
-            this.initRoamingStamp()
-        },
-        methods: {
-            async initRoamingStamp() {
-                if (runtimeData.stickerCache) return
+const roamingState = shallowRef<
+    | 'loading'
+    | 'ok'
+    | 'err'
+    | 'no-support'
+>('loading')
 
-                await this.loadRomaingStamp()
-            },
-            async reloadRoamingStamp() {
-                if (this.loaderLock) return
-                runtimeData.stickerCache = undefined
+// 初次加载漫游表情
+initRoamingStamp()
 
-                await this.loadRomaingStamp()
-            },
 
-            async loadRomaingStamp() {
-                if (this.loaderLock) return
-                this.loaderLock = true
-                if (!runtimeData.nowAdapter?.getCustomFace) {
-                    this.support = false
-                    this.loaderLock = false
-                    return
-                }
+async function initRoamingStamp() {
+    if (runtimeData.stickerCache) return
 
-                const data = await runtimeData.nowAdapter.getCustomFace()
-                if (!data) {
-                    this.loaderLock = false
-                    this.error = true
-                    return
-                }
+    await loadRomaingStamp()
+}
+async function reloadRoamingStamp() {
+    if (roamingState.value === 'loading') return
+    runtimeData.stickerCache = undefined
 
-                runtimeData.stickerCache = data
-                this.loaderLock = false
-            },
+    await loadRomaingStamp()
+}
 
-            addSpecialSeg(seg: Seg) {
-                this.$emit('addSpecialSeg', seg)
-            },
-            addBaseFace(id: number) {
-                this.addSpecialSeg(new FaceSeg(id))
-            },
-            addImgFace(url: string) {
-                this.addSpecialSeg(new ImgSeg(url, true))
-                // 直接发送表情
-                if(runtimeData.sysConfig.send_face == true) {
-                    this.$emit('sendMsg')
-                }
-            },
-        },
-    })
+async function loadRomaingStamp() {
+    if (roamingState.value === 'loading') return
+    roamingState.value = 'loading'
+    if (!runtimeData.nowAdapter?.getCustomFace) {
+        roamingState.value = 'no-support'
+        return
+    }
+
+    const data = await runtimeData.nowAdapter.getCustomFace()
+    if (!data) {
+        roamingState.value = 'err'
+        return
+    }
+
+    runtimeData.stickerCache = data
+    roamingState.value = 'ok'
+}
+
+function addSpecialSeg(seg: Seg) {
+    emit('addSpecialSeg', seg)
+}
+function addBaseFace(id: number) {
+    if (id < 5000)
+        addSpecialSeg(new FaceSeg(id))
+    else
+        addSpecialSeg(new TxtSeg(Emoji.get(id)!.value))
+}
+function addImgFace(url: string) {
+    addSpecialSeg(new ImgSeg(url, true))
+    // 直接发送表情
+    if(runtimeData.sysConfig.send_face == true) {
+        emit('sendMsg')
+    }
+}
 </script>

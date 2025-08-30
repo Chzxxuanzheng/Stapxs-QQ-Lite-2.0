@@ -12,25 +12,6 @@ import { markRaw, toRaw } from 'vue'
 import app from '@renderer/main'
 import { backend } from '@renderer/runtime/backend'
 
-// dev下貌似能优化掉0.5s初次进入chat等待时间
-const facePathMap = new Map<number, string>()
-const pathList = import.meta.glob('@renderer/assets/img/qq-face/public/*/s*.*', { eager: true })
-for(const path in pathList) {
-    const match = path.match(/\/s(\d+)\.(gif|png)$/)
-    if (match) {
-        const id = parseInt(match[1])
-        facePathMap.set(id, (pathList[path] as any).default)
-    }
-}
-/**
- * 获取表情图片，优先返回 gif，不存在的返回 png
- * @param id 表情编号
- * @returns 表情图片
- */
-export function getFace(id: number) {
-    return facePathMap.get(id) ?? ''
-}
-
 /**
 * 发送消息
 * @param session 目标会话
