@@ -100,6 +100,7 @@ Session.afterActiveHook.push((_)=>{
     }
     backend.call(undefined, 'sys:flushOnMessage', false, list)
 })
+//#endregion
 
 //#region == 工具函数 ==============================================
 /**
@@ -162,13 +163,18 @@ function sendNotify(session: Session, msg: Message, important: boolean = false):
     // 如果没有开启通知，直接返回
     if (option.get('close_notice')) return
 
-    // TODO: 通知跳转
+    let tag: string
+    if (msg instanceof Msg)
+        tag = `${session.id}/${msg.message_id ?? ''}`
+    else
+        tag = `${session.id}/`
+
     // 组装通知
     const msgInfo = {
         base_type: 'msg',
         title: session.showName,
         body: msg.preMsg,
-        tag: `${session.id}/${msg.message_id}`,
+        tag: tag,
         icon: session.face,
         image: undefined as any,
         type: session.type,

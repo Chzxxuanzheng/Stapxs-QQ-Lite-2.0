@@ -1,11 +1,12 @@
 import app from '@renderer/main'
 import { NotifyInfo, NotificationElem } from './elements/system'
-import { jumpToChat } from './utils/appUtil'
+import { jumpToSession } from './utils/appUtil'
 import {
     LocalNotificationSchema,
     DeliveredNotifications
 } from '@capacitor/local-notifications'
 import { backend } from '@renderer/runtime/backend'
+import { Session } from './model/session'
 
 export class Notify {
     // 针对 MSG 类型的通知，记录用户的通知数量
@@ -181,12 +182,16 @@ export class Notify {
         if (tag !== undefined) {
             if (tag.indexOf('/') > 0) {
                 // MSG 类型的通知
-                const userId = tag.split('/')[0]
-                const msgId = tag.substring(userId.length + 1, tag.length)
-                delete Notify.userNotifyList[userId]
+                const sessionId = tag.split('/')[0]
+                const msgId = tag.substring(sessionId.length + 1, tag.length)
+                delete Notify.userNotifyList[sessionId]
+                // 获取对应回话和消息
+                const session = Session.getSessionById(parseInt(sessionId))
+                if (!session) return
                 // 跳转到这条消息的发送者页面
+                const msg = session.getMsgById(msgId)
                 window.focus()
-                jumpToChat(userId, msgId)
+                if (session) jumpToSession(session, msg)
             }
             this.close(tag)
             // MacOS：刷新 touchbar
