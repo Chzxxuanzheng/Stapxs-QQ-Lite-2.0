@@ -325,8 +325,8 @@
                             @input="searchMessage" />
                     </form>
                     <div :class="{
-                             'disable': msgWhileSend.trim() === ''
-                         }"
+                            'disable': msgWhileSend.trim() === ''
+                        }"
                         @click="sendMsg">
                         <font-awesome-icon v-if="details[3].open" :icon="['fas', 'search']" />
                         <font-awesome-icon v-else :icon="['fas', 'angle-right']" />
@@ -511,6 +511,7 @@ import {
     nextTick,
     watch,
     onMounted,
+    computed,
 } from 'vue'
 import { backend } from '@renderer/runtime/backend'
 import Emoji from '@renderer/function/model/emoji'
@@ -588,6 +589,10 @@ const msgWhileSend = shallowRef<string>('')
 const tags = shallowReactive({...tagsDefault})
 const atFindList = shallowRef<Member[]|null>(null)
 const msgWhileReply = shallowRef<undefined | Msg>()
+const canSendMsg = computed(() => {
+    if (imgCache.length > 0) return true
+    return msgWhileSend.value.trim() !== ''
+})
 //#endregion
 
 //#region == 初始化 ======================================================================
@@ -704,9 +709,8 @@ function chatScroll(event: Event) {
 function mainKey(event: KeyboardEvent) {
     if (!event.shiftKey && event.key === 'Enter') {
         // enter 发送消息
-        if (msgWhileSend.value != '') {
+        if (canSendMsg.value)
             sendMsg()
-        }
     }
 }
 function mainKeyUp(event: KeyboardEvent) {
@@ -754,9 +758,8 @@ function mainKeyUp(event: KeyboardEvent) {
  * PS：主要用来解决一些奇奇怪怪的回车判定导致的问题
  */
 function mainSubmit() {
-    if (msgWhileSend.value != '') {
+    if (canSendMsg.value)
         sendMsg()
-    }
 }
 //#endregion
 
@@ -1317,7 +1320,7 @@ function sendMsg() {
         item.open = false
     })
     // 无消息不发送
-    if (msgWhileSend.value.trim() === '') return
+    if (!canSendMsg.value) return
     // 为了减少对于复杂图文排版页面显示上的工作量，对于非纯文本的消息依旧处理为纯文本，如：
     // "这是一段话 [SQ:0]，[SQ:1] 你要不要来试试 Stapxs QQ Lite？"
     // 其中 [SQ:n] 结构代表着这是特殊消息以及这个消息具体内容在消息缓存中的 index，像是这样：
@@ -1504,7 +1507,9 @@ function forwardSelf() {
     if (!menuDisplay.menuSelectedMsg) return
     sendMsgRaw(
         chat,
-        menuDisplay.menuSelectedMsg.message,
+        menuDisplay.menuSelectedMsg.message.map(
+            item=>item.copy()
+        ),
     )
     closeMsgMenu()
 }

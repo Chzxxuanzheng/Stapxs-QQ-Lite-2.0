@@ -177,22 +177,32 @@ function createMergePreview(msgs: Msg[]): SelfPreMsg[]{
     return [Msg]
 }
 /**
+ * 创建单条转发消息发送内容
+ * @param msgs
+ */
+function createSingleSendMsgs(msgs: Msg[]): SelfMsg[]{
+    const out: SelfMsg[] = []
+    for (const chat of selected.value) {
+        for (const msg of msgs) {
+            out.push(SelfMsg.create(
+                msg.message.map(item => item.copy()),
+                chat,
+            ))
+        }
+    }
+    return out
+}
+/**
  * 创建合并转发消息发送内容
  * @param msgs
  */
 function createMergeSendMsg(msgs: Msg[]): SelfMsg[]{
     const out: SelfMsg[] = []
     for (const chat of selected.value) {
-        out.push(SelfMsg.createMerge(msgs, chat))
-    }
-    return out
-}
-function createSingleSendMsgs(msgs: Msg[]): SelfMsg[]{
-    const out: SelfMsg[] = []
-    for (const chat of selected.value) {
-        for (const msg of msgs) {
-            out.push(SelfMsg.create(msg.message, chat))
-        }
+        out.push(SelfMsg.createMerge(
+            msgs.map(item => item.copy()),
+            chat,
+        ))
     }
     return out
 }

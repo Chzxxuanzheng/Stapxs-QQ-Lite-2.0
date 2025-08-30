@@ -561,10 +561,11 @@ export abstract class Session {
         const imgList = toRaw(msg.imgList)
         if (imgList.length === 0) return
         if (!this.imgHead || !this.imgTail) {
-            this.imgHead = imgList.at(0)
-            this.imgTail = imgList.at(-1)
+            this.imgHead = toRaw(imgList.at(0))
+            this.imgTail = toRaw(imgList.at(-1))
         }else {
-            this.imgTail.concatNext(imgList.at(0)!)
+            this.imgTail.concatNext(toRaw(imgList.at(0)!))
+            this.imgTail = toRaw(imgList.at(-1))
         }
     }
     private imgFromHistory(msgs: Message[]): void {
@@ -573,11 +574,11 @@ export abstract class Session {
             if (msg.imgList.length === 0) continue
             const imgList = toRaw(msg.imgList)
             if (!this.imgHead || !this.imgTail) {
-                this.imgHead = imgList.at(0)
-                this.imgTail = imgList.at(-1)
+                this.imgHead = toRaw(imgList.at(0))
+                this.imgTail = toRaw(imgList.at(-1))
             }else {
-                this.imgHead.concatPrev(imgList.at(-1)!)
-                this.imgHead = imgList.at(0)
+                this.imgHead.concatPrev(toRaw(imgList.at(-1)!))
+                this.imgHead = toRaw(imgList.at(0))
             }
         }
     }
@@ -590,15 +591,15 @@ export abstract class Session {
     ): void {
         if (oldData.length === 0 && newData.length !== 0) throw new Error('旧数据不能为空')
 
-        const head = oldData.at(0)!.prev
-        const tail = newData.at(-1)!.next
+        const head = toRaw(oldData.at(0)!).prev
+        const tail = toRaw(newData.at(-1)!).next
         this.removeImgList(oldData)
         if (head) {
-            head.extendNext(newData.at(0)!)
-            if (!this.imgTail || this.imgTail === head) this.imgTail = newData.at(-1)!
+            head.extendNext(toRaw(newData.at(0)!))
+            if (!this.imgTail || this.imgTail === head) this.imgTail = toRaw(newData.at(-1)!)
         }else if (tail) {
-            tail.extendPrev(oldData.at(-1)!)
-            if (!this.imgHead || this.imgHead === tail) this.imgHead = newData.at(0)!
+            tail.extendPrev(toRaw(oldData.at(-1)!))
+            if (!this.imgHead || this.imgHead === tail) this.imgHead = toRaw(newData.at(0)!)
         }
     }
     /**
@@ -608,9 +609,9 @@ export abstract class Session {
      */
     removeImgList(imgs: Img[]): void {
         for (const img of imgs) {
-            if (img === this.imgHead) this.imgHead = img.next
-            if (img === this.imgTail) this.imgTail = img.prev
-            img.delete()
+            if (img === this.imgHead) this.imgHead = toRaw(img.next)
+            if (img === this.imgTail) this.imgTail = toRaw(img.prev)
+            toRaw(img).delete()
         }
     }
     //#endregion

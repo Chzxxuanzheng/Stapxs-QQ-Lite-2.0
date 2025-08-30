@@ -14,9 +14,9 @@ import { AtSeg, ForwardSeg, ReplySeg, Seg } from './seg'
 import { autoReactive } from './utils'
 import { BaseUser, ForwardSender, getSender, Member, type IUser } from './user'
 import { Message } from './message'
-import { GroupSession, Session } from './session'
+import { GroupSession, Session, TempSession } from './session'
 import { delay } from '../utils/systemUtil'
-import { EssenceData, ForwardNodeData, MsgData, SegData } from '../adapter/interface'
+import { EssenceData, ForwardNodeData, MsgData, SegData, SenderData } from '../adapter/interface'
 import { reactive, toRaw } from 'vue'
 import { Img } from './img'
 
@@ -228,6 +228,40 @@ export class Msg extends Message {
         }
         this.emojis[id] = emojiData
     }
+
+    serializeData(): MsgData {
+        if (!this.session) throw new Error('会话信息缺失')
+        return {
+            message_id: this.message_id,
+            session: {
+                id: this.session.id,
+                group_id: this.session.type === 'temp' ? (
+                    this.session as TempSession
+                ).group_id : undefined,
+                type: this.session.type
+            },
+            sender: this.sender.serializeData() as SenderData,
+            time: this.time?.time,
+            message: this.message.map(seg => seg.serializeData()),
+            isDelete: this.isDelete,
+        }
+    }
+
+    copy(): typeof this {
+        return new (this.constructor as typeof Msg)(
+            this.serializeData()
+        ) as typeof this
+    }
+
+    toForwardMsgData(): ForwardMsg {
+        return new ForwardMsg({
+            sender: {
+                nickname: this.sender.name,
+                face: this.sender.face
+            },
+            content: this.message.map(seg => seg.serializeData())
+        })
+    }
 }
 
 /**
@@ -435,5 +469,18 @@ export class ForwardMsg extends Msg {
         const sender = new ForwardSender(data.sender)
         const message = Msg.parseSegs(data.content)
         super(message, sender)
+    }
+
+    serializeNodeData(): ForwardNodeData {
+        return {
+            sender: this.sender.serializeData(),
+            content: this.message.map(seg => seg.serializeData()),
+        }
+    }
+
+    override copy(): typeof this {
+        return new (this.constructor as typeof ForwardMsg)(
+            this.serializeNodeData()
+        ) as typeof this
     }
 }
