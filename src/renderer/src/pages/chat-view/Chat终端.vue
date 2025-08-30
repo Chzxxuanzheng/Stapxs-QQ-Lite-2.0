@@ -156,7 +156,7 @@
         Reactive,
     } from 'vue'
     import { runtimeData } from '@renderer/function/msg'
-    import { getTrueLang } from '@renderer/function/utils/systemUtil'
+    import { copyToClipboard, getTrueLang } from '@renderer/function/utils/systemUtil'
     import {
         Logger,
         LogType,
@@ -713,17 +713,15 @@
                     this.msg = 'sql reply ' + str + ' '
                     input.focus()
                 }
-                app.config.globalProperties.$copyText(String(str)).then(
-                    () => {
+                copyToClipboard(String(str))
+                    .then(
                         this.addCommandOut(
                             ':: Copy messageId successfully.',
                             'gray',
                         )
-                    },
-                    () => {
+                    ).catch(
                         this.addCommandOut(':: Copy messageId failed.', 'gray')
-                    },
-                )
+                    )
             },
 
             /**

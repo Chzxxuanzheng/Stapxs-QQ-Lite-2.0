@@ -229,7 +229,7 @@ import BcTab from 'vue3-bcui/packages/bc-tab'
 
 import { PopInfo, PopType } from '@renderer/function/base'
 import { ref, ShallowRef, shallowRef, markRaw, nextTick, shallowReactive } from 'vue'
-import { delay, getTrueLang } from '@renderer/function/utils/systemUtil'
+import { copyToClipboard, delay, getTrueLang } from '@renderer/function/utils/systemUtil'
 import { runtimeData } from '@renderer/function/msg'
 import { GroupSession, Session, UserSession } from '@renderer/function/model/session'
 import { Member, User } from '@renderer/function/model/user'
@@ -293,14 +293,12 @@ async function removeUser(mem: Member) {
 
 function copyText(text: string | number) {
     const popInfo = new PopInfo()
-    app.config.globalProperties.$copyText(String(text)).then(
-        () => {
-            popInfo.add(PopType.INFO, $t('复制成功'), true)
-        },
-        () => {
-            popInfo.add(PopType.ERR, $t('复制失败'), true)
-        },
-    )
+    copyToClipboard(String(text))
+        .then(
+            () => popInfo.add(PopType.INFO, $t('复制成功'))
+        ).catch(
+            () => popInfo.add(PopType.ERR, $t('复制失败'))
+        )
 }
 
 async function banMember(mem: Member, banTime: number) {

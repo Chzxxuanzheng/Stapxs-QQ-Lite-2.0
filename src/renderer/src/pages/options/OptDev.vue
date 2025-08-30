@@ -244,6 +244,7 @@ import {
 } from 'vue'
 import driver from '@renderer/function/driver'
 import { ensurePopBox, htmlPopBox } from '@renderer/function/utils/popBox'
+import { copyToClipboard } from '@renderer/function/utils/systemUtil'
 
 const illegalProxyUrl = computed(() => {
     if (!runtimeData.sysConfig.proxyUrl) return false
@@ -441,11 +442,12 @@ const illegalProxyUrl = computed(() => {
                             text: app.config.globalProperties.$t('复制'),
                             noClose: true,
                             fun: () => {
-                                app.config.globalProperties.$copyText(info)
-                                new PopInfo().add(
-                                    PopType.INFO,
-                                    app.config.globalProperties.$t('复制成功'),
-                                )
+                                copyToClipboard(info)
+                                    .then(
+                                        () => new PopInfo().add(PopType.INFO, this.$t('复制成功'))
+                                    ).catch(
+                                        () => new PopInfo().add(PopType.ERR, this.$t('复制失败'))
+                                    )
                             },
                         },
                         {
@@ -468,11 +470,12 @@ const illegalProxyUrl = computed(() => {
                             text: app.config.globalProperties.$t('复制'),
                             noClose: true,
                             fun: () => {
-                                app.config.globalProperties.$copyText(json)
-                                new PopInfo().add(
-                                    PopType.INFO,
-                                    app.config.globalProperties.$t('复制成功'),
-                                )
+                                copyToClipboard(json)
+                                    .then(
+                                        () => new PopInfo().add(PopType.INFO, this.$t('复制成功'))
+                                    ).catch(
+                                        () => new PopInfo().add(PopType.ERR, this.$t('复制失败'))
+                                    )
                             },
                         },
                         {

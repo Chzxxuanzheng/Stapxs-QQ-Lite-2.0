@@ -479,6 +479,7 @@ import Menu from '@renderer/components/Menu.vue'
 
 import { downloadFile, shouldAutoFocus } from '@renderer/function/utils/appUtil'
 import {
+    copyToClipboard,
     delay,
     getViewTime,
 } from '@renderer/function/utils/systemUtil'
@@ -1548,14 +1549,12 @@ function copyMsg() {
     if (!msg) return
 
     const popInfo = new PopInfo()
-    app.config.globalProperties.$copyText(msg.plaintext).then(
-        () => {
-            popInfo.add(PopType.INFO, $t('复制成功'), true)
-        },
-        () => {
-            popInfo.add(PopType.ERR, $t('复制失败'), true)
-        },
-    )
+    copyToClipboard(msg.plaintext)
+        .then(
+            () => popInfo.add(PopType.INFO, $t('复制成功'))
+        ).catch(
+            () => popInfo.add(PopType.ERR, $t('复制失败'))
+        )
 
     closeMsgMenu()
 }
@@ -1566,14 +1565,12 @@ function copySelectMsg() {
     if (menuDisplay.selectCache === '') return
 
     const popInfo = new PopInfo()
-    app.config.globalProperties.$copyText(menuDisplay.selectCache).then(
-        () => {
-            popInfo.add(PopType.INFO, $t('复制成功'), true)
-        },
-        () => {
-            popInfo.add(PopType.ERR, $t('复制失败'), true)
-        },
-    )
+    copyToClipboard(menuDisplay.selectCache)
+        .then(
+            () => popInfo.add(PopType.INFO, $t('复制成功'))
+        ).catch(
+            () => popInfo.add(PopType.ERR, $t('复制失败'))
+        )
 
     closeMsgMenu()
 }
@@ -1697,16 +1694,12 @@ function copyMsgs() {
     })
     msg = msg.trim()
     const popInfo = new PopInfo()
-    app.config.globalProperties.$copyText(msg).then(
-        () => {
-            popInfo.add(PopType.INFO, $t('复制成功'), true)
-
-            closeMultiselect()
-        },
-        () => {
-            popInfo.add(PopType.ERR, $t('复制失败'), true)
-        },
-    )
+    copyToClipboard(msg)
+        .then(
+            () => popInfo.add(PopType.INFO, $t('复制成功'))
+        ).catch(
+            () => popInfo.add(PopType.ERR, $t('复制失败'))
+        )
 }
 function closeMultiselect() {
     if (!msgBar.value) return

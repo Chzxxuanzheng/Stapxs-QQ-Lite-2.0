@@ -190,6 +190,7 @@ import {
 import { downloadFile } from '@renderer/function/utils/appUtil'
 import { PopInfo, PopType } from '@renderer/function/base'
 import { runtimeData } from '@renderer/function/msg'
+import { copyToClipboard } from '@renderer/function/utils/systemUtil'
 
 type EditToolType = 'hand' | 'pen' | 'rect'
 
@@ -1009,7 +1010,7 @@ async function copyBlob(blob?: Blob) {
         new PopInfo().add(PopType.ERR, $t('复制失败'))
         return
     }
-    await navigator.clipboard.write([
+    await copyToClipboard([
         new window.ClipboardItem({ 'image/png': blob })
     ])
     new PopInfo().add(PopType.INFO, $t('复制成功'))
