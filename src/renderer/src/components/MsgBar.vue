@@ -34,7 +34,6 @@
                 :config="config"
                 :user-info-pan="userInfoPan"
                 @click="msgClick($event, msgIndex)"
-                @scroll-to-msg="arg=>$emit('scrollToMsg', arg)"
                 @image-loaded="arg=>$emit('imageLoaded', arg)"
                 @show-msg-menu="(eventData, msg) => openMsgMenu(eventData, msg)"
                 @show-user-menu="(eventData, user) => openUserMenu(eventData, user)"
@@ -67,7 +66,7 @@ import { Notice, SystemNotice } from '@renderer/function/model/notice'
 import { IUser } from '@renderer/function/model/user'
 import { MenuEventData } from '@renderer/function/elements/information'
 import app from '@renderer/main'
-import { UserInfoPan } from '@renderer/pages/Chat.vue'
+import { UserInfoPan } from './UserInfoPan.vue'
 
 //#region ====定义与导出============================================
 const {
@@ -92,7 +91,6 @@ const {
 const emit = defineEmits<{
     msgClick: [event: MouseEvent, msg: Msg],
     imageLoaded: [height: number],
-    scrollToMsg: [id: string],
     leftMove: [msg: Msg],
     rightMove: [msg: Msg],
     senderDoubleClick: [user: IUser],

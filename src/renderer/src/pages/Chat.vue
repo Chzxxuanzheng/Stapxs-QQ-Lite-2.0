@@ -54,7 +54,7 @@
             </div>
         </div>
         <!-- 消息显示区 -->
-        <div ref="msgPan" class="chat"
+        <div ref="msgPan" id="msgPan" class="chat"
             style="scroll-behavior: smooth"
             @scroll="chatScroll">
             <!-- 前缀 -->
@@ -90,7 +90,6 @@
                 :show-msg-menu="showMsgMenu"
                 :show-user-menu="showUserMenu"
                 :user-info-pan="userInfoPanFunc"
-                @scroll-to-msg="scrollToMsgMethod"
                 @image-loaded="imgLoadedScroll"
                 @left-move="replyMsg"
                 @sender-double-click="(user)=>sendPoke(user)"
@@ -1609,7 +1608,8 @@ function jumpSearchMsg() {
     closeSearch()
     setTimeout(() => {
         if (!menuDisplay.menuSelectedMsg) return
-        scrollToMsgMethod(`chat-${menuDisplay.menuSelectedMsg.uuid}`)
+        if (!scrollToMsg(menuDisplay.menuSelectedMsg, true))
+            new PopInfo().add(PopType.INFO, $t('无法定位上下文'))
         closeMsgMenu()
     }, 100)
 }
@@ -1958,11 +1958,6 @@ function scrollBottom(showAnimation = false) {
     const pan = msgPan.value
     if (!pan) return
     scrollTo(pan.scrollHeight, showAnimation)
-}
-function scrollToMsgMethod(id: string) {
-    if (!scrollToMsg(id, true)) {
-        new PopInfo().add(PopType.INFO, $t('无法定位上下文'))
-    }
 }
 function imgLoadedScroll(height: number) {
     const pan = msgPan.value

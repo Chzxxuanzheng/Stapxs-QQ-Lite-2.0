@@ -52,7 +52,8 @@ export function scrollToMsg(msg: Message, showAnimation: boolean, showHighlight 
     else
         panDom.style.scrollBehavior = 'smooth'
 
-    panDom.scrollTop = msgDom.offsetTop - msgDom.offsetHeight + 10
+    const vh = window.innerHeight / 100
+    panDom.scrollTop = msgDom.offsetTop - msgDom.offsetHeight - 20 * vh
     panDom.style.scrollBehavior = 'smooth'
 
     // 加高亮特效
@@ -237,10 +238,12 @@ export function jumpToSession(session: Session, msg?: Message) {
     }
 
     changeSession(session)
-    // 跳转到对应消息
-    setTimeout(()=>{
-        if (msg) scrollToMsg(msg, true)
-    }, 500)
+    session.activate().then(()=>{
+        // 跳转到对应消息
+        setTimeout(()=>{
+            if (msg) scrollToMsg(msg, true)
+        }, 500)
+    })
 }
 
 /**

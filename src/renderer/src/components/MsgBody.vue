@@ -401,6 +401,7 @@ import { Logger, LogType, PopInfo, PopType } from '@renderer/function/base'
 import { pokeAnime } from '@renderer/function/utils/msgUtil'
 import {
     openLink,
+    scrollToMsg as scrollToMsgFunc,
     sendStatEvent,
 } from '@renderer/function/utils/appUtil'
 import { useStayEvent } from '@renderer/function/utils/vuse'
@@ -460,7 +461,6 @@ const {
 }>()
 
 const emit = defineEmits<{
-    scrollToMsg: [id: string]
     imageLoaded: [height: number]
     leftMove: [msg: Msg]
     rightMove: [msg: Msg]
@@ -569,20 +569,14 @@ defineExpose({
              * @param message_id 消息 id
              */
             scrollToMsg(message_id: string) {
-                let uuid: string|undefined = undefined
-                for (const item of runtimeData.nowChat!.messageList) {
-                    if (!(item instanceof Msg)) continue
-                    if (item.message_id === message_id) {
-                        uuid = item.uuid
-                        break
-                    }
-                }
-                if (!uuid) {
+                if (!this.data.session) return
+                const msg = this.data.session.getMsgById(message_id)
+                if (!msg) {
                     new PopInfo().add(PopType.INFO, this.$t('定位消息失败'))
                     return
                 }
-                // eslint-disable-next-line vue/require-explicit-emits
-                this.$emit('scrollToMsg', 'chat-' + uuid)
+                const re = scrollToMsgFunc(msg, true)
+                console.log(re)
             },
 
             /**
