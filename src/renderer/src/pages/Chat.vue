@@ -146,8 +146,8 @@
                                             v-for="(seg, indexc) in item.message"
                                             :key="'jinc-' + index + '-' + indexc">
                                             <span v-if="seg instanceof TxtSeg">{{ seg.text }}</span>
-                                            <img v-if="seg instanceof FaceSeg"
-                                                class="face" :src="seg.src">
+                                            <EmojiFace v-if="seg instanceof FaceSeg"
+                                                :emoji="seg.face" class="msg-face" />
                                             <img v-if="seg instanceof ImgSeg" :src="seg.src">
                                         </template>
                                     </div>
@@ -351,9 +351,8 @@
                         'open': menuDisplay.respond
                     }">
                     <template v-for="(num, index) in Emoji.responseId" :key="'respond-' + num">
-                        <EmojiFace v-if="Emoji.has(num)" :emoji="Emoji.get(num)!"
-                            @click="menuDisplay.menuSelectedMsg ?
-                                    changeRespond(String(num), menuDisplay.menuSelectedMsg as Msg): ''" />
+                        <EmojiFace :emoji="Emoji.get(num)!" @click="menuDisplay.menuSelectedMsg ?
+                            changeRespond(String(num), menuDisplay.menuSelectedMsg as Msg): ''" />
                         <font-awesome-icon v-if="index == 4" :icon="['fas', 'angle-up']" @click="menuDisplay.respond = true" />
                     </template>
                 </div>
@@ -514,7 +513,6 @@ import {
     onMounted,
 } from 'vue'
 import { backend } from '@renderer/runtime/backend'
-import { emoji } from 'zod'
 import Emoji from '@renderer/function/model/emoji'
 import EmojiFace from '@renderer/components/EmojiFace.vue'
 
@@ -899,12 +897,13 @@ function showMsgMenu(data: MenuEventData, msg: Msg): Promise<void> | undefined {
     const textBody = selection?.anchorNode?.parentElement
     const textMsg = null as HTMLElement | null
 
+
     if (
+        textMsg &&
+        textMsg.id == data.target.id &&
         textBody &&
         textBody.className.indexOf('msg-text') > -1 &&
-        selection.focusNode == selection.anchorNode &&
-        textMsg &&
-        textMsg.id == data.target.id
+        selection.focusNode == selection.anchorNode
     ) {
         // 用于判定是否选中了 msg-text 且开始和结束是同一个 Node（防止跨消息复制）
         menuDisplay.selectCache = selection.toString()
@@ -1618,6 +1617,7 @@ function jumpSearchMsg() {
     }, 100)
 }
 function consoleLogMsg() {
+    // eslint-disable-next-line no-console
     console.log(menuDisplay.menuSelectedMsg)
 }
 //#endregion

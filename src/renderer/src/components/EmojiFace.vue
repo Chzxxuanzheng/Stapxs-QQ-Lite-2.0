@@ -5,14 +5,17 @@
  * @Version: 1.0
 -->
 <template>
-    <img class="emoji-face" v-if="emoji.type === 'apng'" loading="lazy" :src="emoji.value" />
-    <span class="emoji-face" v-else>{{ emoji.value }}</span>
+    <font-awesome-icon v-if="emoji === undefined"
+        :icon="['fas', 'face-grin-wide']" class="emoji-face" />
+    <img v-else-if="emoji.type === 'apng'" class="emoji-face" loading="lazy"
+        :src="emoji.value">
+    <span v-else class="emoji-face">{{ emoji.value }}</span>
 </template>
 
 <script setup lang="ts">
-import Emoji from '@renderer/function/model/emoji';
+import Emoji from '@renderer/function/model/emoji'
 
 const { emoji } = defineProps<{
-    emoji: Emoji
+    emoji?: Emoji
 }>()
 </script>

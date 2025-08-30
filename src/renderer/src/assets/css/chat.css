@@ -1498,7 +1498,6 @@ input {
     display: flex;
 }
 .jin-pan-body > div > div.context > img {
-    margin: 0 10px 10px 10px;
     border-radius: 7px;
     max-width: 60%;
 }
